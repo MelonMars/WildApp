@@ -9,6 +9,8 @@ import {
   Animated,
   ScrollView,
   FlatList,
+  ActivityIndicator,
+  Share
 } from 'react-native';
 
 import { LinearGradient } from 'expo-linear-gradient';
@@ -16,8 +18,12 @@ import { useApp } from './contexts/AppContext';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { Image } from 'expo-image';
 
+import { PostService } from './services/postService';
+import { common_styles, colors, typography, shadows } from './styles';
+
 const { width, height } = Dimensions.get('window');
 const AnimatedFlatList = Animated.createAnimatedComponent(FlatList);
+
 
 export default function GalleryPage() {
     const [fadeAnim] = useState(new Animated.Value(0));
@@ -176,8 +182,9 @@ export default function GalleryPage() {
             }
             const formattedPost = {
                 id: Date.now().toString(),
-                username: 'you',
-                ...parsedPost
+                username: 'anonymous',
+                ...parsedPost,
+                completed_at: parsedPost.completedAt || parsedPost.completed_at
             };
             setPosts(prevPosts => [formattedPost, ...prevPosts]);
             setIsNewPostAnimating(true);
@@ -203,38 +210,45 @@ export default function GalleryPage() {
     }, [newPost, isNewPost, challenge, category, photo, caption, completedAt, timestamp]);
 
     const formatTimeAgo = (dateString) => {
-        console.log("Formatting time for date:", dateString);
+        if (!dateString) {
+            console.log("No date provided, returning 'Just now'");
+            return 'Just now';
+        }
         const now = new Date();
         const postDate = new Date(dateString);
-        const diffInHours = Math.floor((now - postDate) / (1000 * 60 * 60));
+        if (isNaN(postDate.getTime())) {
+            return 'Just now';
+        }
+        const diffInMs = now - postDate;
+        const diffInHours = Math.floor(diffInMs / (1000 * 60 * 60));
         if (diffInHours < 1) return 'Just now';
         if (diffInHours < 24) return `${diffInHours}h ago`;
         return `${Math.floor(diffInHours / 24)}d ago`;
     };
 
     const getCategoryColor = (category) => {
-        const colors = {
-            social: '#ff6b35',
-            fitness: '#4CAF50',
-            adventure: '#2196F3',
-            creative: '#9C27B0',
-            mindful: '#FF9800',
-            COWARD: '#ff0000',
+        const categoryColors = {
+            social: colors.vintageOrange,
+            fitness: colors.forestGreen,
+            adventure: colors.oliveGreen,
+            creative: colors.mossGreen,
+            mindful: colors.peach,
+            COWARD: colors.vintageRed,
         };
-        return colors[category] || '#666';
+        return categoryColors[category] || colors.darkGray;
     };
 
     const renderCowardPost = (item, animatedTransforms, isNewPost) => {
         return (
             <View style={styles.photoContainer}>
-                <View style={styles.cowardPhotoContainer}>
+                <View style={[styles.cowardPhotoContainer, common_styles.photoFrame]}>
                     <Text style={styles.cowardX}>✗</Text>
                 </View>
                 <View style={[
-                    styles.categoryBadge,
+                    common_styles.categoryBadge,
                     { backgroundColor: getCategoryColor('COWARD') }
                 ]}>
-                    <Text style={styles.categoryText}>COWARD</Text>
+                    <Text style={common_styles.categoryBadgeText}>COWARD</Text>
                 </View>
             </View>
         );
@@ -245,14 +259,14 @@ export default function GalleryPage() {
             <View style={styles.photoContainer}>
                 <Image
                     source={{ uri: item.photo }}
-                    style={styles.postPhoto}
+                    style={[common_styles.photoFrame, styles.postPhoto]}
                     resizeMode="cover"
                 />
                 <View style={[
-                    styles.categoryBadge,
+                    common_styles.categoryBadge,
                     { backgroundColor: getCategoryColor(item.category) }
                 ]}>
-                    <Text style={styles.categoryText}>{item.category.toUpperCase()}</Text>
+                    <Text style={common_styles.categoryBadgeText}>{item.category.toUpperCase()}</Text>
                 </View>
             </View>
         );
@@ -260,8 +274,8 @@ export default function GalleryPage() {
 
     const renderCowardCaption = (item) => {
         return (
-            <View style={styles.postCaptionArea}>
-                <Text style={styles.challengeText} numberOfLines={2}>
+            <View style={[common_styles.captionArea, styles.postCaptionArea]}>
+                <Text style={common_styles.challengeText} numberOfLines={2}>
                     {item.challenge}
                 </Text>
                 <Text style={styles.cowardText}>
@@ -269,8 +283,8 @@ export default function GalleryPage() {
                     <Text style={styles.cowardLabel}> is a </Text>
                     <Text style={styles.cowardUsername}>COWARD</Text>
                 </Text>
-                <View style={styles.postFooter}>
-                    <Text style={styles.timeText}>{formatTimeAgo(item.completedAt)}</Text>
+                <View style={common_styles.polaroidFooter}>
+                    <Text style={common_styles.dateStamp}>{formatTimeAgo(item.completed_at)}</Text>
                 </View>
             </View>
         );
@@ -278,16 +292,16 @@ export default function GalleryPage() {
 
     const renderNormalCaption = (item) => {
         return (
-            <View style={styles.postCaptionArea}>
-                <Text style={styles.challengeText} numberOfLines={2}>
+            <View style={[common_styles.captionArea, styles.postCaptionArea]}>
+                <Text style={common_styles.challengeText} numberOfLines={2}>
                     {item.challenge}
                 </Text>
-                <Text style={styles.captionText} numberOfLines={2}>
+                <Text style={common_styles.captionText} numberOfLines={2}>
                     "{item.caption}"
                 </Text>
-                <View style={styles.postFooter}>
-                    <Text style={styles.usernameText}>@{item.username}</Text>
-                    <Text style={styles.timeText}>{formatTimeAgo(item.completedAt)}</Text>
+                <View style={common_styles.polaroidFooter}>
+                    <Text style={common_styles.usernameStamp}>@{item.username}</Text>
+                    <Text style={common_styles.dateStamp}>{formatTimeAgo(item.completed_at)}</Text>
                 </View>
             </View>
         );
@@ -304,11 +318,13 @@ export default function GalleryPage() {
         const offsetX = (index % 2) * 10 - 5;
         const isNewPost = index === 0 && isNewPostAnimating;
         const isCowardPost = item.category === 'COWARD';
+        
         let animatedTransforms = [
             { scale },
             { rotate: `${rotation}deg` },
             { translateX: offsetX }
         ];
+        
         if (isNewPost) {
             const slamTranslateY = newPostAnim.interpolate({
                 inputRange: [0, 0.5, 1],
@@ -332,6 +348,7 @@ export default function GalleryPage() {
                 { translateY: slamTranslateY }
             ];
         }
+        
         return (
             <Animated.View
                 style={[
@@ -350,12 +367,13 @@ export default function GalleryPage() {
             >
                 <TouchableOpacity
                     style={[
+                        common_styles.polaroidSmall,
                         styles.polaroidPost,
                         isNewPost ? {
                             borderWidth: 2,
                             borderColor: getCategoryColor(item.category),
                         } : {},
-                        isCowardPost ? styles.cowardPost : {}
+                        isCowardPost ? common_styles.failureContainer : {}
                     ]}
                     activeOpacity={0.9}
                     onPress={() => openModal(item)}
@@ -368,12 +386,12 @@ export default function GalleryPage() {
                         renderCowardCaption(item) :
                         renderNormalCaption(item)
                     }
-                    <View style={[styles.cornerTear, { top: -2, left: -1 }]} />
-                    <View style={[styles.cornerTear, { bottom: 10, right: -2 }]} />
+                    <View style={[common_styles.cornerTear, common_styles.cornerTearTopLeft]} />
+                    <View style={[common_styles.cornerTear, common_styles.cornerTearBottomRight]} />
                     <View style={[
-                        styles.tapeEffect,
+                        common_styles.tapeHorizontal,
+                        common_styles.tapeTopLeft,
                         {
-                            top: -5,
                             left: 20 + (index % 3) * 15,
                             transform: [{ rotate: `${(index % 5 - 2) * 3}deg` }]
                         }
@@ -393,10 +411,28 @@ export default function GalleryPage() {
             extrapolate: 'clamp',
         });
 
+        const handleShare = async () => {
+            try {
+                const shareContent = isCowardPost 
+                    ? `${selectedPost.username.toUpperCase()} is a COWARD! 📸 Challenge: "${selectedPost.challenge}"`
+                    : `"${selectedPost.caption}" - @${selectedPost.username} 📸 Challenge: "${selectedPost.challenge}"`;
+
+                const shareOptions = {
+                    title: 'Check this out!',
+                    message: shareContent,
+                    url: selectedPost.photo || undefined, 
+                };
+
+                await Share.share(shareOptions);
+            } catch (error) {
+                console.log('Share cancelled or failed:', error);
+            }
+        };
+
         return (
             <Animated.View 
                 style={[
-                    styles.modalOverlay,
+                    common_styles.modalOverlay,
                     {
                         opacity: modalAnim,
                         transform: [{ scale: modalScale }]
@@ -404,72 +440,88 @@ export default function GalleryPage() {
                 ]}
             >
                 <TouchableOpacity 
-                    style={styles.modalBackground}
+                    style={StyleSheet.absoluteFill}
                     onPress={closeModal}
                     activeOpacity={1}
                 />
-                <Animated.View style={styles.modalContent}>
+                <Animated.View style={common_styles.modalContent}>
                     <TouchableOpacity
-                        style={styles.closeButton}
+                        style={common_styles.closeButton}
                         onPress={closeModal}
                     >
-                        <Text style={styles.closeButtonText}>×</Text>
+                        <Text style={common_styles.closeButtonText}>×</Text>
                     </TouchableOpacity>
                     
-                    <View style={[styles.modalPolaroid, isCowardPost ? styles.cowardPost : {}]}>
+                    <TouchableOpacity
+                        style={styles.retroShareButton}
+                        onPress={handleShare}
+                        activeOpacity={0.8}
+                    >
+                        <View style={styles.retroShareIcon}>
+                            <Text style={styles.retroShareIconText}>📤</Text>
+                        </View>
+                        <Text style={styles.retroShareText}>SHARE</Text>
+                        <View style={styles.retroShareGlow} />
+                    </TouchableOpacity>
+                    
+                    <View style={[
+                        common_styles.polaroidLarge,
+                        styles.modalPolaroid,
+                        isCowardPost ? common_styles.failureContainer : {}
+                    ]}>
                         {isCowardPost ? (
                             <View style={styles.modalPhotoContainer}>
-                                <View style={styles.modalCowardPhotoContainer}>
+                                <View style={[common_styles.photoFrame, styles.modalCowardPhotoContainer]}>
                                     <Text style={styles.modalCowardX}>✗</Text>
                                 </View>
                                 <View style={[
-                                    styles.modalCategoryBadge,
+                                    common_styles.categoryBadge,
                                     { backgroundColor: getCategoryColor('COWARD') }
                                 ]}>
-                                    <Text style={styles.modalCategoryText}>COWARD</Text>
+                                    <Text style={common_styles.categoryBadgeText}>COWARD</Text>
                                 </View>
                             </View>
                         ) : (
                             <View style={styles.modalPhotoContainer}>
                                 <Image
                                     source={{ uri: selectedPost.photo }}
-                                    style={styles.modalPostPhoto}
+                                    style={[common_styles.photoFrame, styles.modalPostPhoto]}
                                     resizeMode="cover"
                                 />
                                 <View style={[
-                                    styles.modalCategoryBadge,
+                                    common_styles.categoryBadge,
                                     { backgroundColor: getCategoryColor(selectedPost.category) }
                                 ]}>
-                                    <Text style={styles.modalCategoryText}>{selectedPost.category.toUpperCase()}</Text>
+                                    <Text style={common_styles.categoryBadgeText}>{selectedPost.category.toUpperCase()}</Text>
                                 </View>
                             </View>
                         )}
                         
-                        <View style={styles.modalCaptionArea}>
-                            <Text style={styles.modalChallengeText}>
+                        <View style={[common_styles.captionArea, styles.modalCaptionArea]}>
+                            <Text style={[common_styles.challengeText, styles.modalChallengeText]}>
                                 {selectedPost.challenge}
                             </Text>
                             {isCowardPost ? (
-                                <Text style={styles.modalCowardText}>
+                                <Text style={[common_styles.failureText, styles.modalCowardText]}>
                                     <Text style={styles.modalCowardUsername}>{selectedPost.username.toUpperCase()}</Text>
                                     <Text style={styles.modalCowardLabel}> is a </Text>
                                     <Text style={styles.modalCowardUsername}>COWARD</Text>
                                 </Text>
                             ) : (
-                                <Text style={styles.modalCaptionText}>
+                                <Text style={[common_styles.captionText, styles.modalCaptionText]}>
                                     "{selectedPost.caption}"
                                 </Text>
                             )}
-                            <View style={styles.modalPostFooter}>
-                                <Text style={styles.modalUsernameText}>@{selectedPost.username}</Text>
-                                <Text style={styles.modalTimeText}>{formatTimeAgo(selectedPost.completedAt)}</Text>
+                            <View style={common_styles.polaroidFooter}>
+                                <Text style={common_styles.usernameStamp}>@{selectedPost.username}</Text>
+                                <Text style={common_styles.dateStamp}>{formatTimeAgo(selectedPost.completed_at)}</Text>
                             </View>
                         </View>
                         
-                        <View style={[styles.modalCornerTear, { top: -2, left: -1 }]} />
-                        <View style={[styles.modalCornerTear, { bottom: 10, right: -2 }]} />
-                        <View style={[styles.modalTapeEffect, { top: -8, left: 30 }]} />
-                        <View style={[styles.modalTapeEffect, { bottom: -8, right: 40 }]} />
+                        <View style={[common_styles.cornerTear, common_styles.cornerTearTopLeft]} />
+                        <View style={[common_styles.cornerTear, common_styles.cornerTearBottomRight]} />
+                        <View style={[common_styles.tapeHorizontal, common_styles.tapeTopLeft]} />
+                        <View style={[common_styles.tapeHorizontal, common_styles.tapeBottomRight]} />
                     </View>
                 </Animated.View>
             </Animated.View>
@@ -479,53 +531,53 @@ export default function GalleryPage() {
     const renderFooter = () => {
         if (!loading) return null;
         return (
-            <View style={styles.loadingFooter}>
-                <ActivityIndicator size="small" color="#ff6b35" />
-                <Text style={styles.loadingText}>Loading more posts...</Text>
+            <View style={common_styles.loadingContainer}>
+                <ActivityIndicator size="small" color={colors.vintageOrange} />
+                <Text style={common_styles.loadingText}>Loading more posts...</Text>
             </View>
         );
     };
 
     if (!preloadComplete) {
         return (
-            <View style={styles.loadingContainer}>
-                <ActivityIndicator size="large" color="#ff6b35" />
-                <Text style={styles.loadingText}>Loading gallery...</Text>
+            <View style={common_styles.loadingContainer}>
+                <ActivityIndicator size="large" color={colors.vintageOrange} />
+                <Text style={common_styles.loadingText}>Loading gallery...</Text>
             </View>
         );
     }
 
     return (
-        <View style={styles.container}>
-            <StatusBar barStyle="light-content" backgroundColor="#1a1a1a" />
+        <View style={common_styles.container}>
+            <StatusBar barStyle="light-content" backgroundColor={colors.darkBrown} />
             <LinearGradient
-                colors={['#8B4513', '#654321', '#3D2914']}
-                style={styles.background}
+                colors={[colors.lightBrown, colors.mediumBrown, colors.darkBrown]}
+                style={common_styles.backgroundTexture}
             />
-            <Animated.View style={[styles.header, { opacity: fadeAnim, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }]}>
+            <Animated.View style={[common_styles.header, { opacity: fadeAnim, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }]}>
                 <TouchableOpacity
-                    style={[styles.backButton, { marginBottom: 0, marginTop: 0 }]}
+                    style={[common_styles.ghostButton, styles.backButton]}
                     onPress={() => router.navigate('/')}
                 >
-                    <Text style={styles.backButtonText}>← HOME</Text>
+                    <Text style={common_styles.ghostButtonText}>← HOME</Text>
                 </TouchableOpacity>
                 <View style={{ flex: 1, alignItems: 'center' }}>
-                    <Text style={styles.headerTitle}>THE WALL</Text>
-                    <Text style={styles.headerSubtitle}>PROOF OF COURAGE</Text>
+                    <Text style={common_styles.headerTitle}>THE WALL</Text>
+                    <Text style={common_styles.headerSubtitle}>PROOF OF COURAGE</Text>
                 </View>
                 <View style={{ width: 70 }} />
             </Animated.View>
-            <View style={styles.headerLine} />
-            <Animated.View style={[styles.galleryContainer, { opacity: fadeAnim }]}>
+            <View style={common_styles.headerLine} />
+            <Animated.View style={[common_styles.galleryContainer, { opacity: fadeAnim }]}>
                 <AnimatedFlatList
                     ref={flatListRef}
                     data={posts}
                     renderItem={renderPost}
                     keyExtractor={(item) => item.id}
                     numColumns={2}
-                    columnWrapperStyle={styles.row}
+                    columnWrapperStyle={common_styles.galleryRow}
                     showsVerticalScrollIndicator={false}
-                    contentContainerStyle={styles.galleryContent}
+                    contentContainerStyle={common_styles.galleryContent}
                     onScroll={Animated.event(
                         [{ nativeEvent: { contentOffset: { y: scrollY } } }],
                         { useNativeDriver: true }
@@ -550,387 +602,185 @@ export default function GalleryPage() {
             {renderModal()}
         </View>
     );
-};
+}
 
 const styles = StyleSheet.create({
-    container: {
-        flex: 1,
-        backgroundColor: '#3D2914',
-    },
-    background: {
-        position: 'absolute',
-        left: 0,
-        right: 0,
-        top: 0,
-        bottom: 0,
-    },
-    loadingContainer: {
-        flex: 1,
-        justifyContent: 'center',
-        alignItems: 'center',
-        backgroundColor: '#3D2914',
-    },
-    loadingText: {
-        color: '#D2B48C',
-        fontSize: 16,
-        marginTop: 10,
-        fontFamily: 'Courier New',
-    },
-    header: {
-        paddingTop: 50,
-        paddingHorizontal: 20,
-        paddingBottom: 20,
-        backgroundColor: 'rgba(61, 41, 20, 0.9)',
-        borderBottomWidth: 3,
-        borderBottomColor: '#8B4513',
-    },
-    backButton: {
-        alignSelf: 'flex-start',
-        marginBottom: 15,
-        backgroundColor: '#8B4513',
-        paddingHorizontal: 12,
-        paddingVertical: 6,
-        borderRadius: 0,
-        borderWidth: 2,
-        borderColor: '#D2B48C',
-    },
-    backButtonText: {
-        color: '#D2B48C',
-        fontSize: 14,
-        fontWeight: 'bold',
-        fontFamily: 'Courier New',
-    },
-    headerTitle: {
-        fontSize: 32,
-        fontWeight: 'bold',
-        color: '#D2B48C',
-        textAlign: 'center',
-        marginBottom: 5,
-        fontFamily: 'Courier New',
-        textShadow: '2px 2px 4px rgba(0,0,0,0.5)',
-    },
-    headerSubtitle: {
-        fontSize: 14,
-        color: '#CD853F',
-        textAlign: 'center',
-        letterSpacing: 2,
-        fontFamily: 'Courier New',
-    },
-    headerLine: {
-        height: 3,
-        backgroundColor: '#8B4513',
-        marginTop: 15,
-        marginHorizontal: 40,
-    },
-    galleryContainer: {
-        flex: 1,
-        paddingTop: 20,
-    },
-    galleryContent: {
-        paddingHorizontal: 15,
-        paddingBottom: 20,
-    },
-    row: {
-        justifyContent: 'space-around',
-        marginBottom: 20,
-    },
     postContainer: {
         flex: 0.48,
-        marginBottom: 15,
+        marginBottom: 20,
+        alignItems: 'center',
     },
+    
     polaroidPost: {
-        backgroundColor: '#F5F5DC',
-        padding: 12,
-        paddingBottom: 20,
-        shadowColor: '#000',
-        shadowOffset: { width: 3, height: 3 },
-        shadowOpacity: 0.3,
-        shadowRadius: 5,
-        elevation: 8,
-        borderWidth: 1,
-        borderColor: '#DDD',
-        position: 'relative',
+        width: '100%',
+        minHeight: 200,
     },
-    cowardPost: {
-        backgroundColor: '#FFE4E1',
-        borderColor: '#FF6B6B',
-    },
+    
     photoContainer: {
         position: 'relative',
-        marginBottom: 10,
+        marginBottom: 8,
     },
+    
     postPhoto: {
-        width: '100%',
         height: 120,
-        backgroundColor: '#EEE',
-        borderWidth: 1,
-        borderColor: '#CCC',
+        borderRadius: 2,
     },
+    
     cowardPhotoContainer: {
-        width: '100%',
         height: 120,
-        backgroundColor: '#FFB6C1',
         justifyContent: 'center',
         alignItems: 'center',
-        borderWidth: 2,
-        borderColor: '#FF6B6B',
+        backgroundColor: colors.lightGray,
     },
+    
     cowardX: {
-        fontSize: 48,
-        color: '#FF0000',
-        fontWeight: 'bold',
-        fontFamily: 'Courier New',
+        ...typography.headerLarge,
+        color: colors.vintageRed,
+        fontWeight: '900',
     },
-    categoryBadge: {
-        position: 'absolute',
-        top: 5,
-        right: 5,
-        paddingHorizontal: 6,
-        paddingVertical: 2,
-        borderRadius: 0,
-        borderWidth: 1,
-        borderColor: '#000',
-    },
-    categoryText: {
-        color: '#FFF',
-        fontSize: 10,
-        fontWeight: 'bold',
-        fontFamily: 'Courier New',
-    },
+    
     postCaptionArea: {
-        paddingHorizontal: 2,
-    },
-    challengeText: {
-        fontSize: 12,
-        fontWeight: 'bold',
-        color: '#8B4513',
-        marginBottom: 4,
-        fontFamily: 'Courier New',
-    },
-    captionText: {
-        fontSize: 11,
-        color: '#654321',
-        fontStyle: 'italic',
-        marginBottom: 6,
-        fontFamily: 'Courier New',
-    },
-    cowardText: {
-        fontSize: 11,
-        marginBottom: 6,
-        fontFamily: 'Courier New',
-    },
-    cowardUsername: {
-        color: '#FF0000',
-        fontWeight: 'bold',
-    },
-    cowardLabel: {
-        color: '#654321',
-    },
-    postFooter: {
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-    },
-    usernameText: {
-        fontSize: 10,
-        color: '#8B4513',
-        fontWeight: 'bold',
-        fontFamily: 'Courier New',
-    },
-    timeText: {
-        fontSize: 9,
-        color: '#A0522D',
-        fontFamily: 'Courier New',
-    },
-    cornerTear: {
-        position: 'absolute',
-        width: 12,
-        height: 12,
-        backgroundColor: '#3D2914',
-        transform: [{ rotate: '45deg' }],
-    },
-    tapeEffect: {
-        position: 'absolute',
-        width: 30,
-        height: 15,
-        backgroundColor: 'rgba(255, 255, 255, 0.6)',
-        borderWidth: 1,
-        borderColor: 'rgba(0, 0, 0, 0.1)',
-        opacity: 0.7,
-    },
-    loadingFooter: {
-        flexDirection: 'row',
-        justifyContent: 'center',
-        alignItems: 'center',
-        paddingVertical: 20,
-    },
-    bottomAccent: {
-        height: 5,
-        backgroundColor: '#8B4513',
-    },
-    modalOverlay: {
-        position: 'absolute',
-        top: 0,
-        left: 0,
-        right: 0,
-        bottom: 0,
-        justifyContent: 'center',
-        alignItems: 'center',
-        zIndex: 1000,
-    },
-    modalBackground: {
-        position: 'absolute',
-        top: 0,
-        left: 0,
-        right: 0,
-        bottom: 0,
-        backgroundColor: 'rgba(0, 0, 0, 0.8)',
-    },
-    modalContent: {
-        width: '85%',
-        maxWidth: 400,
-        position: 'relative',
-    },
-    closeButton: {
-        position: 'absolute',
-        top: -15,
-        right: -15,
-        width: 40,
-        height: 40,
-        backgroundColor: '#8B4513',
-        borderRadius: 20,
-        justifyContent: 'center',
-        alignItems: 'center',
-        zIndex: 10,
-        borderWidth: 2,
-        borderColor: '#D2B48C',
-    },
-    closeButtonText: {
-        color: '#D2B48C',
-        fontSize: 24,
-        fontWeight: 'bold',
-        fontFamily: 'Courier New',
-    },
-    modalPolaroid: {
-        backgroundColor: '#F5F5DC',
-        padding: 20,
-        paddingBottom: 30,
-        shadowColor: '#000',
-        shadowOffset: { width: 5, height: 5 },
-        shadowOpacity: 0.5,
-        shadowRadius: 10,
-        elevation: 15,
-        borderWidth: 2,
-        borderColor: '#DDD',
-        position: 'relative',
-        transform: [{ rotate: '1deg' }],
-    },
-    modalPhotoContainer: {
-        position: 'relative',
-        marginBottom: 15,
-    },
-    modalPostPhoto: {
-        width: '100%',
-        height: 250,
-        backgroundColor: '#EEE',
-        borderWidth: 2,
-        borderColor: '#CCC',
-    },
-    modalCowardPhotoContainer: {
-        width: '100%',
-        height: 250,
-        backgroundColor: '#FFB6C1',
-        justifyContent: 'center',
-        alignItems: 'center',
-        borderWidth: 3,
-        borderColor: '#FF6B6B',
-    },
-    modalCowardX: {
-        fontSize: 80,
-        color: '#FF0000',
-        fontWeight: 'bold',
-        fontFamily: 'Courier New',
-    },
-    modalCategoryBadge: {
-        position: 'absolute',
-        top: 10,
-        right: 10,
-        paddingHorizontal: 10,
+        paddingHorizontal: 8,
         paddingVertical: 4,
-        borderRadius: 0,
-        borderWidth: 2,
-        borderColor: '#000',
     },
-    modalCategoryText: {
-        color: '#FFF',
-        fontSize: 14,
-        fontWeight: 'bold',
-        fontFamily: 'Courier New',
+    
+    cowardText: {
+        ...typography.bodySmall,
+        color: colors.vintageRed,
+        textAlign: 'center',
+        fontWeight: '800',
+        marginTop: 4,
     },
+    
+    cowardUsername: {
+        ...typography.stamp,
+        color: colors.vintageRed,
+        letterSpacing: 1,
+    },
+    
+    cowardLabel: {
+        ...typography.bodySmall,
+        color: colors.dustyRed,
+    },
+    
+    modalPolaroid: {
+        width: '100%',
+        minHeight: 300,
+    },
+    
+    modalPhotoContainer: {
+        marginBottom: 12,
+        position: 'relative',
+    },
+    
+    modalPostPhoto: {
+        height: 200,
+        borderRadius: 2,
+    },
+    
+    modalCowardPhotoContainer: {
+        height: 200,
+        justifyContent: 'center',
+        alignItems: 'center',
+        backgroundColor: colors.lightGray,
+    },
+    
+    modalCowardX: {
+        ...typography.headerLarge,
+        fontSize: 48,
+        color: colors.vintageRed,
+        fontWeight: '900',
+    },
+    
     modalCaptionArea: {
-        paddingHorizontal: 5,
+        paddingHorizontal: 12,
+        paddingVertical: 8,
     },
+    
     modalChallengeText: {
         fontSize: 16,
-        fontWeight: 'bold',
-        color: '#8B4513',
+        lineHeight: 22,
         marginBottom: 10,
-        textAlign: 'center',
-        fontFamily: 'Courier New',
     },
+    
     modalCaptionText: {
         fontSize: 14,
-        color: '#654321',
-        fontStyle: 'italic',
-        marginBottom: 15,
-        textAlign: 'center',
-        fontFamily: 'Courier New',
+        lineHeight: 20,
+        marginBottom: 8,
     },
+    
     modalCowardText: {
-        fontSize: 14,
-        marginBottom: 15,
-        textAlign: 'center',
-        fontFamily: 'Courier New',
+        fontSize: 16,
+        marginBottom: 8,
     },
+    
     modalCowardUsername: {
-        color: '#FF0000',
-        fontWeight: 'bold',
+        ...typography.stamp,
+        fontSize: 14,
+        color: colors.vintageRed,
+        letterSpacing: 1,
     },
+    
     modalCowardLabel: {
-        color: '#654321',
+        color: colors.dustyRed,
+        fontSize: 14,
     },
-    modalPostFooter: {
+    
+    retroShareButton: {
+        position: 'absolute',
+        top: -25,
+        left: 20,
         flexDirection: 'row',
-        justifyContent: 'center',
         alignItems: 'center',
-        gap: 15,
+        backgroundColor: colors.forestGreen,
+        paddingHorizontal: 12,
+        paddingVertical: 6,
+        borderWidth: 2,
+        borderColor: colors.oliveGreen,
+        borderRadius: 4,
+        zIndex: 10,
+        transform: [{ rotate: '-2deg' }],
+        ...shadows.lightShadow,
     },
-    modalUsernameText: {
-        fontSize: 12,
-        color: '#8B4513',
-        fontWeight: 'bold',
-        fontFamily: 'Courier New',
+    
+    retroShareIcon: {
+        marginRight: 6,
     },
-    modalTimeText: {
-        fontSize: 11,
-        color: '#A0522D',
-        fontFamily: 'Courier New',
+    
+    retroShareIconText: {
+        fontSize: 14,
     },
-    modalCornerTear: {
+    
+    retroShareText: {
+        ...typography.stamp,
+        color: colors.polaroidWhite,
+        fontSize: 10,
+    },
+    
+    retroShareGlow: {
         position: 'absolute',
-        width: 15,
-        height: 15,
-        backgroundColor: '#3D2914',
-        transform: [{ rotate: '45deg' }],
-    },
-    modalTapeEffect: {
-        position: 'absolute',
-        width: 40,
-        height: 20,
-        backgroundColor: 'rgba(255, 255, 255, 0.6)',
+        top: -2,
+        left: -2,
+        right: -2,
+        bottom: -2,
+        backgroundColor: 'transparent',
         borderWidth: 1,
-        borderColor: 'rgba(0, 0, 0, 0.1)',
-        opacity: 0.7,
-        transform: [{ rotate: '-8deg' }],
+        borderColor: 'rgba(255,255,255,0.3)',
+        borderRadius: 6,
+    },
+    
+    backButton: {
+        paddingVertical: 8,
+        paddingHorizontal: 12,
+        minWidth: 70,
+    },
+    
+    bottomAccent: {
+        height: 4,
+        backgroundColor: colors.lightBrown,
+        marginHorizontal: 20,
+        marginBottom: 10,
+        borderRadius: 2,
+        opacity: 0.6,
     },
 });

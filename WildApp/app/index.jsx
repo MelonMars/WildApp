@@ -2,6 +2,7 @@ import React, { useEffect } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, ActivityIndicator } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useApp } from './contexts/AppContext';
+import { common_styles, colors, typography, shadows } from './styles'; 
 
 export default function Home() {
     const router = useRouter();
@@ -49,236 +50,222 @@ export default function Home() {
     };
 
     return (
-        <View style={styles.container}>
-            <View style={styles.titleContainer}>
-                <Text style={styles.title}>Wild</Text>
-                <Text style={styles.subtitle}>Time to live.</Text>
-                
-                {isPreloading && (
-                    <View style={styles.preloadingContainer}>
-                        <ActivityIndicator size="small" color="#8B4513" />
-                        <Text style={styles.preloadingText}>Loading gallery...</Text>
-                    </View>
-                )}
-            </View>
+      <View style={common_styles.container}>
+          <View style={common_styles.backgroundTexture} />
+          
+          <View style={[common_styles.cornerTear, common_styles.cornerTearTopLeft]} />
+          <View style={[common_styles.cornerTear, common_styles.cornerTearTopRight]} />
+          
+          <View style={styles.titleContainer}>
+              <Text style={styles.title}>Wild</Text>
+              <View style={styles.titleAccent} />
+              <Text style={styles.subtitle}>Time to live.</Text>
+              
+              {isPreloading && (
+                  <View style={styles.preloadingContainer}>
+                      <ActivityIndicator size="small" color={colors.lightBrown} />
+                      <Text style={styles.preloadingText}>Loading gallery...</Text>
+                  </View>
+              )}
+          </View>
 
-            <View style={styles.middleButtonsContainer}>
-                <TouchableOpacity style={styles.mainButton} onPress={navigateToPage1}>
-                    <Text style={styles.mainButtonText}>SOCIAL</Text>
-                </TouchableOpacity>
+          <View style={styles.middleButtonsContainer}>
+              <TouchableOpacity style={styles.categoryButton} onPress={navigateToPage1}>
+                  <Text style={styles.categoryButtonText}>SOCIAL</Text>
+                  <View style={styles.categoryAccent} />
+              </TouchableOpacity>
 
-                <TouchableOpacity style={styles.mainButton} onPress={navigateToPage2}>
-                    <Text style={styles.mainButtonText}>ADVENTURE</Text>
-                </TouchableOpacity>
+              <TouchableOpacity style={[styles.categoryButton, styles.categoryButtonMiddle]} onPress={navigateToPage2}>
+                  <Text style={styles.categoryButtonText}>ADVENTURE</Text>
+                  <View style={styles.categoryAccent} />
+              </TouchableOpacity>
 
-                <TouchableOpacity style={styles.mainButton} onPress={navigateToPage3}>
-                    <Text style={styles.mainButtonText}>CREATIVE</Text>
-                </TouchableOpacity>
-            </View>
+              <TouchableOpacity style={styles.categoryButton} onPress={navigateToPage3}>
+                  <Text style={styles.categoryButtonText}>CREATIVE</Text>
+                  <View style={styles.categoryAccent} />
+              </TouchableOpacity>
+          </View>
 
-            <View style={styles.bottomButtonContainer}>
-                <TouchableOpacity 
-                    style={[
-                        styles.bottomButton,
-                        isPreloading && styles.bottomButtonLoading
-                    ]} 
-                    onPress={navigateToGallery}
-                    disabled={isPreloading}
-                >
-                    <Text style={styles.bottomButtonText}>
-                        {isPreloading ? 'LOADING...' : 'THE WALL'}
-                    </Text>
-                    {isPreloading && (
-                        <ActivityIndicator 
-                            size="small" 
-                            color="#FFFFFF" 
-                            style={styles.buttonSpinner}
-                        />
-                    )}
-                </TouchableOpacity>
-            </View>
-        </View>
-    );
+          <View style={styles.bottomButtonContainer}>
+              <TouchableOpacity 
+                  style={[
+                      styles.galleryButton,
+                      isPreloading && styles.galleryButtonLoading
+                  ]} 
+                  onPress={navigateToGallery}
+                  disabled={isPreloading}
+              >
+                  <Text style={styles.galleryButtonText}>
+                      {isPreloading ? 'LOADING...' : 'THE WALL'}
+                  </Text>
+                  {isPreloading && (
+                      <ActivityIndicator 
+                          size="small" 
+                          color={colors.polaroidWhite}
+                          style={styles.buttonSpinner}
+                      />
+                  )}
+                  <View style={styles.galleryButtonDistress} />
+              </TouchableOpacity>
+              
+              <View style={[common_styles.tapeHorizontal, styles.bottomTape]} />
+          </View>
+          
+          <View style={[common_styles.cornerTear, common_styles.cornerTearBottomLeft]} />
+          <View style={[common_styles.cornerTear, common_styles.cornerTearBottomRight]} />
+      </View>
+  );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#F5F5DC',
-    justifyContent: 'space-between',
-    paddingVertical: 60,
-    paddingHorizontal: 30,
-  },
-  titleContainer: {
-    alignItems: 'center',
-    marginTop: 20,
-  },
-  title: {
-    fontSize: 32,
-    fontWeight: 'bold',
-    color: '#8B4513',
-    letterSpacing: 3,
-    textShadowColor: '#D2B48C',
-    textShadowOffset: { width: 2, height: 2 },
-    textShadowRadius: 1,
-  },
-  subtitle: {
-    fontSize: 14,
-    color: '#A0522D',
-    letterSpacing: 2,
-    marginTop: 5,
-    fontStyle: 'italic',
-  },
-  middleButtonsContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    gap: 25,
-  },
-  mainButton: {
-    backgroundColor: '#D2B48C',
-    paddingVertical: 18,
-    paddingHorizontal: 40,
-    borderRadius: 8,
-    borderWidth: 3,
-    borderColor: '#8B4513',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 4,
-    elevation: 8,
-    minWidth: 200,
-    alignItems: 'center',
-  },
-  mainButtonText: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#8B4513',
-    letterSpacing: 1.5,
-  },
-  bottomButtonContainer: {
-    alignItems: 'center',
-    marginBottom: 20,
-  },
-  bottomButton: {
-    backgroundColor: '#CD853F',
-    paddingVertical: 12,
-    paddingHorizontal: 30,
-    borderRadius: 20,
-    borderWidth: 2,
-    borderColor: '#A0522D',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.2,
-    shadowRadius: 3,
-    elevation: 4,
-    width: '100%',
-    alignContent: 'center',
-    alignItems: 'center',
-  },
-  bottomButtonText: {
-    fontSize: 16,
-    color: '#FFFFFF',
-    fontWeight: '600',
-    letterSpacing: 1,
-  },
-    container: {
-    flex: 1,
-    backgroundColor: '#F5F5DC',
-    justifyContent: 'space-between',
-    paddingVertical: 60,
-    paddingHorizontal: 30,
-  },
-  titleContainer: {
-    alignItems: 'center',
-    marginTop: 20,
-  },
-  title: {
-    fontSize: 32,
-    fontWeight: 'bold',
-    color: '#8B4513',
-    letterSpacing: 3,
-    textShadowColor: '#D2B48C',
-    textShadowOffset: { width: 2, height: 2 },
-    textShadowRadius: 1,
-  },
-  subtitle: {
-    fontSize: 14,
-    color: '#A0522D',
-    letterSpacing: 2,
-    marginTop: 5,
-    fontStyle: 'italic',
-  },
-  preloadingContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginTop: 15,
-    gap: 8,
-  },
-  preloadingText: {
-    fontSize: 12,
-    color: '#8B4513',
-    fontStyle: 'italic',
-  },
-  middleButtonsContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    gap: 25,
-  },
-  mainButton: {
-    backgroundColor: '#D2B48C',
-    paddingVertical: 18,
-    paddingHorizontal: 40,
-    borderRadius: 8,
-    borderWidth: 3,
-    borderColor: '#8B4513',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 4,
-    elevation: 8,
-    minWidth: 200,
-    alignItems: 'center',
-  },
-  mainButtonText: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#8B4513',
-    letterSpacing: 1.5,
-  },
-  bottomButtonContainer: {
-    alignItems: 'center',
-    marginBottom: 20,
-  },
-  bottomButton: {
-    backgroundColor: '#CD853F',
-    paddingVertical: 12,
-    paddingHorizontal: 30,
-    borderRadius: 20,
-    borderWidth: 2,
-    borderColor: '#A0522D',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.2,
-    shadowRadius: 3,
-    elevation: 4,
-    width: '100%',
-    alignContent: 'center',
-    alignItems: 'center',
-    flexDirection: 'row',
-    justifyContent: 'center',
-  },
-  bottomButtonLoading: {
-    opacity: 0.7,
-  },
-  bottomButtonText: {
-    fontSize: 16,
-    color: '#FFFFFF',
-    fontWeight: '600',
-    letterSpacing: 1,
-  },
-  buttonSpinner: {
-    marginLeft: 8,
-  },
+    titleContainer: {
+        alignItems: 'center',
+        paddingTop: 80,
+        paddingBottom: 40,
+        paddingHorizontal: 30,
+    },
+    title: {
+        ...typography.headerLarge,
+        fontSize: 48,
+        color: colors.tan,
+        fontWeight: '900',
+        letterSpacing: 8,
+        textAlign: 'center',
+        textShadowColor: colors.deepShadow,
+        textShadowOffset: { width: 3, height: 3 },
+        textShadowRadius: 0,
+        transform: [{ rotate: '-1deg' }],
+    }, 
+    titleAccent: {
+        width: 120,
+        height: 4,
+        backgroundColor: colors.vintageOrange,
+        marginTop: 8,
+        transform: [{ rotate: '1deg' }],
+        opacity: 0.8,
+    },
+    subtitle: {
+        ...typography.bodyLarge,
+        color: colors.peach,
+        fontWeight: '600',
+        letterSpacing: 3,
+        marginTop: 15,
+        fontStyle: 'italic',
+        transform: [{ rotate: '0.5deg' }],
+    },
+    preloadingContainer: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        marginTop: 20,
+        paddingHorizontal: 20,
+        paddingVertical: 10,
+        backgroundColor: `${colors.lightBrown}40`,
+        borderWidth: 1,
+        borderColor: colors.tan,
+        transform: [{ rotate: '-0.5deg' }],
+    },
+    preloadingText: {
+        ...typography.bodySmall,
+        color: colors.tan,
+        marginLeft: 10,
+        fontWeight: '600',
+        letterSpacing: 1,
+    },
+    
+    middleButtonsContainer: {
+        flex: 1,
+        justifyContent: 'center',
+        paddingHorizontal: 40,
+        gap: 25,
+    },
+    
+    categoryButton: {
+        ...common_styles.primaryButton,
+        backgroundColor: colors.forestGreen,
+        paddingVertical: 20,
+        paddingHorizontal: 40,
+        borderWidth: 3,
+        borderColor: colors.oliveGreen,
+        position: 'relative',
+        transform: [{ rotate: '0.5deg' }],
+    },
+    
+    categoryButtonMiddle: {
+        transform: [{ rotate: '-1deg' }],
+        backgroundColor: colors.oliveGreen,
+        borderColor: colors.mossGreen,
+    },
+    
+    categoryButtonText: {
+        ...typography.headerSmall,
+        color: colors.polaroidWhite,
+        textAlign: 'center',
+        fontWeight: '900',
+        letterSpacing: 3,
+    },
+    
+    categoryAccent: {
+        position: 'absolute',
+        bottom: -3,
+        right: 15,
+        width: 15,
+        height: 15,
+        backgroundColor: colors.vintageOrange,
+        transform: [{ rotate: '45deg' }],
+    },
+    
+    bottomButtonContainer: {
+        paddingHorizontal: 40,
+        paddingBottom: 60,
+        alignItems: 'center',
+        position: 'relative',
+    },
+    
+    galleryButton: {
+        backgroundColor: colors.lightBrown,
+        paddingVertical: 18,
+        paddingHorizontal: 50,
+        borderWidth: 3,
+        borderColor: colors.tan,
+        position: 'relative',
+        transform: [{ rotate: '-0.5deg' }],
+        ...shadows.lightShadow,
+    },
+    
+    galleryButtonLoading: {
+        backgroundColor: colors.darkGray,
+        borderColor: colors.mediumGray,
+    },
+    
+    galleryButtonText: {
+        ...typography.headerMedium,
+        color: colors.polaroidWhite,
+        textAlign: 'center',
+        fontWeight: '800',
+        letterSpacing: 4,
+    },
+    
+    galleryButtonDistress: {
+        position: 'absolute',
+        top: -4,
+        left: 10,
+        width: 20,
+        height: 3,
+        backgroundColor: colors.vintageRed,
+        transform: [{ rotate: '-5deg' }],
+        opacity: 0.7,
+    },
+    
+    buttonSpinner: {
+        position: 'absolute',
+        right: 15,
+        top: '50%',
+        marginTop: -10,
+    },
+    
+    bottomTape: {
+        bottom: 20,
+        right: 30,
+        transform: [{ rotate: '12deg' }],
+    },
 });

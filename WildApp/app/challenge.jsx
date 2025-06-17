@@ -1,23 +1,21 @@
 import React, { useState, useEffect } from 'react';
-import {
-  View,
-  Text,
-  TouchableOpacity,
-  StyleSheet,
-  Dimensions,
-  StatusBar,
-  Animated,
-  BackHandler,
+import { 
+  View, 
+  Text, 
+  TouchableOpacity, 
+  StatusBar, 
+  Animated, 
+  BackHandler 
 } from 'react-native';
-import { LinearGradient } from 'expo-linear-gradient';
-import { useRouter, useLocalSearchParams } from 'expo-router';
+import { useLocalSearchParams, useRouter } from 'expo-router';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { common_styles, colors, typography } from './styles';
 import { PostService } from './services/postService';
-
-const { width, height } = Dimensions.get('window');
 
 const ChallengePage = () => {
     const [pulseAnim] = useState(new Animated.Value(1));
     const [shakeAnim] = useState(new Animated.Value(0));
+    const [wobbleAnim] = useState(new Animated.Value(0));
     const { challenge, category } = useLocalSearchParams();
     const router = useRouter();
 
@@ -33,45 +31,63 @@ const ChallengePage = () => {
 
     useEffect(() => {
         const pulse = Animated.loop(
-        Animated.sequence([
-            Animated.timing(pulseAnim, {
-            toValue: 1.05,
-            duration: 2000,
-            useNativeDriver: true,
-            }),
-            Animated.timing(pulseAnim, {
-            toValue: 1,
-            duration: 2000,
-            useNativeDriver: true,
-            }),
-        ])
+            Animated.sequence([
+                Animated.timing(pulseAnim, {
+                    toValue: 1.02,
+                    duration: 3000,
+                    useNativeDriver: true,
+                }),
+                Animated.timing(pulseAnim, {
+                    toValue: 1,
+                    duration: 3000,
+                    useNativeDriver: true,
+                }),
+            ])
         );
         pulse.start();
+
+        const wobble = Animated.loop(
+            Animated.sequence([
+                Animated.timing(wobbleAnim, {
+                    toValue: 0.5,
+                    duration: 4000,
+                    useNativeDriver: true,
+                }),
+                Animated.timing(wobbleAnim, {
+                    toValue: -0.5,
+                    duration: 4000,
+                    useNativeDriver: true,
+                }),
+            ])
+        );
+        wobble.start();
     }, []);
 
     const handleCowardPress = async () => {
         Animated.sequence([
-          Animated.timing(shakeAnim, { toValue: 10, duration: 50, useNativeDriver: true }),
-          Animated.timing(shakeAnim, { toValue: -10, duration: 50, useNativeDriver: true }),
-          Animated.timing(shakeAnim, { toValue: 10, duration: 50, useNativeDriver: true }),
-          Animated.timing(shakeAnim, { toValue: 0, duration: 50, useNativeDriver: true }),
+            Animated.timing(shakeAnim, { toValue: 8, duration: 60, useNativeDriver: true }),
+            Animated.timing(shakeAnim, { toValue: -8, duration: 60, useNativeDriver: true }),
+            Animated.timing(shakeAnim, { toValue: 8, duration: 60, useNativeDriver: true }),
+            Animated.timing(shakeAnim, { toValue: -8, duration: 60, useNativeDriver: true }),
+            Animated.timing(shakeAnim, { toValue: 0, duration: 60, useNativeDriver: true }),
         ]).start();
 
         try {
-          cowardData = {
-            challenge: challenge,
-            username: 'anonymous',
-          }
+            const cowardData = {
+                challenge: challenge,
+                username: await AsyncStorage.getItem('username') || 'anonymous',
+            };
 
-          const result = await PostService.cowardPost(cowardData);
-          console.log('Coward post created:', result);
+            const result = await PostService.cowardPost(cowardData);
+            console.log('Coward post created:', result);
         } catch (error) {
-          console.error('Error creating coward post:', error);
+            console.error('Error creating coward post:', error);
         }
+
         setTimeout(() => {
-        router.push(
-            { pathname: 'coward', params: { challenge, category } }
-        )
+            router.push(
+                { pathname: 'coward', params: { challenge, category } }
+            );
         }, 1000);
     };
 
@@ -79,229 +95,237 @@ const ChallengePage = () => {
         router.push({
             pathname: 'postchallenge',
             params: { 
-            challenge, 
-            category,
-            completedAt: new Date().toISOString()
+                challenge, 
+                category,
+                completedAt: new Date().toISOString()
             }
         });
     };
 
     return (
-        <View style={styles.container}>
-        <StatusBar barStyle="light-content" backgroundColor="#1a1a1a" />
-        
-        <LinearGradient
-            colors={['#2a2a2a', '#1a1a1a', '#0f0f0f']}
-            style={styles.background}
-        />
-        
-        <View style={styles.grungeOverlay} />
-        
-        <View style={styles.header}>
-            <Text style={styles.categoryLabel}>{category.toUpperCase()}</Text>
-            <View style={styles.headerLine} />
-        </View>
-
-        <View style={styles.challengeContainer}>
-            <Animated.View 
+        <Animated.View 
             style={[
-                styles.challengeBox,
-                { transform: [{ scale: pulseAnim }] }
+                common_styles.container,
+                { transform: [{ rotate: `${wobbleAnim._value}deg` }] }
             ]}
-            >
-            <Text style={styles.challengeTitle}>YOUR MISSION:</Text>
-            <Text style={styles.challengeText}>{challenge}</Text>
-            </Animated.View>
+        >
+            <StatusBar barStyle="light-content" backgroundColor={colors.darkBrown} />
+            
+            <View style={common_styles.backgroundTexture} />
+            
+            <View style={styles.paperOverlay} />
+            
+            <View style={styles.header}>
+                <View style={common_styles.categoryBadge}>
+                    <Text style={common_styles.categoryBadgeText}>
+                        {category.toUpperCase()}
+                    </Text>
+                </View>
+                <View style={[common_styles.headerLine, styles.headerAccent]} />
+                <Text style={styles.missionLabel}>FIELD MISSION</Text>
+            </View>
 
-            <Text style={styles.warningText}>
-            NO BACKING OUT NOW.{'\n'}
-            DO IT OR FACE THE SHAME.
-            </Text>
-        </View>
+            <View style={common_styles.contentContainer}>
+                <View style={common_styles.polaroidContainer}>
+                    <Animated.View 
+                        style={[
+                            common_styles.polaroidLarge,
+                            styles.challengePolaroid,
+                            { transform: [
+                                { scale: pulseAnim },
+                                { rotate: '-1.5deg' }
+                            ]}
+                        ]}
+                    >
+                        <View style={[common_styles.cornerTear, common_styles.cornerTearTopLeft]} />
+                        <View style={[common_styles.cornerTear, common_styles.cornerTearBottomRight]} />
+                        
+                        <View style={[common_styles.tapeHorizontal, common_styles.tapeTopLeft]} />
+                        <View style={[common_styles.tapeHorizontal, common_styles.tapeBottomRight]} />
+                        
+                        <View style={[common_styles.photoFrame, common_styles.photoMedium]}>
+                            <View style={common_styles.photoPlaceholderContent}>
+                                <Text style={styles.adventureIcon}>🏞️</Text>
+                                <Text style={common_styles.photoPlaceholderText}>
+                                    YOUR ADVENTURE
+                                </Text>
+                                <Text style={common_styles.photoPlaceholderSubtext}>
+                                    awaits capture
+                                </Text>
+                            </View>
+                        </View>
+                        
+                        <View style={common_styles.captionArea}>
+                            <Text style={styles.challengeLabel}>MISSION BRIEFING:</Text>
+                            <Text style={[common_styles.challengeText, styles.challengeContent]}>
+                                {challenge}
+                            </Text>
+                        </View>
+                        
+                        <View style={common_styles.polaroidFooter}>
+                            <Text style={common_styles.usernameStamp}>EXPLORER</Text>
+                            <Text style={common_styles.dateStamp}>
+                                {new Date().toLocaleDateString()}
+                            </Text>
+                        </View>
+                    </Animated.View>
+                </View>
 
-        <View style={styles.buttonContainer}>
-            <TouchableOpacity 
-            style={styles.completeButton}
-            onPress={handleCompletePress}
-            activeOpacity={0.8}
-            >
-            <Text style={styles.completeButtonText}>I DID IT</Text>
-            <View style={styles.buttonDistress} />
-            </TouchableOpacity>
+                <View style={styles.warningContainer}>
+                    <Text style={styles.warningText}>
+                        THE WILD CALLS TO YOU.{'\n'}
+                        ANSWER OR RETREAT IN SHAME.
+                    </Text>
+                </View>
+            </View>
 
-            <Animated.View 
-            style={[
-                styles.cowardButtonContainer,
-                { transform: [{ translateX: shakeAnim }] }
-            ]}
-            >
-            <TouchableOpacity 
-                style={styles.cowardButton}
-                onPress={handleCowardPress}
-                activeOpacity={0.7}
-            >
-                <Text style={styles.cowardButtonText}>I'M A COWARD</Text>
-                <View style={styles.cowardDistress} />
-            </TouchableOpacity>
-            </Animated.View>
-        </View>
+            <View style={styles.buttonContainer}>
+                <TouchableOpacity 
+                    style={[common_styles.primaryButton, styles.completeButton]}
+                    onPress={handleCompletePress}
+                    activeOpacity={0.8}
+                >
+                    <Text style={common_styles.primaryButtonText}>MISSION COMPLETE</Text>
+                </TouchableOpacity>
 
-        <View style={styles.bottomGrunge} />
-        </View>
+                <Animated.View 
+                    style={[
+                        styles.cowardButtonContainer,
+                        { transform: [{ translateX: shakeAnim }] }
+                    ]}
+                >
+                    <TouchableOpacity 
+                        style={[common_styles.dangerButton, styles.cowardButton]}
+                        onPress={handleCowardPress}
+                        activeOpacity={0.7}
+                    >
+                        <Text style={common_styles.dangerButtonText}>RETREAT TO SAFETY</Text>
+                    </TouchableOpacity>
+                </Animated.View>
+            </View>
+
+            <View style={styles.bottomAccent} />
+        </Animated.View>
     );
 };
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#1a1a1a',
-  },
-  background: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-  },
-  grungeOverlay: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    backgroundColor: 'rgba(0,0,0,0.3)',
-    opacity: 0.7,
-  },
-  header: {
-    marginTop: 60,
-    paddingHorizontal: 30,
-    alignItems: 'center',
-  },
-  categoryLabel: {
-    fontSize: 16,
-    fontWeight: '900',
-    color: '#ff6b35',
-    letterSpacing: 3,
-    fontFamily: 'System',
-  },
-  headerLine: {
-    width: 100,
-    height: 3,
-    backgroundColor: '#ff6b35',
-    marginTop: 10,
-    transform: [{ rotate: '-1deg' }],
-  },
-  challengeContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    paddingHorizontal: 20,
-    alignItems: 'center',
-  },
-  challengeBox: {
-    backgroundColor: 'rgba(255, 255, 255, 0.95)',
-    padding: 30,
-    borderRadius: 0,
-    borderWidth: 3,
-    borderColor: '#333',
-    transform: [{ rotate: '-0.5deg' }],
-    shadowColor: '#000',
-    shadowOffset: { width: 5, height: 5 },
-    shadowOpacity: 0.3,
-    shadowRadius: 0,
-    elevation: 8,
-  },
-  challengeTitle: {
-    fontSize: 18,
-    fontWeight: '900',
-    color: '#333',
-    textAlign: 'center',
-    marginBottom: 15,
-    letterSpacing: 2,
-  },
-  challengeText: {
-    fontSize: 24,
-    fontWeight: '700',
-    color: '#111',
-    textAlign: 'center',
-    lineHeight: 30,
-    fontFamily: 'System',
-  },
-  warningText: {
-    fontSize: 14,
-    fontWeight: '800',
-    color: '#ff6b35',
-    textAlign: 'center',
-    marginTop: 40,
-    letterSpacing: 1,
-    lineHeight: 20,
-  },
-  buttonContainer: {
-    paddingHorizontal: 30,
-    paddingBottom: 50,
-    gap: 20,
-  },
-  completeButton: {
-    backgroundColor: '#4CAF50',
-    paddingVertical: 18,
-    paddingHorizontal: 40,
-    borderWidth: 3,
-    borderColor: '#2E7D32',
-    transform: [{ rotate: '0.5deg' }],
-    position: 'relative',
-  },
-  completeButtonText: {
-    fontSize: 20,
-    fontWeight: '900',
-    color: '#fff',
-    textAlign: 'center',
-    letterSpacing: 2,
-  },
-  buttonDistress: {
-    position: 'absolute',
-    top: -2,
-    right: -2,
-    width: 10,
-    height: 10,
-    backgroundColor: '#ff6b35',
-    transform: [{ rotate: '45deg' }],
-  },
-  cowardButtonContainer: {
-    alignSelf: 'center',
-  },
-  cowardButton: {
-    backgroundColor: '#666',
-    paddingVertical: 12,
-    paddingHorizontal: 30,
-    borderWidth: 2,
-    borderColor: '#333',
-    transform: [{ rotate: '-0.5deg' }],
-    position: 'relative',
-  },
-  cowardButtonText: {
-    fontSize: 14,
-    fontWeight: '700',
-    color: '#ccc',
-    textAlign: 'center',
-    letterSpacing: 1,
-  },
-  cowardDistress: {
-    position: 'absolute',
-    bottom: -1,
-    left: 5,
-    width: 20,
-    height: 2,
-    backgroundColor: '#333',
-  },
-  bottomGrunge: {
-    position: 'absolute',
-    bottom: 0,
-    left: 0,
-    right: 0,
-    height: 20,
-    backgroundColor: '#ff6b35',
-    opacity: 0.3,
-    transform: [{ skewY: '-1deg' }],
-  },
-});
+const styles = {
+    paperOverlay: {
+        position: 'absolute',
+        top: 0,
+        left: 0,
+        right: 0,
+        bottom: 0,
+        backgroundColor: 'rgba(245,245,220,0.05)',
+        opacity: 0.8,
+    },
+    
+    header: {
+        paddingTop: 60,
+        paddingHorizontal: 30,
+        alignItems: 'center',
+        paddingBottom: 20,
+    },
+    
+    headerAccent: {
+        backgroundColor: colors.forestGreen,
+        width: 120,
+        height: 4,
+        transform: [{ rotate: '1deg' }],
+    },
+    
+    missionLabel: {
+        ...typography.headerSmall,
+        color: colors.tan,
+        marginTop: 15,
+        letterSpacing: 3,
+        fontFamily: typography.fontFamily,
+    },
+    
+    challengePolaroid: {
+        backgroundColor: colors.polaroidWhite,
+        borderWidth: 2,
+        borderColor: colors.lightGray,
+        shadowColor: colors.deepShadow,
+        shadowOffset: { width: 4, height: 8 },
+        shadowOpacity: 0.5,
+        shadowRadius: 12,
+        elevation: 15,
+    },
+    
+    adventureIcon: {
+        fontSize: 48,
+        marginBottom: 10,
+    },
+    
+    challengeLabel: {
+        ...typography.label,
+        color: colors.forestGreen,
+        textAlign: 'center',
+        marginBottom: 8,
+        letterSpacing: 2,
+    },
+    
+    challengeContent: {
+        ...typography.bodyLarge,
+        color: colors.darkBrown,
+        fontWeight: '800',
+        lineHeight: 24,
+    },
+    
+    warningContainer: {
+        marginTop: 30,
+        marginBottom: 40,
+        paddingHorizontal: 20,
+        alignItems: 'center',
+    },
+    
+    warningText: {
+        ...typography.bodyMedium,
+        color: colors.vintageOrange,
+        textAlign: 'center',
+        fontWeight: '800',
+        letterSpacing: 1.5,
+        lineHeight: 22,
+        transform: [{ rotate: '-0.5deg' }],
+    },
+    
+    buttonContainer: {
+        paddingHorizontal: 30,
+        paddingBottom: 50,
+        gap: 25,
+    },
+    
+    completeButton: {
+        paddingVertical: 20,
+        shadowColor: colors.deepShadow,
+        shadowOffset: { width: 3, height: 5 },
+        shadowOpacity: 0.3,
+        shadowRadius: 8,
+        elevation: 10,
+        transform: [{ rotate: '1deg' }],
+    },
+    
+    cowardButtonContainer: {
+        alignSelf: 'center',
+    },
+    
+    cowardButton: {
+        paddingVertical: 16,
+        transform: [{ rotate: '-1deg' }],
+        borderWidth: 3,
+    },
+    
+    bottomAccent: {
+        position: 'absolute',
+        bottom: 0,
+        left: 0,
+        right: 0,
+        height: 25,
+        backgroundColor: colors.forestGreen,
+        opacity: 0.4,
+        transform: [{ skewY: '1deg' }],
+    },
+};
 
 export default ChallengePage;
