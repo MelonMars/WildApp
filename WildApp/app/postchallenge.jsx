@@ -14,6 +14,7 @@ import {
 import { LinearGradient } from 'expo-linear-gradient';
 import { Camera } from 'expo-camera';
 import * as ImagePicker from 'expo-image-picker';
+import { PostService } from './services/postService';
 
 const { width, height } = Dimensions.get('window');
 import { useRouter, useLocalSearchParams } from 'expo-router';
@@ -78,7 +79,7 @@ const PostChallengePage = () => {
     }
   };
 
-  const handlePost = () => {
+  const handlePost = async () => {
     if (!photo) {
       Alert.alert('Photo Required', 'Take a photo to prove you did it!');
       return;
@@ -87,20 +88,39 @@ const PostChallengePage = () => {
     const post = {
       challenge,
       category,
-      photo,
+      photo: 'https://picsum.photos/400/400',
       caption: caption || `Just crushed: ${challenge}`,
       completedAt,
       timestamp: new Date().toISOString(),
     };
 
-    console.log('Posting to wall:', post);
+    try {
+      console.log('Posting to wall:', post);
 
-    router.push({
-        "pathname": "gallery",
-        "params": { 
-            newPost: JSON.stringify(post)
+      const newPost = await PostService.createPost(post);
+
+      console.log('Post created successfully:', newPost);
+
+      router.push({
+        pathname: "gallery",
+        params: {
+          newPost: JSON.stringify(newPost),
+          isNewPost: 'true'
         }
-    })
+      });
+
+    } catch (error) {
+      console.error('Failed to create post:', error);
+
+      Alert.alert(
+        'Post Failed',
+        'Something went wrong while posting. Please try again.',
+        [
+          { text: 'Cancel', style: 'cancel' },
+          { text: 'Retry', onPress: () => handlePost() }
+        ]
+      );
+    }
   };
 
   const formatDate = (dateString) => {
