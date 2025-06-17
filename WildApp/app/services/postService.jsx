@@ -1,6 +1,44 @@
 import { supabase } from '../config/supabase';
+import * as FileSystem from 'expo-file-system';
+import { decode } from 'base64-arraybuffer';
 
 export class PostService {
+  static async uploadPhoto(photoUri, fileName = null) {
+    try {
+      console.log('Reading file from URI:', photoUri);
+      
+      const base64 = await FileSystem.readAsStringAsync(photoUri, {
+        encoding: FileSystem.EncodingType.Base64,
+      });
+      
+      const uniqueFileName = fileName || `post_${Date.now()}_${Math.random().toString(36).substring(7)}.jpg`;
+      
+      console.log('Uploading file:', uniqueFileName);
+      
+      const { data, error } = await supabase.storage
+        .from('posts')
+        .upload(uniqueFileName, decode(base64), {
+          contentType: 'image/jpeg',
+          upsert: false
+        });
+
+      if (error) {
+        console.error('Supabase upload error:', error);
+        throw error;
+      }
+
+      const { data: { publicUrl } } = supabase.storage
+        .from('posts')
+        .getPublicUrl(data.path);
+
+      console.log('File uploaded successfully, public URL:', publicUrl);
+      return publicUrl;
+    } catch (error) {
+      console.error('Error uploading photo:', error);
+      throw error;
+    }
+  }
+
   static async fetchPosts(lastDoc = null, pageSize = 2) {
     try {
       let query = supabase

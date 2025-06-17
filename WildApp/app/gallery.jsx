@@ -391,7 +391,7 @@ export default function GalleryPage() {
             <Animated.View style={[styles.header, { opacity: fadeAnim }]}>
                 <TouchableOpacity
                     style={styles.backButton}
-                    onPress={() => router.back()}
+                    onPress={() => router.navigate('/')}
                 >
                     <Text style={styles.backButtonText}>← HOME</Text>
                 </TouchableOpacity>

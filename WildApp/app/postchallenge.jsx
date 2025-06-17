@@ -80,48 +80,56 @@ const PostChallengePage = () => {
   };
 
   const handlePost = async () => {
-    if (!photo) {
-      Alert.alert('Photo Required', 'Take a photo to prove you did it!');
-      return;
-    }
+  if (!photo) {
+    Alert.alert('Photo Required', 'Take a photo to prove you did it!');
+    return;
+  }
 
+  try {
+    console.log('Starting post creation process...');
+    console.log("Using photo URI:", photo);
+    
+    console.log('Uploading photo...');
+    const photoUrl = await PostService.uploadPhoto(photo);
+    console.log('Photo uploaded successfully:', photoUrl);
+    
     const post = {
       challenge,
       category,
-      photo: 'https://picsum.photos/400/400',
+      photo: photoUrl,
       caption: caption || `Just crushed: ${challenge}`,
       completedAt,
       timestamp: new Date().toISOString(),
     };
 
-    try {
-      console.log('Posting to wall:', post);
+    console.log('Creating post in database:', post);
+    
+    const newPost = await PostService.createPost(post);
+    
+    console.log('Post created successfully:', newPost);
+    
+    router.push({
+      pathname: "gallery",
+      params: {
+        newPost: JSON.stringify(newPost),
+        isNewPost: 'true'
+      }
+    });
+    
+  } catch (error) {
+    console.error('Failed to create post:', error);
+    
+    Alert.alert(
+      'Post Failed', 
+      'Something went wrong while posting. Please try again.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        { text: 'Retry', onPress: () => handlePost() }
+      ]
+    );
+  }
+};
 
-      const newPost = await PostService.createPost(post);
-
-      console.log('Post created successfully:', newPost);
-
-      router.push({
-        pathname: "gallery",
-        params: {
-          newPost: JSON.stringify(newPost),
-          isNewPost: 'true'
-        }
-      });
-
-    } catch (error) {
-      console.error('Failed to create post:', error);
-
-      Alert.alert(
-        'Post Failed',
-        'Something went wrong while posting. Please try again.',
-        [
-          { text: 'Cancel', style: 'cancel' },
-          { text: 'Retry', onPress: () => handlePost() }
-        ]
-      );
-    }
-  };
 
   const formatDate = (dateString) => {
     const date = new Date(dateString);
