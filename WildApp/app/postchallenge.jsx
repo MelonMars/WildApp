@@ -23,6 +23,7 @@ const PostChallengePage = () => {
   const [fadeAnim] = useState(new Animated.Value(0));
   const [slideAnim] = useState(new Animated.Value(50));
   const [caption, setCaption] = useState('');
+  const [username, setUsername] = useState('');
   const [photo, setPhoto] = useState(null);
   const [cameraPermission, setCameraPermission] = useState(null);
   const { challenge, category, completedAt } = useLocalSearchParams();
@@ -214,6 +215,15 @@ const PostChallengePage = () => {
                 onChangeText={setCaption}
                 multiline
                 maxLength={100}
+                textAlignVertical="top"
+              />
+              <TextInput
+                style={styles.captionInput}
+                placeholder="Your name (optional)"
+                placeholderTextColor="#666"
+                value={username}
+                onChangeText={setUsername}
+                maxLength={30}
                 textAlignVertical="top"
               />
 

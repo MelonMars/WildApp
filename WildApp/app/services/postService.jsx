@@ -108,7 +108,7 @@ export class PostService {
       const { data, error } = await supabase
         .from('posts')
         .insert([{
-          username: postData.username || 'you',
+          username: postData.username || 'anonymous',
           challenge: postData.challenge,
           category: postData.category,
           photo: postData.photo,
@@ -128,6 +128,38 @@ export class PostService {
       return data;
     } catch (error) {
       console.error('Error creating post:', error);
+      throw error;
+    }
+  }
+
+  static async cowardPost(cowardData) {
+    try {
+      const currentTimestamp = new Date().toISOString();
+      
+      const { data, error } = await supabase
+        .from('posts')
+        .insert([{
+          username: cowardData.username || 'anonymous_coward',
+          challenge: cowardData.challenge,
+          category: 'COWARD',
+          photo: null,
+          caption: cowardData.caption || null,
+          completed_at: currentTimestamp,
+          timestamp: currentTimestamp,
+          likes: 0,
+          comments: 0
+        }])
+        .select()
+        .single();
+
+      if (error) {
+        throw error;
+      }
+
+      console.log('Coward post created successfully:', data);
+      return data;
+    } catch (error) {
+      console.error('Error creating coward post:', error);
       throw error;
     }
   }

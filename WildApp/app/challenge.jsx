@@ -11,6 +11,7 @@ import {
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter, useLocalSearchParams } from 'expo-router';
+import { PostService } from './services/postService';
 
 const { width, height } = Dimensions.get('window');
 
@@ -48,14 +49,25 @@ const ChallengePage = () => {
         pulse.start();
     }, []);
 
-    const handleCowardPress = () => {
+    const handleCowardPress = async () => {
         Animated.sequence([
-        Animated.timing(shakeAnim, { toValue: 10, duration: 50, useNativeDriver: true }),
-        Animated.timing(shakeAnim, { toValue: -10, duration: 50, useNativeDriver: true }),
-        Animated.timing(shakeAnim, { toValue: 10, duration: 50, useNativeDriver: true }),
-        Animated.timing(shakeAnim, { toValue: 0, duration: 50, useNativeDriver: true }),
+          Animated.timing(shakeAnim, { toValue: 10, duration: 50, useNativeDriver: true }),
+          Animated.timing(shakeAnim, { toValue: -10, duration: 50, useNativeDriver: true }),
+          Animated.timing(shakeAnim, { toValue: 10, duration: 50, useNativeDriver: true }),
+          Animated.timing(shakeAnim, { toValue: 0, duration: 50, useNativeDriver: true }),
         ]).start();
 
+        try {
+          cowardData = {
+            challenge: challenge,
+            username: 'anonymous',
+          }
+
+          const result = await PostService.cowardPost(cowardData);
+          console.log('Coward post created:', result);
+        } catch (error) {
+          console.error('Error creating coward post:', error);
+        }
         setTimeout(() => {
         router.push(
             { pathname: 'coward', params: { challenge, category } }

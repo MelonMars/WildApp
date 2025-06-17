@@ -23,7 +23,7 @@ const CowardPage = () => {
   const [timeLeft, setTimeLeft] = useState(10);
   
   const { challenge, category } = useLocalSearchParams();
-    const navigation = useRouter();
+  const router = useRouter();
 
   useEffect(() => {
     Vibration.vibrate([0, 100, 50, 100]);
@@ -76,8 +76,8 @@ const CowardPage = () => {
     }
     
     router.push(
-        { pathname: 'home', params: { redemption: true } }
-    )
+        { pathname: '/', params: { redemption: true } }
+    );
   };
 
   const getShameMessage = () => {
