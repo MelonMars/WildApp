@@ -31,7 +31,7 @@ const colors = {
 };
 
 const typography = {
-  fontFamily: 'System', // Make this Courier New
+  fontFamily: 'Courier New',
   
   headerLarge: {
     fontSize: 32,
@@ -402,35 +402,7 @@ export const common_styles = StyleSheet.create({
     ...typography.stamp,
     color: colors.polaroidWhite,
   },
-  
-  cornerTear: {
-    position: 'absolute',
-    width: 12,
-    height: 12,
-    backgroundColor: colors.mediumBrown,
-    transform: [{ rotate: '45deg' }],
-  },
-  
-  cornerTearTopLeft: {
-    top: -2,
-    left: -2,
-  },
-  
-  cornerTearTopRight: {
-    top: -2,
-    right: -2,
-  },
-  
-  cornerTearBottomLeft: {
-    bottom: -2,
-    left: -2,
-  },
-  
-  cornerTearBottomRight: {
-    bottom: -2,
-    right: -2,
-  },
-  
+    
   tapeHorizontal: {
     position: 'absolute',
     width: 40,

@@ -13,6 +13,7 @@ import {
 } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { common_styles, colors, typography } from './styles';
+import * as Haptics from 'expo-haptics';
 
 const { width, height } = Dimensions.get('window');
 
@@ -69,6 +70,8 @@ const CowardPage = () => {
   }, [timeLeft]);
 
   const handleRedemption = () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+
     if (timeLeft > 0) {
       Vibration.vibrate(50);
       return;
@@ -125,11 +128,6 @@ const CowardPage = () => {
                   RETREAT
                 </Text>
               </View>
-              
-              <View style={[common_styles.cornerTear, common_styles.cornerTearTopLeft]} />
-              <View style={[common_styles.cornerTear, common_styles.cornerTearTopRight]} />
-              <View style={[common_styles.cornerTear, common_styles.cornerTearBottomLeft]} />
-              
               <View style={[common_styles.photoFrame, common_styles.photoMedium, styles.shamePhoto]}>
                 <View style={common_styles.photoPlaceholderContent}>
                   <Text style={styles.shameIcon}>🏃‍♂️💨</Text>

@@ -3,6 +3,7 @@ import { View, Text, TouchableOpacity, StyleSheet, ActivityIndicator } from 'rea
 import { useRouter } from 'expo-router';
 import { useApp } from './contexts/AppContext';
 import { common_styles, colors, typography, shadows } from './styles'; 
+import * as Haptics from 'expo-haptics';
 
 export default function Home() {
     const router = useRouter();
@@ -18,6 +19,7 @@ export default function Home() {
     }
 
     const navigateToPage1 = () => {
+        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
         console.log('Navigate to Page 1');
         const challenge = fetchChallenge('social');
         router.push({
@@ -27,6 +29,7 @@ export default function Home() {
     };
 
     const navigateToPage2 = () => {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
         console.log('Navigate to Page 2');
         const challenge = fetchChallenge('adventure');
         router.push({
@@ -36,6 +39,7 @@ export default function Home() {
     };
 
     const navigateToPage3 = () => {
+        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
         console.log('Navigate to Page 3');
         const challenge = fetchChallenge('creative');
         router.push({
@@ -45,6 +49,7 @@ export default function Home() {
     };
 
     const navigateToGallery = () => {
+        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
         console.log('Navigate to Gallery');
         router.push('/gallery');
     };
@@ -52,10 +57,6 @@ export default function Home() {
     return (
       <View style={common_styles.container}>
           <View style={common_styles.backgroundTexture} />
-          
-          <View style={[common_styles.cornerTear, common_styles.cornerTearTopLeft]} />
-          <View style={[common_styles.cornerTear, common_styles.cornerTearTopRight]} />
-          
           <View style={styles.titleContainer}>
               <Text style={styles.title}>Wild</Text>
               <View style={styles.titleAccent} />
@@ -110,9 +111,6 @@ export default function Home() {
               
               <View style={[common_styles.tapeHorizontal, styles.bottomTape]} />
           </View>
-          
-          <View style={[common_styles.cornerTear, common_styles.cornerTearBottomLeft]} />
-          <View style={[common_styles.cornerTear, common_styles.cornerTearBottomRight]} />
       </View>
   );
 }

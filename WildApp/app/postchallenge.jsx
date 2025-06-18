@@ -17,6 +17,7 @@ import * as ImagePicker from 'expo-image-picker';
 import { PostService } from './services/postService';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { common_styles, colors } from './styles';
+import * as Haptics from 'expo-haptics';
 
 const { width, height } = Dimensions.get('window');
 import { useRouter, useLocalSearchParams } from 'expo-router';
@@ -80,6 +81,7 @@ const PostChallengePage = () => {
   }, []);
 
   const takePicture = async () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     if (!cameraPermission) {
       Alert.alert('Camera Permission', 'Please enable camera access to take photos');
       return;
@@ -98,6 +100,7 @@ const PostChallengePage = () => {
   };
 
   const selectFromGallery = async () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     const result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ImagePicker.MediaTypeOptions.Images,
       allowsEditing: true,
@@ -111,6 +114,7 @@ const PostChallengePage = () => {
   };
 
   const handlePost = async () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
     if (!photo) {
       Alert.alert('Photo Required', 'Take a photo to prove you did it!');
       return;
@@ -277,7 +281,10 @@ const PostChallengePage = () => {
                 placeholder="Write your victory story..."
                 placeholderTextColor={colors.darkGray}
                 value={caption}
-                onChangeText={setCaption}
+                onChangeText={text => {
+                  setCaption(text);
+                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                }}
                 multiline
                 maxLength={100}
                 textAlignVertical="top"
@@ -299,7 +306,10 @@ const PostChallengePage = () => {
                 placeholder="Your name (optional)"
                 placeholderTextColor={colors.darkGray}
                 value={username}
-                onChangeText={setUsername}
+                onChangeText={text => {
+                  setUsername(text);
+                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                }}
                 maxLength={30}
                 textAlignVertical="top"
                 blurOnSubmit={true}
@@ -314,9 +324,6 @@ const PostChallengePage = () => {
                 <Text style={common_styles.dateStamp}>{formatDate(completedAt)}</Text>
               </View>
             </View>
-
-            <View style={[common_styles.cornerTear, common_styles.cornerTearTopLeft]} />
-            <View style={[common_styles.cornerTear, common_styles.cornerTearBottomRight]} />
           </View>
 
           <View style={[common_styles.tapeHorizontal, common_styles.tapeTopLeft]} />

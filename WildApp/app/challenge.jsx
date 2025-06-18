@@ -1,21 +1,28 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { 
   View, 
   Text, 
   TouchableOpacity, 
   StatusBar, 
   Animated, 
-  BackHandler 
+  BackHandler,
+  Vibration
 } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { common_styles, colors, typography } from './styles';
 import { PostService } from './services/postService';
+import * as Haptics from 'expo-haptics';
 
 const ChallengePage = () => {
     const [pulseAnim] = useState(new Animated.Value(1));
     const [shakeAnim] = useState(new Animated.Value(0));
     const [wobbleAnim] = useState(new Animated.Value(0));
+    const [fillAnim] = useState(new Animated.Value(0));
+    const [isHolding, setIsHolding] = useState(false);
+    const [showConfirmation, setShowConfirmation] = useState(false);
+    const holdingRef = useRef(false);
+    const fillAnimationRef = useRef(null);
     const { challenge, category } = useLocalSearchParams();
     const router = useRouter();
 
@@ -63,7 +70,13 @@ const ChallengePage = () => {
         wobble.start();
     }, []);
 
-    const handleCowardPress = async () => {
+    const handleCowardPressIn = () => {
+        console.log('Press in - starting hold');
+        setIsHolding(true);
+        holdingRef.current = true;
+         
+        Vibration.vibrate([0, 100, 0], true);
+
         Animated.sequence([
             Animated.timing(shakeAnim, { toValue: 8, duration: 60, useNativeDriver: true }),
             Animated.timing(shakeAnim, { toValue: -8, duration: 60, useNativeDriver: true }),
@@ -72,6 +85,46 @@ const ChallengePage = () => {
             Animated.timing(shakeAnim, { toValue: 0, duration: 60, useNativeDriver: true }),
         ]).start();
 
+        fillAnimationRef.current = Animated.timing(fillAnim, {
+            toValue: 1,
+            duration: 3000,
+            useNativeDriver: false,
+        });
+        
+        fillAnimationRef.current.start(({ finished }) => {
+            Vibration.cancel();
+            console.log('Animation finished:', finished, 'Still holding:', holdingRef.current);
+            if (finished && holdingRef.current) {
+                console.log('Showing confirmation');
+                setShowConfirmation(true);
+                setIsHolding(false);
+                holdingRef.current = false;
+            }
+        });
+    };
+
+    const handleCowardPressOut = () => {
+        console.log('Press out - stopping hold');
+        setIsHolding(false);
+        holdingRef.current = false;
+        
+        Vibration.cancel();
+
+        if (fillAnimationRef.current) {
+            fillAnimationRef.current.stop();
+        }
+        
+        Animated.timing(fillAnim, {
+            toValue: 0,
+            duration: 300,
+            useNativeDriver: false,
+        }).start();
+    };
+
+    const handleConfirmRetreat = async () => {
+        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
+        setShowConfirmation(false);
+        
         try {
             const cowardData = {
                 challenge: challenge,
@@ -88,10 +141,24 @@ const ChallengePage = () => {
             router.push(
                 { pathname: 'coward', params: { challenge, category } }
             );
-        }, 1000);
+        }, 500);
+    };
+
+    const handleCancelRetreat = () => {
+        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Soft);
+        setShowConfirmation(false);
+        setIsHolding(false);
+        holdingRef.current = false;
+        
+        Animated.timing(fillAnim, {
+            toValue: 0,
+            duration: 300,
+            useNativeDriver: false,
+        }).start();
     };
 
     const handleCompletePress = () => {
+        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
         router.push({
             pathname: 'postchallenge',
             params: { 
@@ -101,6 +168,11 @@ const ChallengePage = () => {
             }
         });
     };
+
+    const fillHeight = fillAnim.interpolate({
+        inputRange: [0, 1],
+        outputRange: ['0%', '100%'],
+    });
 
     return (
         <Animated.View 
@@ -137,9 +209,6 @@ const ChallengePage = () => {
                             ]}
                         ]}
                     >
-                        <View style={[common_styles.cornerTear, common_styles.cornerTearTopLeft]} />
-                        <View style={[common_styles.cornerTear, common_styles.cornerTearBottomRight]} />
-                        
                         <View style={[common_styles.tapeHorizontal, common_styles.tapeTopLeft]} />
                         <View style={[common_styles.tapeHorizontal, common_styles.tapeBottomRight]} />
                         
@@ -196,15 +265,51 @@ const ChallengePage = () => {
                 >
                     <TouchableOpacity 
                         style={[common_styles.dangerButton, styles.cowardButton]}
-                        onPress={handleCowardPress}
+                        onPressIn={handleCowardPressIn}
+                        onPressOut={handleCowardPressOut}
                         activeOpacity={0.7}
                     >
-                        <Text style={common_styles.dangerButtonText}>RETREAT TO SAFETY</Text>
+                        <Animated.View 
+                            style={[
+                                styles.buttonFill,
+                                { height: fillHeight }
+                            ]}
+                        />
+                        <Text style={[common_styles.dangerButtonText, styles.cowardButtonText]}>
+                            {isHolding ? 'HOLD TO RETREAT...' : 'RETREAT TO SAFETY'}
+                        </Text>
                     </TouchableOpacity>
                 </Animated.View>
             </View>
 
             <View style={styles.bottomAccent} />
+
+            {showConfirmation && (
+                <View style={styles.modalOverlay}>
+                    <View style={styles.confirmationModal}>
+                        <Text style={styles.confirmationTitle}>⚠️ RETREAT CONFIRMATION</Text>
+                        <Text style={styles.confirmationMessage}>
+                            Are you absolutely certain you want to abandon this mission and retreat to safety?
+                            {'\n\n'}
+                            This action will mark you as a coward for this challenge.
+                        </Text>
+                        <View style={styles.confirmationButtons}>
+                            <TouchableOpacity 
+                                style={[common_styles.primaryButton, styles.cancelButton]}
+                                onPress={handleCancelRetreat}
+                            >
+                                <Text style={common_styles.primaryButtonText}>STAY BRAVE</Text>
+                            </TouchableOpacity>
+                            <TouchableOpacity 
+                                style={[common_styles.dangerButton, styles.confirmButton]}
+                                onPress={handleConfirmRetreat}
+                            >
+                                <Text style={common_styles.dangerButtonText}>CONFIRM RETREAT</Text>
+                            </TouchableOpacity>
+                        </View>
+                    </View>
+                </View>
+            )}
         </Animated.View>
     );
 };
@@ -219,21 +324,18 @@ const styles = {
         backgroundColor: 'rgba(245,245,220,0.05)',
         opacity: 0.8,
     },
-    
     header: {
         paddingTop: 60,
         paddingHorizontal: 30,
         alignItems: 'center',
         paddingBottom: 20,
     },
-    
     headerAccent: {
         backgroundColor: colors.forestGreen,
         width: 120,
         height: 4,
         transform: [{ rotate: '1deg' }],
     },
-    
     missionLabel: {
         ...typography.headerSmall,
         color: colors.tan,
@@ -241,7 +343,6 @@ const styles = {
         letterSpacing: 3,
         fontFamily: typography.fontFamily,
     },
-    
     challengePolaroid: {
         backgroundColor: colors.polaroidWhite,
         borderWidth: 2,
@@ -252,12 +353,10 @@ const styles = {
         shadowRadius: 12,
         elevation: 15,
     },
-    
     adventureIcon: {
         fontSize: 48,
         marginBottom: 10,
     },
-    
     challengeLabel: {
         ...typography.label,
         color: colors.forestGreen,
@@ -265,21 +364,18 @@ const styles = {
         marginBottom: 8,
         letterSpacing: 2,
     },
-    
     challengeContent: {
         ...typography.bodyLarge,
         color: colors.darkBrown,
         fontWeight: '800',
         lineHeight: 24,
     },
-    
     warningContainer: {
         marginTop: 30,
         marginBottom: 40,
         paddingHorizontal: 20,
         alignItems: 'center',
     },
-    
     warningText: {
         ...typography.bodyMedium,
         color: colors.vintageOrange,
@@ -289,13 +385,11 @@ const styles = {
         lineHeight: 22,
         transform: [{ rotate: '-0.5deg' }],
     },
-    
     buttonContainer: {
         paddingHorizontal: 30,
         paddingBottom: 50,
         gap: 25,
     },
-    
     completeButton: {
         paddingVertical: 20,
         shadowColor: colors.deepShadow,
@@ -305,17 +399,14 @@ const styles = {
         elevation: 10,
         transform: [{ rotate: '1deg' }],
     },
-    
     cowardButtonContainer: {
         alignSelf: 'center',
     },
-    
     cowardButton: {
         paddingVertical: 16,
         transform: [{ rotate: '-1deg' }],
         borderWidth: 3,
     },
-    
     bottomAccent: {
         position: 'absolute',
         bottom: 0,
@@ -325,6 +416,69 @@ const styles = {
         backgroundColor: colors.forestGreen,
         opacity: 0.4,
         transform: [{ skewY: '1deg' }],
+    },
+    buttonFill: {
+        position: 'absolute',
+        bottom: 0,
+        left: 0,
+        right: 0,
+        backgroundColor: 'rgba(255, 116, 16, 0.3)',
+        borderRadius: 8,
+    },
+    cowardButtonText: {
+        zIndex: 1,
+        position: 'relative',
+    },
+    modalOverlay: {
+        position: 'absolute',
+        top: 0,
+        left: 0,
+        right: 0,
+        bottom: 0,
+        backgroundColor: 'rgba(0, 0, 0, 0.7)',
+        justifyContent: 'center',
+        alignItems: 'center',
+        zIndex: 1000,
+    },
+    confirmationModal: {
+        backgroundColor: colors.cream,
+        margin: 20,
+        padding: 25,
+        borderRadius: 15,
+        borderWidth: 3,
+        borderColor: colors.darkBrown,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.3,
+        shadowRadius: 8,
+        elevation: 8,
+    },
+    confirmationTitle: {
+        fontSize: 18,
+        fontWeight: 'bold',
+        color: colors.darkBrown,
+        textAlign: 'center',
+        marginBottom: 15,
+        fontFamily: 'serif',
+    },
+    confirmationMessage: {
+        fontSize: 16,
+        color: colors.darkBrown,
+        textAlign: 'center',
+        marginBottom: 25,
+        lineHeight: 22,
+        fontFamily: 'serif',
+    },
+    confirmationButtons: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        gap: 15,
+    },
+    cancelButton: {
+        flex: 1,
+    },
+    confirmButton: {
+        flex: 1,
     },
 };
 

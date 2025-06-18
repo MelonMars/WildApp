@@ -17,6 +17,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { useApp } from './contexts/AppContext';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { Image } from 'expo-image';
+import * as Haptics from 'expo-haptics';
 
 import { PostService } from './services/postService';
 import { common_styles, colors, typography, shadows } from './styles';
@@ -141,6 +142,7 @@ export default function GalleryPage() {
     };
 
     const openModal = (post) => {
+        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
         setSelectedPost(post);
         Animated.spring(modalAnim, {
             toValue: 1,
@@ -151,6 +153,7 @@ export default function GalleryPage() {
     };
 
     const closeModal = () => {
+        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
         Animated.timing(modalAnim, {
             toValue: 0,
             duration: 300,
@@ -386,8 +389,6 @@ export default function GalleryPage() {
                         renderCowardCaption(item) :
                         renderNormalCaption(item)
                     }
-                    <View style={[common_styles.cornerTear, common_styles.cornerTearTopLeft]} />
-                    <View style={[common_styles.cornerTear, common_styles.cornerTearBottomRight]} />
                     <View style={[
                         common_styles.tapeHorizontal,
                         common_styles.tapeTopLeft,
@@ -412,6 +413,8 @@ export default function GalleryPage() {
         });
 
         const handleShare = async () => {
+            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+
             try {
                 const shareContent = isCowardPost 
                     ? `${selectedPost.username.toUpperCase()} is a COWARD! 📸 Challenge: "${selectedPost.challenge}"`
@@ -518,8 +521,6 @@ export default function GalleryPage() {
                             </View>
                         </View>
                         
-                        <View style={[common_styles.cornerTear, common_styles.cornerTearTopLeft]} />
-                        <View style={[common_styles.cornerTear, common_styles.cornerTearBottomRight]} />
                         <View style={[common_styles.tapeHorizontal, common_styles.tapeTopLeft]} />
                         <View style={[common_styles.tapeHorizontal, common_styles.tapeBottomRight]} />
                     </View>
@@ -557,7 +558,10 @@ export default function GalleryPage() {
             <Animated.View style={[common_styles.header, { opacity: fadeAnim, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }]}>
                 <TouchableOpacity
                     style={[common_styles.ghostButton, styles.backButton]}
-                    onPress={() => router.navigate('/')}
+                    onPress={() => {
+                        router.navigate('/');
+                        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                    }}
                 >
                     <Text style={common_styles.ghostButtonText}>← HOME</Text>
                 </TouchableOpacity>
