@@ -4,14 +4,29 @@ import { useRouter } from 'expo-router';
 import { useApp } from './contexts/AppContext';
 import { common_styles, colors, typography, shadows } from './styles'; 
 import * as Haptics from 'expo-haptics';
+import { PostService } from './services/postService';
 
 export default function Home() {
     const router = useRouter();
     const { isPreloading, preloadComplete } = useApp();
+    const [challenges, setChallenges] = React.useState(null);
+
+    useEffect(() => {
+        const fetchChallenges = async () => {
+            try {
+                const challengesData = await PostService.fetchChallenges();
+                setChallenges(challengesData);
+            } catch (error) {
+                console.error('Error fetching challenges:', error);
+            }
+        };
+
+        if (isPreloading) {
+            fetchChallenges();
+        }
+    }, [isPreloading, preloadComplete]);
 
     const fetchChallenge = (type) => {
-        // Open challenge list from challenges.json
-        const challenges = require('./challenges.json');
         const challengeList = challenges[type];
         const randomIndex = Math.floor(Math.random() * challengeList.length);
         const randomChallenge = challengeList[randomIndex];
@@ -53,6 +68,12 @@ export default function Home() {
         console.log('Navigate to Gallery');
         router.push('/gallery');
     };
+
+    const handleCreateChallenge = () => {
+        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+        console.log('Create Challenge');
+        router.push('/createchallenge');
+    }
 
     return (
       <View style={common_styles.container}>
@@ -108,7 +129,11 @@ export default function Home() {
                   )}
                   <View style={styles.galleryButtonDistress} />
               </TouchableOpacity>
-              
+                <TouchableOpacity 
+                    style={[common_styles.primaryButton, {'marginTop': 20}]} 
+                    onPress={handleCreateChallenge}>
+                    <Text style={common_styles.primaryButtonText}>New Challenge</Text>
+                </TouchableOpacity>
               <View style={[common_styles.tapeHorizontal, styles.bottomTape]} />
           </View>
       </View>

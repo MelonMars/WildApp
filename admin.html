@@ -1,0 +1,745 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🌲 Challenge Review Portal 🏕️</title>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Courier+Prime:wght@400;700&family=Permanent+Marker&display=swap');
+        
+        :root {
+            --forest-green: #2d5016;
+            --moss-green: #4a7c59;
+            --sage-green: #87a96b;
+            --cream: #f5f1e8;
+            --bark-brown: #8b4513;
+            --vintage-orange: #d2691e;
+            --pine-dark: #1a3409;
+            --leaf-light: #9cb86f;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Courier Prime', monospace;
+            background: linear-gradient(135deg, var(--forest-green) 0%, var(--pine-dark) 100%);
+            min-height: 100vh;
+            color: var(--cream);
+            position: relative;
+            overflow-x: hidden;
+        }
+
+        body::before {
+            content: '';
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: 
+                radial-gradient(circle at 20% 30%, rgba(139, 69, 19, 0.1) 0%, transparent 50%),
+                radial-gradient(circle at 80% 70%, rgba(210, 105, 30, 0.1) 0%, transparent 50%),
+                repeating-linear-gradient(
+                    45deg,
+                    transparent,
+                    transparent 2px,
+                    rgba(245, 241, 232, 0.02) 2px,
+                    rgba(245, 241, 232, 0.02) 4px
+                );
+            pointer-events: none;
+            z-index: 1;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 20px;
+            position: relative;
+            z-index: 2;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 40px;
+            background: rgba(26, 52, 9, 0.8);
+            padding: 30px;
+            border-radius: 15px;
+            border: 3px solid var(--bark-brown);
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+            backdrop-filter: blur(10px);
+        }
+
+        .header h1 {
+            font-family: 'Permanent Marker', cursive;
+            font-size: 2.5rem;
+            color: var(--vintage-orange);
+            text-shadow: 3px 3px 6px rgba(0,0,0,0.7);
+            margin-bottom: 10px;
+            transform: rotate(-1deg);
+        }
+
+        .header p {
+            font-size: 1.1rem;
+            color: var(--leaf-light);
+            font-weight: 700;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+        }
+
+        .stats-panel {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            margin-bottom: 40px;
+        }
+
+        .stat-card {
+            background: rgba(74, 124, 89, 0.9);
+            padding: 20px;
+            border-radius: 12px;
+            border: 2px solid var(--sage-green);
+            text-align: center;
+            box-shadow: 0 8px 20px rgba(0,0,0,0.3);
+            transform: rotate(0.5deg);
+            transition: all 0.3s ease;
+        }
+
+        .stat-card:nth-child(even) {
+            transform: rotate(-0.5deg);
+        }
+
+        .stat-card:hover {
+            transform: rotate(0deg) scale(1.05);
+            box-shadow: 0 12px 30px rgba(0,0,0,0.4);
+        }
+
+        .stat-number {
+            font-size: 2.5rem;
+            font-weight: bold;
+            color: var(--vintage-orange);
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
+        }
+
+        .stat-label {
+            font-size: 0.9rem;
+            color: var(--cream);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-top: 5px;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 40px;
+            font-size: 1.2rem;
+            color: var(--leaf-light);
+        }
+
+        .submissions-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+            gap: 30px;
+            margin-top: 30px;
+        }
+
+        .submission-card {
+            background: rgba(245, 241, 232, 0.95);
+            border-radius: 15px;
+            overflow: hidden;
+            box-shadow: 0 15px 35px rgba(0,0,0,0.4);
+            border: 3px solid var(--bark-brown);
+            color: var(--forest-green);
+            position: relative;
+            transform: rotate(-0.5deg);
+            transition: all 0.3s ease;
+        }
+
+        .submission-card:nth-child(even) {
+            transform: rotate(0.5deg);
+        }
+
+        .submission-card:hover {
+            transform: rotate(0deg) scale(1.02);
+            box-shadow: 0 20px 40px rgba(0,0,0,0.5);
+        }
+
+        .submission-header {
+            background: var(--moss-green);
+            color: var(--cream);
+            padding: 15px;
+            text-align: center;
+            position: relative;
+        }
+
+        .submission-header::after {
+            content: '';
+            position: absolute;
+            bottom: -10px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 0;
+            height: 0;
+            border-left: 10px solid transparent;
+            border-right: 10px solid transparent;
+            border-top: 10px solid var(--moss-green);
+        }
+
+        .challenge-name {
+            font-size: 1.1rem;
+            font-weight: bold;
+            margin-bottom: 5px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .category-badge {
+            background: var(--vintage-orange);
+            color: var(--cream);
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            font-weight: bold;
+            display: inline-block;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .submission-content {
+            padding: 20px;
+        }
+
+        .proof-photo {
+            width: 100%;
+            height: 200px;
+            object-fit: cover;
+            border-radius: 10px;
+            border: 2px solid var(--sage-green);
+            margin-bottom: 15px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+        }
+
+        .user-info {
+            background: rgba(135, 169, 107, 0.2);
+            padding: 10px;
+            border-radius: 8px;
+            margin-bottom: 15px;
+            border-left: 4px solid var(--moss-green);
+        }
+
+        .caption {
+            font-style: italic;
+            margin: 10px 0;
+            padding: 10px;
+            background: rgba(74, 124, 89, 0.1);
+            border-radius: 8px;
+            border-left: 3px solid var(--sage-green);
+        }
+
+        .timestamp {
+            font-size: 0.85rem;
+            color: var(--bark-brown);
+            margin-bottom: 15px;
+        }
+
+        .action-buttons {
+            display: flex;
+            gap: 10px;
+            margin-top: 15px;
+        }
+
+        .btn {
+            flex: 1;
+            padding: 12px 20px;
+            border: none;
+            border-radius: 8px;
+            font-family: 'Courier Prime', monospace;
+            font-weight: bold;
+            font-size: 0.9rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+        }
+
+        .btn-approve {
+            background: var(--moss-green);
+            color: var(--cream);
+        }
+
+        .btn-approve:hover {
+            background: var(--sage-green);
+            transform: translateY(-2px);
+            box-shadow: 0 6px 16px rgba(0,0,0,0.3);
+        }
+
+        .btn-reject {
+            background: #8B0000;
+            color: var(--cream);
+        }
+
+        .btn-reject:hover {
+            background: #A52A2A;
+            transform: translateY(-2px);
+            box-shadow: 0 6px 16px rgba(0,0,0,0.3);
+        }
+
+        .btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none !important;
+        }
+
+        .review-notes {
+            width: 100%;
+            margin-top: 10px;
+            padding: 8px;
+            border: 2px solid var(--sage-green);
+            border-radius: 6px;
+            font-family: 'Courier Prime', monospace;
+            font-size: 0.9rem;
+            resize: vertical;
+            min-height: 60px;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 60px 20px;
+            color: var(--leaf-light);
+        }
+
+        .empty-state h3 {
+            font-size: 1.5rem;
+            margin-bottom: 10px;
+            color: var(--vintage-orange);
+        }
+
+        .refresh-btn {
+            background: var(--vintage-orange);
+            color: var(--cream);
+            border: none;
+            padding: 15px 30px;
+            border-radius: 10px;
+            font-family: 'Courier Prime', monospace;
+            font-weight: bold;
+            font-size: 1rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            cursor: pointer;
+            margin: 20px auto;
+            display: block;
+            box-shadow: 0 6px 18px rgba(0,0,0,0.3);
+            transition: all 0.3s ease;
+        }
+
+        .refresh-btn:hover {
+            background: var(--bark-brown);
+            transform: translateY(-2px);
+            box-shadow: 0 8px 22px rgba(0,0,0,0.4);
+        }
+
+        .notification {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            padding: 15px 25px;
+            border-radius: 10px;
+            color: var(--cream);
+            font-weight: bold;
+            z-index: 1000;
+            transform: translateX(400px);
+            transition: all 0.3s ease;
+            box-shadow: 0 8px 20px rgba(0,0,0,0.4);
+        }
+
+        .notification.show {
+            transform: translateX(0);
+        }
+
+        .notification.success {
+            background: var(--moss-green);
+        }
+
+        .notification.error {
+            background: #8B0000;
+        }
+
+        .pine-decoration {
+            position: absolute;
+            font-size: 2rem;
+            opacity: 0.1;
+            pointer-events: none;
+            animation: float 6s ease-in-out infinite;
+        }
+
+        .pine-decoration:nth-child(1) { top: 10%; left: 5%; animation-delay: 0s; }
+        .pine-decoration:nth-child(2) { top: 30%; right: 10%; animation-delay: 2s; }
+        .pine-decoration:nth-child(3) { bottom: 20%; left: 8%; animation-delay: 4s; }
+        .pine-decoration:nth-child(4) { bottom: 40%; right: 5%; animation-delay: 1s; }
+
+        @keyframes float {
+            0%, 100% { transform: translateY(0px) rotate(0deg); }
+            50% { transform: translateY(-20px) rotate(5deg); }
+        }
+
+        @media (max-width: 768px) {
+            .header h1 {
+                font-size: 1.8rem;
+            }
+            
+            .submissions-grid {
+                grid-template-columns: 1fr;
+                gap: 20px;
+            }
+            
+            .stat-card {
+                transform: none;
+            }
+            
+            .submission-card {
+                transform: none;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="pine-decoration">🌲</div>
+    <div class="pine-decoration">🏕️</div>
+    <div class="pine-decoration">🍃</div>
+    <div class="pine-decoration">🌿</div>
+
+    <div class="container">
+        <div class="header">
+            <h1>🌲 Forest Ranger's Challenge Review Station 🏕️</h1>
+            <p>Reviewing Nature's Newest Adventures</p>
+        </div>
+
+        <div class="stats-panel" id="statsPanel">
+            <div class="stat-card">
+                <div class="stat-number" id="pendingCount">-</div>
+                <div class="stat-label">Pending Review</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number" id="approvedCount">-</div>
+                <div class="stat-label">Approved Today</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number" id="rejectedCount">-</div>
+                <div class="stat-label">Rejected Today</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number" id="totalCount">-</div>
+                <div class="stat-label">Total Submissions</div>
+            </div>
+        </div>
+
+        <button class="refresh-btn" onclick="loadData()">🔄 Refresh Trail Reports</button>
+
+        <div id="loadingIndicator" class="loading">
+            🌲 Loading challenge submissions from the wilderness... 🏕️
+        </div>
+
+        <div id="submissionsContainer" class="submissions-grid"></div>
+
+        <div id="emptyState" class="empty-state" style="display: none;">
+            <h3>🌟 All Clear on the Trail! 🌟</h3>
+            <p>No pending challenge submissions to review right now.</p>
+            <p>The wilderness is quiet... for now. 🦌</p>
+        </div>
+    </div>
+
+    <div id="notification" class="notification"></div>
+
+    <script>
+        const supabaseUrl = 'https://xnjgkayzqcsgwfpzznrf.supabase.co';
+        const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhuamdrYXl6cWNzZ3dmcHp6bnJmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTAxMjEyMTUsImV4cCI6MjA2NTY5NzIxNX0.pgJsFRTIhlYfZ1k7yOAB89NiQAp1-z2tQXh2zZEXvzQ';
+        
+        let supabase = null;
+        let currentSubmissions = [];
+
+        function initializeSupabase() {
+            if (typeof window.supabase !== 'undefined' && window.supabase.createClient) {
+                supabase = window.supabase.createClient(supabaseUrl, supabaseKey);
+                return true;
+            }
+            return false;
+        }
+
+        function waitForSupabase() {
+            return new Promise((resolve) => {
+                if (initializeSupabase()) {
+                    resolve();
+                    return;
+                }
+                
+                const checkSupabase = setInterval(() => {
+                    if (initializeSupabase()) {
+                        clearInterval(checkSupabase);
+                        resolve();
+                    }
+                }, 100);
+                
+                setTimeout(() => {
+                    clearInterval(checkSupabase);
+                    resolve();
+                }, 5000);
+            });
+        }
+
+        document.addEventListener('DOMContentLoaded', async function() {
+            await waitForSupabase();
+            if (supabase) {
+                loadData();
+            } else {
+                showNotification('Failed to initialize Supabase client! 🐻', 'error');
+            }
+        });
+
+        async function loadData() {
+            if (!supabase) {
+                showNotification('Supabase not initialized! 🐻', 'error');
+                return;
+            }
+            
+            showLoading(true);
+            try {
+                await Promise.all([loadSubmissions()]);
+            } catch (error) {
+                console.error('Error loading data:', error);
+                showNotification('Failed to load data from the wilderness! 🐻', 'error');
+            } finally {
+                showLoading(false);
+            }
+        }
+
+        async function loadSubmissions() {
+            try {
+                const { data, error } = await supabase
+                    .from('newchallengepost')
+                    .select(`
+                        id,
+                        username,
+                        challenge_name,
+                        category,
+                        proof_photo,
+                        caption,
+                        completed_at,
+                        submitted_at,
+                        status
+                    `)
+                    .eq('status', 'pending')
+                    .order('submitted_at', { ascending: true })
+                    .limit(50);
+
+                if (error) throw error;
+
+                currentSubmissions = data || [];
+                renderSubmissions();
+            } catch (error) {
+                console.error('Error loading submissions:', error);
+                showNotification('Failed to load challenge submissions! 🐻', 'error');
+            }
+        }
+
+        function renderSubmissions() {
+            const container = document.getElementById('submissionsContainer');
+            const emptyState = document.getElementById('emptyState');
+
+            if (currentSubmissions.length === 0) {
+                container.innerHTML = '';
+                emptyState.style.display = 'block';
+                return;
+            }
+
+            emptyState.style.display = 'none';
+            container.innerHTML = currentSubmissions.map(submission => `
+                <div class="submission-card" id="card-${submission.id}">
+                    <div class="submission-header">
+                        <div class="challenge-name">${escapeHtml(submission.challenge_name)}</div>
+                        <div class="category-badge">${escapeHtml(submission.category)}</div>
+                    </div>
+                    <div class="submission-content">
+                        ${submission.proof_photo ? 
+                            `<img src="${submission.proof_photo}" alt="Proof photo" class="proof-photo" onerror="this.style.display='none'">` : 
+                            '<div style="height: 200px; background: var(--sage-green); border-radius: 10px; display: flex; align-items: center; justify-content: center; color: var(--cream); margin-bottom: 15px;">📷 No Photo Provided</div>'
+                        }
+                        <div class="user-info">
+                            <strong>🏕️ Adventurer:</strong> ${escapeHtml(submission.username)}<br>
+                            <strong>📅 Completed:</strong> ${formatDate(submission.completed_at)}<br>
+                            <strong>📝 Submitted:</strong> ${formatDate(submission.submitted_at)}
+                        </div>
+                        ${submission.caption ? 
+                            `<div class="caption">"${escapeHtml(submission.caption)}"</div>` : ''
+                        }
+                        <textarea class="review-notes" id="notes-${submission.id}" placeholder="🌲 Add review notes (optional)..."></textarea>
+                        <div class="action-buttons">
+                            <button class="btn btn-approve" onclick="reviewSubmission('${submission.id}', 'approved')">
+                                ✅ Approve Adventure
+                            </button>
+                            <button class="btn btn-reject" onclick="reviewSubmission('${submission.id}', 'rejected')">
+                                ❌ Reject Quest
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        async function reviewSubmission(submissionId, action) {
+            if (!supabase) {
+                showNotification('Supabase not initialized! 🐻', 'error');
+                return;
+            }
+            
+            const card = document.getElementById(`card-${submissionId}`);
+            const buttons = card.querySelectorAll('.btn');
+            const notesInput = document.getElementById(`notes-${submissionId}`);
+            const reviewNotes = notesInput.value.trim();
+
+            buttons.forEach(btn => btn.disabled = true);
+
+            try {
+                const { data: updatedSubmission, error: updateError } = await supabase
+                    .from('newchallengepost')
+                    .update({
+                        status: action,
+                        review_notes: reviewNotes || null,
+                        reviewed_by: 'admin',
+                        reviewed_at: new Date().toISOString()
+                    })
+                    .eq('id', submissionId)
+                    .select()
+                    .single();
+
+                if (updateError) throw updateError;
+
+                if (action === 'approved') {
+                    await processApprovedSubmission(updatedSubmission);
+                }
+
+                card.style.transition = 'all 0.5s ease';
+                card.style.transform = 'scale(0.8) rotate(10deg)';
+                card.style.opacity = '0';
+                
+                setTimeout(() => {
+                    currentSubmissions = currentSubmissions.filter(s => s.id !== submissionId);
+                    renderSubmissions();
+                }, 500);
+
+                const emoji = action === 'approved' ? '🌟' : '🚫';
+                const message = action === 'approved' ? 
+                    `${emoji} Challenge approved and added to the trail map!` : 
+                    `${emoji} Challenge rejected and removed from consideration.`;
+                
+                showNotification(message, 'success');
+
+            } catch (error) {
+                console.error(`Error ${action} submission:`, error);
+                showNotification(`Failed to ${action} challenge! Please try again. 🐻`, 'error');
+                
+                buttons.forEach(btn => btn.disabled = false);
+            }
+        }
+
+        async function processApprovedSubmission(submission) {
+            try {
+                const postData = {
+                    username: submission.username,
+                    challenge: submission.challenge_name,
+                    category: submission.category,
+                    photo: submission.proof_photo,
+                    caption: submission.caption || `Just completed: ${submission.challenge_name}`,
+                    completed_at: submission.completed_at,
+                    timestamp: new Date().toISOString(),
+                    likes: 0,
+                    comments: 0
+                };
+
+                const { error: postError } = await supabase
+                    .from('posts')
+                    .insert([postData]);
+
+                if (postError) {
+                    console.warn('Failed to create post:', postError);
+                }
+
+                const challengeData = {
+                    name: submission.challenge_name,
+                    category: submission.category,
+                    description: submission.caption || submission.challenge_name,
+                    difficulty: getChallengeDifficulty(submission.category),
+                    created_at: new Date().toISOString(),
+                    is_active: true,
+                };
+
+                const { error: challengeError } = await supabase
+                    .from('challenges')
+                    .insert([challengeData]);
+
+                if (challengeError) {
+                    console.warn('Failed to create challenge:', challengeError);
+                }
+
+            } catch (error) {
+                console.error('Error processing approved submission:', error);
+            }
+        }
+
+        function getChallengeDifficulty(category) {
+            const difficultyMap = {
+                'fitness': 'hard',
+                'adventure': 'hard',
+                'creative': 'medium',
+                'social': 'easy',
+                'learning': 'medium',
+                'mindfulness': 'easy',
+                'other': 'medium'
+            };
+            return difficultyMap[category.toLowerCase()] || 'medium';
+        }
+
+        function showLoading(show) {
+            document.getElementById('loadingIndicator').style.display = show ? 'block' : 'none';
+        }
+
+        function showNotification(message, type = 'success') {
+            const notification = document.getElementById('notification');
+            notification.textContent = message;
+            notification.className = `notification ${type}`;
+            
+            setTimeout(() => notification.classList.add('show'), 100);
+            
+            setTimeout(() => {
+                notification.classList.remove('show');
+            }, 4000);
+        }
+
+        function formatDate(dateString) {
+            return new Date(dateString).toLocaleString('en-US', {
+                month: 'short',
+                day: 'numeric',
+                year: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit'
+            });
+        }
+
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        setInterval(() => {
+            if (supabase) {
+                loadData();
+            }
+        }, 5 * 60 * 1000);
+    </script>
+</body>
+</html>

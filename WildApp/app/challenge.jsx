@@ -6,7 +6,8 @@ import {
   StatusBar, 
   Animated, 
   BackHandler,
-  Vibration
+  Vibration,
+  ScrollView
 } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -181,135 +182,137 @@ const ChallengePage = () => {
                 { transform: [{ rotate: `${wobbleAnim._value}deg` }] }
             ]}
         >
-            <StatusBar barStyle="light-content" backgroundColor={colors.darkBrown} />
-            
-            <View style={common_styles.backgroundTexture} />
-            
-            <View style={styles.paperOverlay} />
-            
-            <View style={styles.header}>
-                <View style={common_styles.categoryBadge}>
-                    <Text style={common_styles.categoryBadgeText}>
-                        {category.toUpperCase()}
-                    </Text>
+            <ScrollView>
+                <StatusBar barStyle="light-content" backgroundColor={colors.darkBrown} />
+                
+                <View style={common_styles.backgroundTexture} />
+                
+                <View style={styles.paperOverlay} />
+                
+                <View style={styles.header}>
+                    <View style={common_styles.categoryBadge}>
+                        <Text style={common_styles.categoryBadgeText}>
+                            {category.toUpperCase()}
+                        </Text>
+                    </View>
+                    <View style={[common_styles.headerLine, styles.headerAccent]} />
+                    <Text style={styles.missionLabel}>FIELD MISSION</Text>
                 </View>
-                <View style={[common_styles.headerLine, styles.headerAccent]} />
-                <Text style={styles.missionLabel}>FIELD MISSION</Text>
-            </View>
 
-            <View style={common_styles.contentContainer}>
-                <View style={common_styles.polaroidContainer}>
-                    <Animated.View 
-                        style={[
-                            common_styles.polaroidLarge,
-                            styles.challengePolaroid,
-                            { transform: [
-                                { scale: pulseAnim },
-                                { rotate: '-1.5deg' }
+                <View style={common_styles.contentContainer}>
+                    <View style={common_styles.polaroidContainer}>
+                        <Animated.View 
+                            style={[
+                                common_styles.polaroidLarge,
+                                styles.challengePolaroid,
+                                { transform: [
+                                    { scale: pulseAnim },
+                                    { rotate: '-1.5deg' }
+                                ]}
                             ]}
-                        ]}
-                    >
-                        <View style={[common_styles.tapeHorizontal, common_styles.tapeTopLeft]} />
-                        <View style={[common_styles.tapeHorizontal, common_styles.tapeBottomRight]} />
-                        
-                        <View style={[common_styles.photoFrame, common_styles.photoMedium]}>
-                            <View style={common_styles.photoPlaceholderContent}>
-                                <Text style={styles.adventureIcon}>🏞️</Text>
-                                <Text style={common_styles.photoPlaceholderText}>
-                                    YOUR ADVENTURE
-                                </Text>
-                                <Text style={common_styles.photoPlaceholderSubtext}>
-                                    awaits capture
+                        >
+                            <View style={[common_styles.tapeHorizontal, common_styles.tapeTopLeft]} />
+                            <View style={[common_styles.tapeHorizontal, common_styles.tapeBottomRight]} />
+                            
+                            <View style={[common_styles.photoFrame, common_styles.photoMedium]}>
+                                <View style={common_styles.photoPlaceholderContent}>
+                                    <Text style={styles.adventureIcon}>🏞️</Text>
+                                    <Text style={common_styles.photoPlaceholderText}>
+                                        YOUR ADVENTURE
+                                    </Text>
+                                    <Text style={common_styles.photoPlaceholderSubtext}>
+                                        awaits capture
+                                    </Text>
+                                </View>
+                            </View>
+                            
+                            <View style={common_styles.captionArea}>
+                                <Text style={styles.challengeLabel}>MISSION BRIEFING:</Text>
+                                <Text style={[common_styles.challengeText, styles.challengeContent]}>
+                                    {challenge}
                                 </Text>
                             </View>
-                        </View>
-                        
-                        <View style={common_styles.captionArea}>
-                            <Text style={styles.challengeLabel}>MISSION BRIEFING:</Text>
-                            <Text style={[common_styles.challengeText, styles.challengeContent]}>
-                                {challenge}
+                            
+                            <View style={common_styles.polaroidFooter}>
+                                <Text style={common_styles.usernameStamp}>EXPLORER</Text>
+                                <Text style={common_styles.dateStamp}>
+                                    {new Date().toLocaleDateString()}
+                                </Text>
+                            </View>
+                        </Animated.View>
+                    </View>
+
+                    <View style={styles.warningContainer}>
+                        <Text style={styles.warningText}>
+                            THE WILD CALLS TO YOU.{'\n'}
+                            ANSWER OR RETREAT IN SHAME.
+                        </Text>
+                    </View>
+                </View>
+
+                <View style={styles.buttonContainer}>
+                    <TouchableOpacity 
+                        style={[common_styles.primaryButton, styles.completeButton]}
+                        onPress={handleCompletePress}
+                        activeOpacity={0.8}
+                    >
+                        <Text style={common_styles.primaryButtonText}>MISSION COMPLETE</Text>
+                    </TouchableOpacity>
+
+                    <Animated.View 
+                        style={[
+                            styles.cowardButtonContainer,
+                            { transform: [{ translateX: shakeAnim }] }
+                        ]}
+                    >
+                        <TouchableOpacity 
+                            style={[common_styles.dangerButton, styles.cowardButton]}
+                            onPressIn={handleCowardPressIn}
+                            onPressOut={handleCowardPressOut}
+                            activeOpacity={0.7}
+                        >
+                            <Animated.View 
+                                style={[
+                                    styles.buttonFill,
+                                    { height: fillHeight }
+                                ]}
+                            />
+                            <Text style={[common_styles.dangerButtonText, styles.cowardButtonText]}>
+                                {isHolding ? 'HOLD TO RETREAT...' : 'RETREAT TO SAFETY'}
                             </Text>
-                        </View>
-                        
-                        <View style={common_styles.polaroidFooter}>
-                            <Text style={common_styles.usernameStamp}>EXPLORER</Text>
-                            <Text style={common_styles.dateStamp}>
-                                {new Date().toLocaleDateString()}
-                            </Text>
-                        </View>
+                        </TouchableOpacity>
                     </Animated.View>
                 </View>
 
-                <View style={styles.warningContainer}>
-                    <Text style={styles.warningText}>
-                        THE WILD CALLS TO YOU.{'\n'}
-                        ANSWER OR RETREAT IN SHAME.
-                    </Text>
-                </View>
-            </View>
+                <View style={styles.bottomAccent} />
 
-            <View style={styles.buttonContainer}>
-                <TouchableOpacity 
-                    style={[common_styles.primaryButton, styles.completeButton]}
-                    onPress={handleCompletePress}
-                    activeOpacity={0.8}
-                >
-                    <Text style={common_styles.primaryButtonText}>MISSION COMPLETE</Text>
-                </TouchableOpacity>
-
-                <Animated.View 
-                    style={[
-                        styles.cowardButtonContainer,
-                        { transform: [{ translateX: shakeAnim }] }
-                    ]}
-                >
-                    <TouchableOpacity 
-                        style={[common_styles.dangerButton, styles.cowardButton]}
-                        onPressIn={handleCowardPressIn}
-                        onPressOut={handleCowardPressOut}
-                        activeOpacity={0.7}
-                    >
-                        <Animated.View 
-                            style={[
-                                styles.buttonFill,
-                                { height: fillHeight }
-                            ]}
-                        />
-                        <Text style={[common_styles.dangerButtonText, styles.cowardButtonText]}>
-                            {isHolding ? 'HOLD TO RETREAT...' : 'RETREAT TO SAFETY'}
-                        </Text>
-                    </TouchableOpacity>
-                </Animated.View>
-            </View>
-
-            <View style={styles.bottomAccent} />
-
-            {showConfirmation && (
-                <View style={styles.modalOverlay}>
-                    <View style={styles.confirmationModal}>
-                        <Text style={styles.confirmationTitle}>⚠️ RETREAT CONFIRMATION</Text>
-                        <Text style={styles.confirmationMessage}>
-                            Are you absolutely certain you want to abandon this mission and retreat to safety?
-                            {'\n\n'}
-                            This action will mark you as a coward for this challenge.
-                        </Text>
-                        <View style={styles.confirmationButtons}>
-                            <TouchableOpacity 
-                                style={[common_styles.primaryButton, styles.cancelButton]}
-                                onPress={handleCancelRetreat}
-                            >
-                                <Text style={common_styles.primaryButtonText}>STAY BRAVE</Text>
-                            </TouchableOpacity>
-                            <TouchableOpacity 
-                                style={[common_styles.dangerButton, styles.confirmButton]}
-                                onPress={handleConfirmRetreat}
-                            >
-                                <Text style={common_styles.dangerButtonText}>CONFIRM RETREAT</Text>
-                            </TouchableOpacity>
+                {showConfirmation && (
+                    <View style={styles.modalOverlay}>
+                        <View style={styles.confirmationModal}>
+                            <Text style={styles.confirmationTitle}>⚠️ RETREAT CONFIRMATION</Text>
+                            <Text style={styles.confirmationMessage}>
+                                Are you absolutely certain you want to abandon this mission and retreat to safety?
+                                {'\n\n'}
+                                This action will mark you as a coward for this challenge.
+                            </Text>
+                            <View style={styles.confirmationButtons}>
+                                <TouchableOpacity 
+                                    style={[common_styles.primaryButton, styles.cancelButton]}
+                                    onPress={handleCancelRetreat}
+                                >
+                                    <Text style={common_styles.primaryButtonText}>STAY BRAVE</Text>
+                                </TouchableOpacity>
+                                <TouchableOpacity 
+                                    style={[common_styles.dangerButton, styles.confirmButton]}
+                                    onPress={handleConfirmRetreat}
+                                >
+                                    <Text style={common_styles.dangerButtonText}>CONFIRM RETREAT</Text>
+                                </TouchableOpacity>
+                            </View>
                         </View>
                     </View>
-                </View>
-            )}
+                )}
+            </ScrollView>
         </Animated.View>
     );
 };
@@ -371,8 +374,8 @@ const styles = {
         lineHeight: 24,
     },
     warningContainer: {
-        marginTop: 30,
-        marginBottom: 40,
+        marginTop: 15,
+        marginBottom: 20,
         paddingHorizontal: 20,
         alignItems: 'center',
     },
