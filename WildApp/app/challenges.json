@@ -8,12 +8,18 @@
         "Convince a stranger to teach you a useless skill in exchange for you to teach them one of yours.",
         "Go to a public place and start a conga line. Get at least 10 people to join in.",
         "Start a flash mob in a public place. Get at least 10 people to join in.",
-        "Barter something you own for something you want."
+        "Barter something you own for something you want.",
+        "Go up to a stranger, tag them and say 'You're it!' then run away.",
+        "Go to a public space with a sign saying 'Free Advice' and give BAD advice to anyone who asks.",
+        "Go up to someone at the gym and say they're doing the form wrong, and then do a different exercise.",
+        "Go to a slow moving line (e.g. coffee shop) and then loudly propose for everyone to do a stretch break, and lead it yourself.",
+        "Call a restaurant that you don't work at, and then say that you're quitting and give a fake name. Double or triple down, make sure they believe you."
     ],
     "creative": [
         "Write a letter, put it in a bottle, and throw it into a body of water that is not an ocean. Include your contact details on it.",
         "Build a raft out of found materials and float it down a river or stream.",
-        "Build a shelter from scratch in the woods and spend 3 hours inside it."
+        "Build a shelter from scratch in the woods and spend 3 hours inside it.",
+        "Compose a one minute soundscape using only sounds you find in nature."
     ],
     "adventure": [
         "Spend a night living like a caveman. No electricity, no running water, no modern conveniences. Just you and nature.",
@@ -24,6 +30,8 @@
         "Walk around from sundown to sunrise without using any artificial light sources.",
         "Climb a tree and write a letter to someone. Leave it hidden in the branches for a stranger to find.",
         "Climb onto a rooftop and shout your name to the world as loud as you can.",
-        "Find a forgotten path, trail, or alley, and follow it until it ends."
+        "Find a forgotten path, trail, or alley, and follow it until it ends.",
+        "Hike to a spot with a wild viewpoint and watch the sunset or sunrise.",
+        "Hike to a spot with a wild viewpoint and leave something behind."
     ]
 }
