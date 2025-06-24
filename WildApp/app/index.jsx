@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, ActivityIndicator } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useApp } from './contexts/AppContext';
@@ -6,6 +6,8 @@ import { common_styles, colors, typography, shadows } from './styles';
 import * as Haptics from 'expo-haptics';
 import { PostService } from './services/postService';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useFocusEffect } from '@react-navigation/native';
 
 export default function Home() {
     const router = useRouter();
@@ -13,6 +15,43 @@ export default function Home() {
     const [challenges, setChallenges] = useState(null);
     const [loadingTodaysChallenge, setLoadingTodaysChallenge] = useState(true);
     const [todaysChallenge, setTodaysChallenge] = useState(null);
+    const [streak, setStreak] = useState(0);
+    const [needStreak, setNeedStreak] = useState(false);
+   
+    const getStreak = async () => {
+        try {
+            const storedStreak = await AsyncStorage.getItem('streak');
+            if (storedStreak) {
+                setStreak(parseInt(storedStreak, 10));
+            }
+        } catch (error) {
+            console.error('Error fetching streak:', error);
+        }
+    };
+
+    const checkStreak = async () => {
+        try {
+            const lastCompleted = await AsyncStorage.getItem('lastCompleted');
+            if (lastCompleted) {
+                const lastDate = new Date(lastCompleted);
+                const today = new Date();
+                if (lastDate.toDateString() === today.toDateString()) {
+                    setNeedStreak(false);
+                } else {
+                    setNeedStreak(true);
+                }
+            }
+        } catch (error) {
+            console.error('Error checking streak:', error);
+        }
+    };
+
+    useFocusEffect(
+        useCallback(() => {
+            getStreak();
+            checkStreak();
+        }, [])
+    );
 
     useEffect(() => {
         const fetchChallenges = async () => {
@@ -119,27 +158,31 @@ export default function Home() {
                 )}
             </View>
 
-            <TouchableOpacity style={styles.todaysChallengeButton} onPress={handleTodaysChallenge}>
-                {!loadingTodaysChallenge ? (
-                    <Text style={common_styles.secondaryButtonText}>{todaysChallenge.name}</Text>
-                ) : (
-                    <ActivityIndicator size="small" color={colors.polaroidWhite} />
-                )}
-            </TouchableOpacity>
+            <View style={styles.todaysChallengeRow}>
+                <TouchableOpacity style={styles.todaysChallengeButton} onPress={handleTodaysChallenge}>
+                    {!loadingTodaysChallenge ? (
+                        <Text style={[common_styles.secondaryButtonText, styles.challengeButtonText]} numberOfLines={1}>
+                            {todaysChallenge.name}
+                        </Text>
+                    ) : (
+                        <ActivityIndicator size="small" color={colors.polaroidWhite} />
+                    )}
+                </TouchableOpacity>
+                <Text style={styles.streakCounter}>
+                    {streak} {needStreak ? '⌛' : '🔥'}
+                </Text>
+            </View>
             <View style={styles.middleButtonsContainer}>
                 <TouchableOpacity style={styles.categoryButton} onPress={navigateToPage1}>
                     <Text style={styles.categoryButtonText}>🤝SOCIAL</Text>
-                    <View style={styles.categoryAccent} />
                 </TouchableOpacity>
 
                 <TouchableOpacity style={[styles.categoryButton, styles.categoryButtonMiddle]} onPress={navigateToPage2}>
                     <Text style={styles.categoryButtonText}>🧭ADVENTURE</Text>
-                    <View style={styles.categoryAccent} />
                 </TouchableOpacity>
 
                 <TouchableOpacity style={styles.categoryButton} onPress={navigateToPage3}>
                     <Text style={styles.categoryButtonText}>🎨CREATIVE</Text>
-                    <View style={styles.categoryAccent} />
                 </TouchableOpacity>
             </View>
 
@@ -300,13 +343,11 @@ const styles = StyleSheet.create({
         position: 'relative',
         transform: [{ rotate: '-0.5deg' }],
         ...shadows.lightShadow,
-    },
-    
+    },    
     galleryButtonLoading: {
         backgroundColor: colors.darkGray,
         borderColor: colors.mediumGray,
     },
-    
     galleryButtonText: {
         ...typography.headerMedium,
         color: colors.polaroidWhite,
@@ -314,7 +355,6 @@ const styles = StyleSheet.create({
         fontWeight: '800',
         letterSpacing: 4,
     },
-    
     galleryButtonDistress: {
         position: 'absolute',
         top: -4,
@@ -325,14 +365,12 @@ const styles = StyleSheet.create({
         transform: [{ rotate: '-5deg' }],
         opacity: 0.7,
     },
-    
     buttonSpinner: {
         position: 'absolute',
         right: 15,
         top: '50%',
         marginTop: -10,
     },
-    
     bottomTape: {
         bottom: 20,
         right: 30,
@@ -353,5 +391,31 @@ const styles = StyleSheet.create({
         marginTop: -15,
         width: '80%',
         alignSelf: 'center',
+    },
+    todaysChallengeRow: {
+        flexDirection: 'row', 
+        alignItems: 'center', 
+        justifyContent: 'space-between',
+        marginBottom: 10,
+        paddingHorizontal: 10,
+    },
+    todaysChallengeButton: {
+        ...common_styles.secondaryButton,
+        marginBottom: 0,
+        marginTop: 0,
+        flex: 1,
+        marginRight: 12,
+        minWidth: 0,
+        paddingHorizontal: 12,
+    },
+    challengeButtonText: {
+        flexShrink: 1,
+    },
+    streakCounter: {
+        fontSize: 24,
+        fontWeight: 'bold',
+        color: colors.vintageOrange,
+        letterSpacing: 1,
+        flexShrink: 0,
     }
 });

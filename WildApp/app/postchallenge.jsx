@@ -142,6 +142,18 @@ const PostChallengePage = () => {
       
       const newPost = await PostService.createPost(post);
       
+      const lastCompleted = await AsyncStorage.getItem('lastCompleted');
+      const lastCompletedDate = lastCompleted ? new Date(lastCompleted) : null;
+      const today = new Date();
+      let streak = (await AsyncStorage.getItem('streak')) || "0";
+      
+      if (lastCompletedDate && lastCompletedDate.toDateString() !== today.toDateString()) {
+          streak = (parseInt(streak, 10) + 1).toString();
+      }
+
+      await AsyncStorage.setItem('streak', streak);
+      await AsyncStorage.setItem('lastCompleted', new Date().toISOString());
+
       console.log('Post created successfully:', newPost);
       
       router.push({
