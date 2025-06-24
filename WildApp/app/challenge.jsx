@@ -26,7 +26,7 @@ const ChallengePage = () => {
     const [showConfirmation, setShowConfirmation] = useState(false);
     const holdingRef = useRef(false);
     const fillAnimationRef = useRef(null);
-    const { challenge, category } = useLocalSearchParams();
+    const { challenge, finishes, category } = useLocalSearchParams();
     const router = useRouter();
 
     useEffect(() => {
@@ -268,6 +268,9 @@ const ChallengePage = () => {
                         <Text style={styles.warningText}>
                             THE WILD CALLS TO YOU.{'\n'}
                             ANSWER OR RETREAT IN SHAME.
+                        </Text> 
+                        <Text style={[styles.warningText, { rotateX: '-80deg' }]}>
+                            JOIN {finishes} BRAVE EXPLORERS
                         </Text>
                     </View>
                 </View>

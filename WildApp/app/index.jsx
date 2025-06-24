@@ -12,6 +12,7 @@ export default function Home() {
     const { isPreloading, preloadComplete } = useApp();
     const [challenges, setChallenges] = useState(null);
     const [loadingTodaysChallenge, setLoadingTodaysChallenge] = useState(true);
+    const [todaysChallenge, setTodaysChallenge] = useState(null);
 
     useEffect(() => {
         const fetchChallenges = async () => {
@@ -27,6 +28,17 @@ export default function Home() {
             fetchChallenges();
         }
     }, [isPreloading, preloadComplete]);
+    
+    useEffect(() => {
+        const fetchTodaysChallenge = async () => {
+            setLoadingTodaysChallenge(true);
+            const challenge = await PostService.getTodaysChallenge();
+            setTodaysChallenge(challenge);
+            setLoadingTodaysChallenge(false);
+        };
+
+        fetchTodaysChallenge();
+    }, []);
 
     const fetchChallenge = (type) => {
         const challengeList = challenges[type];
@@ -41,7 +53,7 @@ export default function Home() {
         const challenge = fetchChallenge('social');
         router.push({
             pathname: '/challenge', 
-            params: { challenge: challenge, category: 'social' }
+            params: { challenge: challenge.name, finishes: challenge.finishes, category: 'social' }
         });
     };
 
@@ -51,7 +63,7 @@ export default function Home() {
         const challenge = fetchChallenge('adventure');
         router.push({
             pathname: '/challenge', 
-            params: { challenge: challenge, category: 'adventure' }
+            params: { challenge: challenge.name, finishes: challenge.finishes, category: 'adventure' }
         });
     };
 
@@ -61,7 +73,7 @@ export default function Home() {
         const challenge = fetchChallenge('creative');
         router.push({
             pathname: '/challenge', 
-            params: { challenge: challenge, category: 'creative' }
+            params: { challenge: challenge.name, finishes: challenge.finishes, category: 'creative' }
         });
     };
 
@@ -85,7 +97,10 @@ export default function Home() {
 
     const handleTodaysChallenge = () => {
         Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-        console.log('Today\'s Challenge');
+        router.push({
+            pathname: '/challenge',
+            params: { challenge: todaysChallenge.name, finishes: todaysChallenge.finishes, category: 'daily' }
+        });
     }
 
     return (
@@ -106,7 +121,7 @@ export default function Home() {
 
             <TouchableOpacity style={styles.todaysChallengeButton} onPress={handleTodaysChallenge}>
                 {!loadingTodaysChallenge ? (
-                    <Text style={common_styles.secondaryButtonText}>Today's Challenge</Text>
+                    <Text style={common_styles.secondaryButtonText}>{todaysChallenge.name}</Text>
                 ) : (
                     <ActivityIndicator size="small" color={colors.polaroidWhite} />
                 )}

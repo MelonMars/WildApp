@@ -175,7 +175,8 @@ export class PostService {
           description,
           difficulty,
           created_at,
-          is_active
+          is_active,
+          finishes
         `)
         .eq('is_active', true)
         .order('created_at', { ascending: false });
@@ -188,7 +189,10 @@ export class PostService {
         if (!acc[challenge.category]) {
           acc[challenge.category] = [];
         }
-        acc[challenge.category].push(challenge.name);
+        acc[challenge.category].push({
+          name: challenge.name,
+          finishes: challenge.finishes
+        });
         return acc;
       }, {});
 
@@ -217,6 +221,26 @@ export class PostService {
       return data;
     } catch (error) {
       console.error('Error fetching challenge by name:', error);
+      return null;
+    }
+  }
+
+  static async getTodaysChallenge() {
+    try {
+      const today = new Date().toISOString().slice(0, 10);
+      const { data, error } = await supabase 
+        .from('daily_challenges')
+        .select('*')
+        .eq('challenge_day', today)
+        .single();
+
+      if (error) {
+        throw error;
+      }
+
+      return data;
+    } catch (error) {
+      console.error('Error fetching today\'s challenge:', error);
       return null;
     }
   }
