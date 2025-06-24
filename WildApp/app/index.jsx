@@ -5,6 +5,7 @@ import { useApp } from './contexts/AppContext';
 import { common_styles, colors, typography, shadows } from './styles'; 
 import * as Haptics from 'expo-haptics';
 import { PostService } from './services/postService';
+import { MaterialCommunityIcons } from '@expo/vector-icons';
 
 export default function Home() {
     const router = useRouter();
@@ -75,6 +76,12 @@ export default function Home() {
         router.push('/createchallenge');
     }
 
+    const navigateToMap = () => {
+        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+        console.log('Navigate to Map');
+        router.push('/map');
+    };
+
     return (
       <View style={common_styles.container}>
           <View style={common_styles.backgroundTexture} />
@@ -93,17 +100,17 @@ export default function Home() {
 
           <View style={styles.middleButtonsContainer}>
               <TouchableOpacity style={styles.categoryButton} onPress={navigateToPage1}>
-                  <Text style={styles.categoryButtonText}>SOCIAL</Text>
+                  <Text style={styles.categoryButtonText}>🤝SOCIAL</Text>
                   <View style={styles.categoryAccent} />
               </TouchableOpacity>
 
               <TouchableOpacity style={[styles.categoryButton, styles.categoryButtonMiddle]} onPress={navigateToPage2}>
-                  <Text style={styles.categoryButtonText}>ADVENTURE</Text>
+                  <Text style={styles.categoryButtonText}>🧭ADVENTURE</Text>
                   <View style={styles.categoryAccent} />
               </TouchableOpacity>
 
               <TouchableOpacity style={styles.categoryButton} onPress={navigateToPage3}>
-                  <Text style={styles.categoryButtonText}>CREATIVE</Text>
+                  <Text style={styles.categoryButtonText}>🎨CREATIVE</Text>
                   <View style={styles.categoryAccent} />
               </TouchableOpacity>
           </View>
@@ -129,11 +136,18 @@ export default function Home() {
                   )}
                   <View style={styles.galleryButtonDistress} />
               </TouchableOpacity>
-                <TouchableOpacity 
-                    style={[common_styles.primaryButton, {'marginTop': 20}]} 
-                    onPress={handleCreateChallenge}>
-                    <Text style={common_styles.primaryButtonText}>New Challenge</Text>
-                </TouchableOpacity>
+              <View style={{ flexDirection: 'row', marginTop: 20, alignItems: 'center', justifyContent: 'center', gap: 16 }}>
+                  <TouchableOpacity 
+                      style={[common_styles.primaryButton, { marginTop: 0 }]} 
+                      onPress={handleCreateChallenge}>
+                      <Text style={common_styles.primaryButtonText}>New Challenge</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity 
+                      style={[styles.circleButton, { marginTop: 0 }]}
+                      onPress={navigateToMap}>
+                      <MaterialCommunityIcons name="map" size={28} color={colors.polaroidWhite} />
+                  </TouchableOpacity>
+              </View>
               <View style={[common_styles.tapeHorizontal, styles.bottomTape]} />
           </View>
       </View>
@@ -198,19 +212,23 @@ const styles = StyleSheet.create({
     middleButtonsContainer: {
         flex: 1,
         justifyContent: 'center',
-        paddingHorizontal: 40,
-        gap: 25,
+        paddingHorizontal: 10,
+        flexDirection: 'row',
+        gap: 15,
     },
-    
+
     categoryButton: {
         ...common_styles.primaryButton,
         backgroundColor: colors.forestGreen,
         paddingVertical: 20,
-        paddingHorizontal: 40,
+        paddingHorizontal: 2,
         borderWidth: 3,
         borderColor: colors.oliveGreen,
         position: 'relative',
         transform: [{ rotate: '0.5deg' }],
+        flex: 1,
+        minWidth: 115,
+        height: 60,
     },
     
     categoryButtonMiddle: {
@@ -224,7 +242,8 @@ const styles = StyleSheet.create({
         color: colors.polaroidWhite,
         textAlign: 'center',
         fontWeight: '900',
-        letterSpacing: 3,
+        letterSpacing: 1,
+        fontSize: 12,
     },
     
     categoryAccent: {
@@ -290,5 +309,14 @@ const styles = StyleSheet.create({
         bottom: 20,
         right: 30,
         transform: [{ rotate: '12deg' }],
+    },
+    circleButton: {
+        width: 60,
+        height: 60,
+        borderRadius: 30,
+        backgroundColor: colors.forestGreen,
+        justifyContent: 'center',
+        alignItems: 'center',
+        ...shadows.lightShadow,
     },
 });

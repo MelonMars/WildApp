@@ -11,9 +11,11 @@ import {
 } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { common_styles, colors, typography } from './styles';
+import { common_styles, colors, typography, shadows } from './styles';
 import { PostService } from './services/postService';
 import * as Haptics from 'expo-haptics';
+import { MaterialCommunityIcons } from '@expo/vector-icons';
+import { Share } from 'react-native';
 
 const ChallengePage = () => {
     const [pulseAnim] = useState(new Animated.Value(1));
@@ -175,6 +177,26 @@ const ChallengePage = () => {
         outputRange: ['0%', '100%'],
     });
 
+    const handleShareChallenge = async () => {
+        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+        try {
+            await Share.share({
+                message: `Join me on this WildApp challenge!\n\n"${challenge}"\n\nCategory: ${category}\n\nCan you complete it?`,
+                title: 'WildApp Challenge Invitation',
+            });
+        } catch (error) {
+            console.error('Error sharing challenge:', error);
+        }
+    };
+
+    const navigateToMap = () => {
+        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+        router.push({
+            pathname: 'map',
+            params: { challenge: challenge, category: category }
+        })
+    };
+
     return (
         <Animated.View 
             style={[
@@ -249,7 +271,21 @@ const ChallengePage = () => {
                         </Text>
                     </View>
                 </View>
-
+                <View style={{ flexDirection: 'row', justifyContent: 'center', alignItems: 'center', gap: 16, marginBottom: 10 }}>
+                    <TouchableOpacity 
+                        style={[common_styles.secondaryButton, { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', width: 'auto', alignSelf: 'center', paddingHorizontal: 16 }]}
+                        onPress={handleShareChallenge}
+                        activeOpacity={0.8}
+                    >
+                        <MaterialCommunityIcons name="share-variant" size={22} color={colors.vintageOrange} style={{ marginRight: 8 }} />
+                        <Text style={common_styles.secondaryButtonText}>SHARE & INVITE FRIENDS</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity 
+                        style={[styles.circleButton, { marginTop: 0 }]}
+                        onPress={navigateToMap}>
+                        <MaterialCommunityIcons name="map" size={28} color={colors.polaroidWhite} />
+                    </TouchableOpacity>
+                </View>
                 <View style={styles.buttonContainer}>
                     <TouchableOpacity 
                         style={[common_styles.primaryButton, styles.completeButton]}
@@ -482,6 +518,15 @@ const styles = {
     },
     confirmButton: {
         flex: 1,
+    },
+    circleButton: {
+        width: 60,
+        height: 60,
+        borderRadius: 30,
+        backgroundColor: colors.forestGreen,
+        justifyContent: 'center',
+        alignItems: 'center',
+        ...shadows.lightShadow,
     },
 };
 
