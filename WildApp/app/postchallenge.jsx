@@ -146,9 +146,10 @@ const PostChallengePage = () => {
       const lastCompletedDate = lastCompleted ? new Date(lastCompleted) : null;
       const today = new Date();
       let streak = (await AsyncStorage.getItem('streak')) || "0";
-      
-      if (lastCompletedDate && lastCompletedDate.toDateString() !== today.toDateString()) {
-          streak = (parseInt(streak, 10) + 1).toString();
+      let newStreak = lastCompletedDate && lastCompletedDate.toDateString() !== today.toDateString();
+      newStreak = true; // For testing
+      if (newStreak) {
+          streak = (parseInt(streak, 10) + 1).toString(); 
       }
 
       await AsyncStorage.setItem('streak', streak);
@@ -156,13 +157,24 @@ const PostChallengePage = () => {
 
       console.log('Post created successfully:', newPost);
       
-      router.push({
-        pathname: "gallery",
-        params: {
-          newPost: JSON.stringify(newPost),
-          isNewPost: 'true'
-        }
-      });
+      if (!newStreak) {
+        router.push({
+          pathname: "gallery",
+          params: {
+            newPost: JSON.stringify(newPost),
+            isNewPost: 'true'
+          }
+        });
+      } else {
+        router.push({
+          pathname: "streak",
+          params: {
+            newPost: JSON.stringify(newPost),
+            isNewPost: 'true',
+            streak: streak
+          }
+        })
+      }
       
     } catch (error) {
       console.error('Failed to create post:', error);
