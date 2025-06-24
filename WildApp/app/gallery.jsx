@@ -35,13 +35,11 @@ export default function GalleryPage() {
     const [isNewPostAnimating, setIsNewPostAnimating] = useState(false);
     const [lastDoc, setLastDoc] = useState(null);
     const [hasMore, setHasMore] = useState(true);
-    const [isAutoScrolling, setIsAutoScrolling] = useState(false);
     const [selectedPost, setSelectedPost] = useState(null);
     const [modalAnim] = useState(new Animated.Value(0));
 
     const scrollY = useRef(new Animated.Value(0)).current;
     const flatListRef = useRef(null);
-    const autoScrollTimeoutRef = useRef(null);
     const router = useRouter();
 
     const { newPost, challenge, category, photo, caption, completedAt, timestamp, isNewPost } = useLocalSearchParams();
@@ -64,45 +62,6 @@ export default function GalleryPage() {
             fetchMorePosts();
         }
     }, [preloadComplete, preloadedPosts, preloadedLastDoc, preloadedHasMore]);
-
-    useEffect(() => {
-        if (posts.length > 0 && !isAutoScrolling) {
-            startAutoScroll();
-        }
-        return () => {
-            if (autoScrollTimeoutRef.current) {
-                clearTimeout(autoScrollTimeoutRef.current);
-            }
-        };
-    }, [posts.length]);
-
-    const startAutoScroll = () => {
-        if (autoScrollTimeoutRef.current) {
-            clearTimeout(autoScrollTimeoutRef.current);
-        }
-        autoScrollTimeoutRef.current = setTimeout(() => {
-            if (flatListRef.current && posts.length > 2) {
-                setIsAutoScrolling(true);
-                try {
-                    const scrollToIndex = Math.min(2, posts.length - 1);
-                    flatListRef.current.scrollToIndex({
-                        index: scrollToIndex,
-                        animated: true,
-                        viewPosition: 0.5
-                    });
-                } catch (error) {
-                    console.log('Auto-scroll error:', error);
-                }
-                if (hasMore && !loading) {
-                    fetchMorePosts();
-                }
-                setTimeout(() => {
-                    setIsAutoScrolling(false);
-                    startAutoScroll();
-                }, 3000);
-            }
-        }, 4000);
-    };
 
     const fetchMorePosts = async () => {
         if (loading || !hasMore) return;
@@ -136,9 +95,7 @@ export default function GalleryPage() {
     };
 
     const handleEndReached = () => {
-        if (!isAutoScrolling) {
-            fetchMorePosts();
-        }
+        fetchMorePosts();
     };
 
     const openModal = (post) => {
@@ -590,16 +547,6 @@ export default function GalleryPage() {
                     onEndReached={handleEndReached}
                     onEndReachedThreshold={0.5}
                     ListFooterComponent={renderFooter}
-                    onScrollBeginDrag={() => {
-                        if (autoScrollTimeoutRef.current) {
-                            clearTimeout(autoScrollTimeoutRef.current);
-                        }
-                    }}
-                    onScrollEndDrag={() => {
-                        if (!isAutoScrolling) {
-                            startAutoScroll();
-                        }
-                    }}
                 />
             </Animated.View>
             <View style={styles.bottomAccent} />
