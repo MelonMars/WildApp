@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, ActivityIndicator } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useApp } from './contexts/AppContext';
@@ -10,7 +10,8 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 export default function Home() {
     const router = useRouter();
     const { isPreloading, preloadComplete } = useApp();
-    const [challenges, setChallenges] = React.useState(null);
+    const [challenges, setChallenges] = useState(null);
+    const [loadingTodaysChallenge, setLoadingTodaysChallenge] = useState(true);
 
     useEffect(() => {
         const fetchChallenges = async () => {
@@ -82,76 +83,88 @@ export default function Home() {
         router.push('/map');
     };
 
+    const handleTodaysChallenge = () => {
+        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+        console.log('Today\'s Challenge');
+    }
+
     return (
-      <View style={common_styles.container}>
-          <View style={common_styles.backgroundTexture} />
-          <View style={styles.titleContainer}>
-              <Text style={styles.title}>Wild</Text>
-              <View style={styles.titleAccent} />
-              <Text style={styles.subtitle}>Time to live.</Text>
-              
-              {isPreloading && (
-                  <View style={styles.preloadingContainer}>
-                      <ActivityIndicator size="small" color={colors.lightBrown} />
-                      <Text style={styles.preloadingText}>Loading gallery...</Text>
-                  </View>
-              )}
-          </View>
+        <View style={common_styles.container}>
+            <View style={common_styles.backgroundTexture} />
+            <View style={styles.titleContainer}>
+                <Text style={styles.title}>Wild</Text>
+                <View style={styles.titleAccent} />
+                <Text style={styles.subtitle}>Time to live.</Text>
+                
+                {isPreloading && (
+                    <View style={styles.preloadingContainer}>
+                        <ActivityIndicator size="small" color={colors.lightBrown} />
+                        <Text style={styles.preloadingText}>Loading gallery...</Text>
+                    </View>
+                )}
+            </View>
 
-          <View style={styles.middleButtonsContainer}>
-              <TouchableOpacity style={styles.categoryButton} onPress={navigateToPage1}>
-                  <Text style={styles.categoryButtonText}>🤝SOCIAL</Text>
-                  <View style={styles.categoryAccent} />
-              </TouchableOpacity>
+            <TouchableOpacity style={styles.todaysChallengeButton} onPress={handleTodaysChallenge}>
+                {!loadingTodaysChallenge ? (
+                    <Text style={common_styles.secondaryButtonText}>Today's Challenge</Text>
+                ) : (
+                    <ActivityIndicator size="small" color={colors.polaroidWhite} />
+                )}
+            </TouchableOpacity>
+            <View style={styles.middleButtonsContainer}>
+                <TouchableOpacity style={styles.categoryButton} onPress={navigateToPage1}>
+                    <Text style={styles.categoryButtonText}>🤝SOCIAL</Text>
+                    <View style={styles.categoryAccent} />
+                </TouchableOpacity>
 
-              <TouchableOpacity style={[styles.categoryButton, styles.categoryButtonMiddle]} onPress={navigateToPage2}>
-                  <Text style={styles.categoryButtonText}>🧭ADVENTURE</Text>
-                  <View style={styles.categoryAccent} />
-              </TouchableOpacity>
+                <TouchableOpacity style={[styles.categoryButton, styles.categoryButtonMiddle]} onPress={navigateToPage2}>
+                    <Text style={styles.categoryButtonText}>🧭ADVENTURE</Text>
+                    <View style={styles.categoryAccent} />
+                </TouchableOpacity>
 
-              <TouchableOpacity style={styles.categoryButton} onPress={navigateToPage3}>
-                  <Text style={styles.categoryButtonText}>🎨CREATIVE</Text>
-                  <View style={styles.categoryAccent} />
-              </TouchableOpacity>
-          </View>
+                <TouchableOpacity style={styles.categoryButton} onPress={navigateToPage3}>
+                    <Text style={styles.categoryButtonText}>🎨CREATIVE</Text>
+                    <View style={styles.categoryAccent} />
+                </TouchableOpacity>
+            </View>
 
-          <View style={styles.bottomButtonContainer}>
-              <TouchableOpacity 
-                  style={[
-                      styles.galleryButton,
-                      isPreloading && styles.galleryButtonLoading
-                  ]} 
-                  onPress={navigateToGallery}
-                  disabled={isPreloading}
-              >
-                  <Text style={styles.galleryButtonText}>
-                      {isPreloading ? 'LOADING...' : 'THE WALL'}
-                  </Text>
-                  {isPreloading && (
-                      <ActivityIndicator 
-                          size="small" 
-                          color={colors.polaroidWhite}
-                          style={styles.buttonSpinner}
-                      />
-                  )}
-                  <View style={styles.galleryButtonDistress} />
-              </TouchableOpacity>
-              <View style={{ flexDirection: 'row', marginTop: 20, alignItems: 'center', justifyContent: 'center', gap: 16 }}>
-                  <TouchableOpacity 
-                      style={[common_styles.primaryButton, { marginTop: 0 }]} 
-                      onPress={handleCreateChallenge}>
-                      <Text style={common_styles.primaryButtonText}>New Challenge</Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity 
-                      style={[styles.circleButton, { marginTop: 0 }]}
-                      onPress={navigateToMap}>
-                      <MaterialCommunityIcons name="map" size={28} color={colors.polaroidWhite} />
-                  </TouchableOpacity>
-              </View>
-              <View style={[common_styles.tapeHorizontal, styles.bottomTape]} />
-          </View>
-      </View>
-  );
+            <View style={styles.bottomButtonContainer}>
+                <TouchableOpacity 
+                    style={[
+                        styles.galleryButton,
+                        isPreloading && styles.galleryButtonLoading
+                    ]} 
+                    onPress={navigateToGallery}
+                    disabled={isPreloading}
+                >
+                    <Text style={styles.galleryButtonText}>
+                        {isPreloading ? 'LOADING...' : 'THE WALL'}
+                    </Text>
+                    {isPreloading && (
+                        <ActivityIndicator 
+                            size="small" 
+                            color={colors.polaroidWhite}
+                            style={styles.buttonSpinner}
+                        />
+                    )}
+                    <View style={styles.galleryButtonDistress} />
+                </TouchableOpacity>
+                <View style={{ flexDirection: 'row', marginTop: 20, alignItems: 'center', justifyContent: 'center', gap: 16 }}>
+                    <TouchableOpacity 
+                        style={[common_styles.primaryButton, { marginTop: 0 }]} 
+                        onPress={handleCreateChallenge}>
+                        <Text style={common_styles.primaryButtonText}>New Challenge</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity 
+                        style={[styles.circleButton, { marginTop: 0 }]}
+                        onPress={navigateToMap}>
+                        <MaterialCommunityIcons name="map" size={28} color={colors.polaroidWhite} />
+                    </TouchableOpacity>
+                </View>
+                <View style={[common_styles.tapeHorizontal, styles.bottomTape]} />
+            </View>
+        </View>
+    );
 }
 
 const styles = StyleSheet.create({
@@ -319,4 +332,11 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         ...shadows.lightShadow,
     },
+    todaysChallengeButton: {
+        ...common_styles.secondaryButton,
+        marginBottom: 20,
+        marginTop: -15,
+        width: '80%',
+        alignSelf: 'center',
+    }
 });
