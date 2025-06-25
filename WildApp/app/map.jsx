@@ -101,10 +101,24 @@ const MapPage = () => {
   const initialQuery = params.searchFor || 'posts';
   const challenge = params.challenge || null;
   const category = params.category || null;
+  const latitude = params.latitude || null;
+  const longitude = params.longitude || null;
   const router = useRouter();
   const initialOption = search_options.find(opt => opt.key === initialQuery) || search_options[0];
   
+  const hasParamCoordinates = latitude && longitude;
+  
   const [userLocation, setUserLocation] = useState(null);
+  const [searchLocation, setSearchLocation] = useState(
+    hasParamCoordinates
+      ? {
+          latitude: parseFloat(latitude),
+          longitude: parseFloat(longitude),
+          latitudeDelta: 0.01,
+          longitudeDelta: 0.01,
+        }
+      : null
+  );
   const [places, setPlaces] = useState([]);
   const [posts, setPosts] = useState([]);
   const [selectedOption, setSelectedOption] = useState(initialOption);
@@ -115,6 +129,10 @@ const MapPage = () => {
   const [dropdownVisible, setDropdownVisible] = useState(false);
 
   const requestLocationPermission = useCallback(async () => {
+    if (hasParamCoordinates) {
+      return;
+    }
+
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
     try {
       const { status } = await Location.requestForegroundPermissionsAsync();
@@ -129,21 +147,24 @@ const MapPage = () => {
         accuracy: Location.Accuracy.Balanced,
       });
 
-      setUserLocation({
+      const userCoords = {
         latitude: location.coords.latitude,
         longitude: location.coords.longitude,
         latitudeDelta: 0.01,
         longitudeDelta: 0.01,
-      });
+      };
+
+      setUserLocation(userCoords);
+      setSearchLocation(userCoords);
     } catch (error) {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
       Alert.alert('Trail Error', 'Failed to get your location');
       console.error(error);
     }
-  }, []);
+  }, [hasParamCoordinates]);
 
   const searchNearbyPosts = useCallback(async () => {
-    if (!userLocation) return;
+    if (!searchLocation) return;
 
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     setLoading(true);
@@ -151,8 +172,8 @@ const MapPage = () => {
     
     try {
       const nearbyPosts = await PostService.fetchPostsByLocation(
-        userLocation.latitude,
-        userLocation.longitude,
+        searchLocation.latitude,
+        searchLocation.longitude,
         10000,
       );
       
@@ -166,11 +187,10 @@ const MapPage = () => {
     } finally {
       setLoading(false);
     }
-  }, [userLocation]);
-
+  }, [searchLocation]);
 
   const searchNearbyPlaces = useCallback(async (option) => {
-    if (!userLocation) return;
+    if (!searchLocation) return;
 
     if (option.key === 'posts') {
       return searchNearbyPosts();
@@ -191,14 +211,14 @@ const MapPage = () => {
     } finally {
       setLoading(false);
     }
-  }, [userLocation, searchNearbyPosts]);
+  }, [searchLocation, searchNearbyPosts]);
 
   const searchWithOverpassAPI = useCallback(async (option) => {
     const bbox = [
-      userLocation.latitude - 0.008,
-      userLocation.longitude - 0.008,
-      userLocation.latitude + 0.008,
-      userLocation.longitude + 0.008
+      searchLocation.latitude - 0.008,
+      searchLocation.longitude - 0.008,
+      searchLocation.latitude + 0.008,
+      searchLocation.longitude + 0.008
     ];
 
     const overpassQuery = `
@@ -239,7 +259,7 @@ const MapPage = () => {
       .filter(place => place.latitude && place.longitude);
 
     setPlaces(formattedPlaces);
-  }, [userLocation]);
+  }, [searchLocation]);
 
   const getMarkerColor = useCallback((types) => {
     const typeString = Array.isArray(types) ? types.join(' ').toLowerCase() : types.toLowerCase();
@@ -305,10 +325,10 @@ const MapPage = () => {
   }, [requestLocationPermission]);
 
   useEffect(() => {
-    if (userLocation) {
+    if (searchLocation) {
       searchNearbyPlaces(selectedOption);
     }
-  }, [userLocation]);
+  }, [searchLocation]);
 
   const formatTimeAgo = useCallback((timestamp) => {
     const now = new Date();
@@ -425,12 +445,13 @@ const MapPage = () => {
     ));
   }, [places, posts, getMarkerColor, handleMarkerPress, handlePostMarkerPress]);
 
-
-  if (!userLocation) {
+  if (!searchLocation) {
     return (
       <View style={styles.loadingContainer}>
         <ActivityIndicator size="large" color={colors.forestGreen} />
-        <Text style={styles.loadingText}>🧭 Finding your trail...</Text>
+        <Text style={styles.loadingText}>
+          {hasParamCoordinates ? '📍 Loading location...' : '🧭 Finding your trail...'}
+        </Text>
       </View>
     );
   }
@@ -521,9 +542,9 @@ const MapPage = () => {
             ref={mapRef}
             provider={PROVIDER_GOOGLE}
             style={styles.map}
-            initialRegion={userLocation}
-            showsUserLocation={true}
-            showsMyLocationButton={true}
+            initialRegion={searchLocation}
+            showsUserLocation={!hasParamCoordinates}
+            showsMyLocationButton={!hasParamCoordinates}
             customMapStyle={retrostyle}
             loadingEnabled={true}
             loadingIndicatorColor={colors.forestGreen}

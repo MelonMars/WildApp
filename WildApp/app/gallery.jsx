@@ -19,6 +19,7 @@ import { useRouter, useLocalSearchParams } from 'expo-router';
 import { Image } from 'expo-image';
 import * as Haptics from 'expo-haptics';
 import MapView, { Marker } from 'react-native-maps';
+import { MaterialCommunityIcons } from '@expo/vector-icons';
 
 import { PostService } from './services/postService';
 import { common_styles, colors, typography, shadows } from './styles';
@@ -482,33 +483,49 @@ export default function GalleryPage() {
                         </View>
                         
                         {hasLocation && (
-                            <View style={styles.mapContainer}>
-                                <MapView
-                                    style={styles.modalMap}
-                                    initialRegion={{
-                                        latitude: parseFloat(selectedPost.latitude),
-                                        longitude: parseFloat(selectedPost.longitude),
-                                        latitudeDelta: 0.0922,
-                                        longitudeDelta: 0.0421,
-                                    }}
-                                    scrollEnabled={false}
-                                    zoomEnabled={false}
-                                    rotateEnabled={false}
-                                    pitchEnabled={false}
-                                >
-                                    <Marker
-                                        coordinate={{
+                            <>
+                                <View style={styles.mapContainer}>
+                                    <MapView
+                                        style={styles.modalMap}
+                                        initialRegion={{
                                             latitude: parseFloat(selectedPost.latitude),
                                             longitude: parseFloat(selectedPost.longitude),
+                                            latitudeDelta: 0.0922,
+                                            longitudeDelta: 0.0421,
                                         }}
-                                        title="Challenge Location"
-                                        description={selectedPost.challenge}
-                                    />
-                                </MapView>
-                                <View style={styles.mapOverlay}>
-                                    <Text style={styles.locationText}>📍 Challenge Location</Text>
+                                        scrollEnabled={false}
+                                        zoomEnabled={false}
+                                        rotateEnabled={false}
+                                        pitchEnabled={false}
+                                    >
+                                        <Marker
+                                            coordinate={{
+                                                latitude: parseFloat(selectedPost.latitude),
+                                                longitude: parseFloat(selectedPost.longitude),
+                                            }}
+                                            title="Challenge Location"
+                                            description={selectedPost.challenge}
+                                        />
+                                    </MapView>
+                                    <View style={styles.mapOverlay}>
+                                        <Text style={styles.locationText}>📍 Challenge Location</Text>
+                                    </View>
                                 </View>
-                            </View>
+                                <TouchableOpacity 
+                                    style={[styles.circleButton, { marginTop: 0, alignSelf: 'center' }]}
+                                    onPress={() => {
+                                        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                                        router.push({
+                                            pathname: '/map',
+                                            params: {
+                                                latitude: selectedPost.latitude,
+                                                longitude: selectedPost.longitude,
+                                            }
+                                        })
+                                }}>
+                                    <MaterialCommunityIcons name="map" size={28} color={colors.polaroidWhite} />
+                                </TouchableOpacity>
+                            </>
                         )}
                         
                         <View style={[common_styles.tapeHorizontal, common_styles.tapeTopLeft]} />
@@ -768,4 +785,13 @@ const styles = StyleSheet.create({
         fontSize: 12,
         fontWeight: 'bold',
     },
+    circleButton: {
+        width: 30,
+        height: 30,
+        borderRadius: 15,
+        backgroundColor: colors.forestGreen,
+        justifyContent: 'center',
+        alignItems: 'center',
+        ...shadows.lightShadow,
+    }
 });
