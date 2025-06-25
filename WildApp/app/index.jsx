@@ -5,7 +5,6 @@ import { useApp } from './contexts/AppContext';
 import { common_styles, colors, typography, shadows } from './styles'; 
 import * as Haptics from 'expo-haptics';
 import { PostService } from './services/postService';
-import { MaterialCommunityIcons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useFocusEffect } from '@react-navigation/native';
 
@@ -202,7 +201,7 @@ export default function Home() {
                     disabled={isPreloading}
                 >
                     <Text style={styles.galleryButtonText}>
-                        {isPreloading ? 'LOADING...' : 'THE WALL'}
+                        {isPreloading ? 'LOADING...' : '🖼️ THE WALL'}
                     </Text>
                     {isPreloading && (
                         <ActivityIndicator 
@@ -217,12 +216,12 @@ export default function Home() {
                     <TouchableOpacity 
                         style={[common_styles.primaryButton, { marginTop: 0 }]} 
                         onPress={handleCreateChallenge}>
-                        <Text style={common_styles.primaryButtonText}>New Challenge</Text>
+                        <Text style={common_styles.primaryButtonText}>✏️ New Challenge</Text>
                     </TouchableOpacity>
                     <TouchableOpacity 
                         style={[styles.circleButton, { marginTop: 0 }]}
                         onPress={navigateToMap}>
-                        <MaterialCommunityIcons name="map" size={28} color={colors.polaroidWhite} />
+                        <Text style={{ fontSize: 32 }}>🌎</Text>
                     </TouchableOpacity>
                 </View>
                 <View style={[common_styles.tapeHorizontal, styles.bottomTape]} />

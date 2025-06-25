@@ -14,7 +14,6 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { common_styles, colors, typography, shadows } from './styles';
 import { PostService } from './services/postService';
 import * as Haptics from 'expo-haptics';
-import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { Share } from 'react-native';
 
 const ChallengePage = () => {
@@ -280,13 +279,13 @@ const ChallengePage = () => {
                         onPress={handleShareChallenge}
                         activeOpacity={0.8}
                     >
-                        <MaterialCommunityIcons name="share-variant" size={22} color={colors.vintageOrange} style={{ marginRight: 8 }} />
+                        <Text style={{ fontSize: 22, marginRight: 8 }}>📤</Text>
                         <Text style={common_styles.secondaryButtonText}>SHARE & INVITE FRIENDS</Text>
                     </TouchableOpacity>
                     <TouchableOpacity 
                         style={[styles.circleButton, { marginTop: 0 }]}
                         onPress={navigateToMap}>
-                        <MaterialCommunityIcons name="map" size={28} color={colors.polaroidWhite} />
+                        <Text style={{ fontSize: 32 }}>🌎</Text>
                     </TouchableOpacity>
                 </View>
                 <View style={styles.buttonContainer}>
@@ -295,7 +294,7 @@ const ChallengePage = () => {
                         onPress={handleCompletePress}
                         activeOpacity={0.8}
                     >
-                        <Text style={common_styles.primaryButtonText}>MISSION COMPLETE</Text>
+                        <Text style={common_styles.primaryButtonText}>🏁 MISSION COMPLETE</Text>
                     </TouchableOpacity>
 
                     <Animated.View 
@@ -317,7 +316,7 @@ const ChallengePage = () => {
                                 ]}
                             />
                             <Text style={[common_styles.dangerButtonText, styles.cowardButtonText]}>
-                                {isHolding ? 'HOLD TO RETREAT...' : 'RETREAT TO SAFETY'}
+                                {isHolding ? '🐔 HOLD TO RETREAT...' : '🐔 RETREAT TO SAFETY'}
                             </Text>
                         </TouchableOpacity>
                     </Animated.View>
@@ -339,13 +338,13 @@ const ChallengePage = () => {
                                     style={[common_styles.primaryButton, styles.cancelButton]}
                                     onPress={handleCancelRetreat}
                                 >
-                                    <Text style={common_styles.primaryButtonText}>STAY BRAVE</Text>
+                                    <Text style={common_styles.primaryButtonText}>🛡️ STAY BRAVE</Text>
                                 </TouchableOpacity>
                                 <TouchableOpacity 
                                     style={[common_styles.dangerButton, styles.confirmButton]}
                                     onPress={handleConfirmRetreat}
                                 >
-                                    <Text style={common_styles.dangerButtonText}>CONFIRM RETREAT</Text>
+                                    <Text style={common_styles.dangerButtonText}>🐱 CONFIRM RETREAT</Text>
                                 </TouchableOpacity>
                             </View>
                         </View>

@@ -311,7 +311,7 @@ const PostChallengePage = () => {
           flexDirection: 'row',
           alignItems: 'center',
           justifyContent: 'center',
-          marginBottom: 20,
+          marginBottom: 5,
           paddingHorizontal: 20,
         }}>
           <TouchableOpacity 
@@ -323,6 +323,7 @@ const PostChallengePage = () => {
               paddingVertical: 8,
               borderRadius: 20,
               borderWidth: 2,
+              marginTop: 10,
               borderColor: locationEnabled ? colors.darkBrown : colors.mediumGray,
             }}
             onPress={toggleLocation}

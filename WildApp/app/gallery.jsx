@@ -19,7 +19,6 @@ import { useRouter, useLocalSearchParams } from 'expo-router';
 import { Image } from 'expo-image';
 import * as Haptics from 'expo-haptics';
 import MapView, { Marker } from 'react-native-maps';
-import { MaterialCommunityIcons } from '@expo/vector-icons';
 
 import { PostService } from './services/postService';
 import { common_styles, colors, typography, shadows } from './styles';
@@ -523,7 +522,7 @@ export default function GalleryPage() {
                                             }
                                         })
                                 }}>
-                                    <MaterialCommunityIcons name="map" size={28} color={colors.polaroidWhite} />
+                                    <Text style={{ fontSize: 18 }}>🌎</Text>
                                 </TouchableOpacity>
                             </>
                         )}
