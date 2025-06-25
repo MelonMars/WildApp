@@ -14,6 +14,7 @@ import {
 import { LinearGradient } from 'expo-linear-gradient';
 import { Camera } from 'expo-camera';
 import * as ImagePicker from 'expo-image-picker';
+import * as Location from 'expo-location';
 import { PostService } from './services/postService';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { common_styles, colors } from './styles';
@@ -29,6 +30,9 @@ const PostChallengePage = () => {
   const [username, setUsername] = useState('');
   const [photo, setPhoto] = useState(null);
   const [cameraPermission, setCameraPermission] = useState(null);
+  const [locationEnabled, setLocationEnabled] = useState(true);
+  const [locationPermission, setLocationPermission] = useState(null);
+  const [currentLocation, setCurrentLocation] = useState(null);
   const { challenge, category, completedAt } = useLocalSearchParams();
 
   const router = useRouter();
@@ -78,7 +82,73 @@ const PostChallengePage = () => {
       const { status } = await Camera.requestCameraPermissionsAsync();
       setCameraPermission(status === 'granted');
     })();
+
+    (async () => {
+      const { status } = await Location.requestForegroundPermissionsAsync();
+      setLocationPermission(status === 'granted');
+      
+      if (status === 'granted') {
+        getCurrentLocation();
+      }
+    })();
   }, []);
+
+  useEffect(() => {
+    if (locationEnabled && locationPermission) {
+      getCurrentLocation();
+    }
+  }, [locationEnabled, locationPermission]);
+
+  const getCurrentLocation = async () => {
+    try {
+      if (!locationPermission) {
+        console.log('Location permission not granted');
+        return;
+      }
+
+      const location = await Location.getCurrentPositionAsync({
+        accuracy: Location.Accuracy.Balanced,
+      });
+      
+      setCurrentLocation({
+        latitude: location.coords.latitude,
+        longitude: location.coords.longitude,
+      });
+      
+      console.log('Location obtained:', location.coords);
+    } catch (error) {
+      console.error('Failed to get location:', error);
+      Alert.alert(
+        'Location Error',
+        'Could not get your current location. Please check your location settings.'
+      );
+    }
+  };
+
+  const toggleLocation = async () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    
+    if (!locationEnabled) {
+      if (!locationPermission) {
+        const { status } = await Location.requestForegroundPermissionsAsync();
+        setLocationPermission(status === 'granted');
+        
+        if (status !== 'granted') {
+          Alert.alert(
+            'Location Permission',
+            'Please enable location access to tag your posts with location.'
+          );
+          return;
+        }
+      }
+      
+      setLocationEnabled(true);
+      getCurrentLocation();
+    } else {
+      setLocationEnabled(false);
+      setCurrentLocation(null);
+    }
+  };
 
   const takePicture = async () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
@@ -128,6 +198,21 @@ const PostChallengePage = () => {
       const photoUrl = await PostService.uploadPhoto(photo);
       console.log('Photo uploaded successfully:', photoUrl);
       
+      let coords = currentLocation;
+      if (locationEnabled && !coords) {
+        try {
+          const location = await Location.getCurrentPositionAsync({
+            accuracy: Location.Accuracy.Balanced,
+          });
+          coords = {
+            latitude: location.coords.latitude,
+            longitude: location.coords.longitude,
+          };
+        } catch (error) {
+          console.log('Could not get fresh location:', error);
+        }
+      }
+
       const post = {
         challenge,
         category,
@@ -136,6 +221,9 @@ const PostChallengePage = () => {
         username: username || 'anonymous',
         completedAt,
         timestamp: new Date().toISOString(),
+        latitude: locationEnabled && coords ? coords.latitude : null,
+        longitude: locationEnabled && coords ? coords.longitude : null,
+        locationEnabled: locationEnabled
       };
 
       console.log('Creating post in database:', post);
@@ -147,7 +235,6 @@ const PostChallengePage = () => {
       const today = new Date();
       let streak = (await AsyncStorage.getItem('streak')) || "0";
       let newStreak = lastCompletedDate && lastCompletedDate.toDateString() !== today.toDateString();
-      newStreak = true; // For testing
       if (newStreak) {
           streak = (parseInt(streak, 10) + 1).toString(); 
       }
@@ -190,7 +277,6 @@ const PostChallengePage = () => {
     }
   };
 
-
   const formatDate = (dateString) => {
     const date = new Date(dateString);
     return date.toLocaleDateString('en-US', { 
@@ -219,6 +305,58 @@ const PostChallengePage = () => {
         <View style={common_styles.header}>
           <Text style={common_styles.headerTitle}>CHALLENGE CRUSHED!</Text>
           <View style={common_styles.headerLine} />
+        </View>
+
+        <View style={{
+          flexDirection: 'row',
+          alignItems: 'center',
+          justifyContent: 'center',
+          marginBottom: 20,
+          paddingHorizontal: 20,
+        }}>
+          <TouchableOpacity 
+            style={{
+              flexDirection: 'row',
+              alignItems: 'center',
+              backgroundColor: locationEnabled ? colors.vintageOrange : colors.darkGray,
+              paddingHorizontal: 15,
+              paddingVertical: 8,
+              borderRadius: 20,
+              borderWidth: 2,
+              borderColor: locationEnabled ? colors.darkBrown : colors.mediumGray,
+            }}
+            onPress={toggleLocation}
+          >
+            <Text style={{
+              fontSize: 16,
+              marginRight: 8,
+            }}>
+              {locationEnabled ? '📍' : '📍'}
+            </Text>
+            <Text style={{
+              fontSize: 12,
+              fontWeight: '700',
+              color: locationEnabled ? colors.polaroidWhite : colors.mediumGray,
+              letterSpacing: 1,
+            }}>
+              {locationEnabled ? 'LOCATION ON' : 'LOCATION OFF'}
+            </Text>
+          </TouchableOpacity>
+          
+          {locationEnabled && currentLocation && (
+            <View style={{
+              marginLeft: 10,
+              padding: 5,
+            }}>
+              <Text style={{
+                fontSize: 10,
+                color: colors.darkGray,
+                fontStyle: 'italic',
+              }}>
+                📍 Located
+              </Text>
+            </View>
+          )}
         </View>
 
         <View style={common_styles.polaroidContainer}>

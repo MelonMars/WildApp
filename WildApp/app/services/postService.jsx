@@ -54,7 +54,9 @@ export class PostService {
           comments,
           completed_at,
           timestamp,
-          created_at
+          created_at,
+          latitude,
+          longitude
         `)
         .order('completed_at', { ascending: false })
         .limit(pageSize);
@@ -116,7 +118,9 @@ export class PostService {
           completed_at: postData.completedAt,
           timestamp: postData.timestamp,
           likes: 0,
-          comments: 0
+          comments: 0,
+          latitude: postData.latitude || null,
+          longitude: postData.longitude || null
         }])
         .select()
         .single();
@@ -130,6 +134,85 @@ export class PostService {
       console.error('Error creating post:', error);
       throw error;
     }
+  }
+
+  static async fetchPostsByLocation(latitude, longitude, radius = 10000) {
+    try {
+      const radiusDegrees = radius / 111320;
+      
+      const minLat = latitude - radiusDegrees;
+      const maxLat = latitude + radiusDegrees;
+      const minLon = longitude - (radiusDegrees / Math.cos(latitude * Math.PI / 180));
+      const maxLon = longitude + (radiusDegrees / Math.cos(latitude * Math.PI / 180));
+
+      const { data, error } = await supabase
+        .from('posts')
+        .select(`
+          id,
+          username,
+          challenge,
+          category,
+          photo,
+          caption,
+          likes,
+          comments,
+          completed_at,
+          timestamp,
+          latitude,
+          longitude
+        `)
+        .gte('latitude', minLat)
+        .lte('latitude', maxLat)
+        .gte('longitude', minLon)
+        .lte('longitude', maxLon)
+        .not('latitude', 'is', null)
+        .not('longitude', 'is', null)
+        .order('completed_at', { ascending: false })
+
+      if (error) {
+        throw error;
+      }
+
+      const filteredPosts = [];
+      for (const post of data) {
+        
+        const distance = this.calculateDistance(
+          latitude, 
+          longitude, 
+          post.latitude, 
+          post.longitude
+        );
+        
+        if (distance <= radius) {
+          filteredPosts.push(post);
+        }
+      }
+
+      filteredPosts.forEach(post => {
+        post.latitude = parseFloat(post.latitude);
+        post.longitude = parseFloat(post.longitude);
+      });
+      return filteredPosts;
+
+    } catch (error) {
+      console.error('Error fetching posts by location:', error);
+      throw error;
+    }
+  }
+
+  static calculateDistance(lat1, lon1, lat2, lon2) {
+    const R = 6371000;
+    const p1 = lat1 * Math.PI / 180;
+    const p2 = lat2 * Math.PI / 180;
+    const dp = (lat2 - lat1) * Math.PI / 180;
+    const dl = (lon2 - lon1) * Math.PI / 180;
+
+    const a = Math.sin(dp / 2) * Math.sin(dp / 2) +
+              Math.cos(p1) * Math.cos(p2) *
+              Math.sin(dl / 2) * Math.sin(dl / 2);
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+
+    return R * c;
   }
 
   static async cowardPost(cowardData) {
@@ -228,11 +311,23 @@ export class PostService {
   static async getTodaysChallenge() {
     try {
       const today = new Date().toISOString().slice(0, 10);
-      const { data, error } = await supabase 
+      console.log('Fetching challenge for today:', today);
+      let { data, error } = await supabase 
         .from('daily_challenges')
         .select('*')
         .eq('challenge_day', today)
         .single();
+
+      if (!data || error?.code === 'PGRST116') {
+        const { data: recentData, error: recentError } = await supabase
+          .from('daily_challenges')
+          .select('*')
+          .order('challenge_day', { ascending: false })
+          .limit(1)
+          .single();
+        data = recentData;
+        error = recentError;
+      }
 
       if (error) {
         throw error;

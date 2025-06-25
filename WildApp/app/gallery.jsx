@@ -18,6 +18,7 @@ import { useApp } from './contexts/AppContext';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { Image } from 'expo-image';
 import * as Haptics from 'expo-haptics';
+import MapView, { Marker } from 'react-native-maps';
 
 import { PostService } from './services/postService';
 import { common_styles, colors, typography, shadows } from './styles';
@@ -363,6 +364,8 @@ export default function GalleryPage() {
         if (!selectedPost) return null;
         
         const isCowardPost = selectedPost.category === 'COWARD';
+        const hasLocation = selectedPost.latitude && selectedPost.longitude;
+        
         const modalScale = modalAnim.interpolate({
             inputRange: [0, 1],
             outputRange: [0.8, 1],
@@ -478,6 +481,36 @@ export default function GalleryPage() {
                             </View>
                         </View>
                         
+                        {hasLocation && (
+                            <View style={styles.mapContainer}>
+                                <MapView
+                                    style={styles.modalMap}
+                                    initialRegion={{
+                                        latitude: parseFloat(selectedPost.latitude),
+                                        longitude: parseFloat(selectedPost.longitude),
+                                        latitudeDelta: 0.0922,
+                                        longitudeDelta: 0.0421,
+                                    }}
+                                    scrollEnabled={false}
+                                    zoomEnabled={false}
+                                    rotateEnabled={false}
+                                    pitchEnabled={false}
+                                >
+                                    <Marker
+                                        coordinate={{
+                                            latitude: parseFloat(selectedPost.latitude),
+                                            longitude: parseFloat(selectedPost.longitude),
+                                        }}
+                                        title="Challenge Location"
+                                        description={selectedPost.challenge}
+                                    />
+                                </MapView>
+                                <View style={styles.mapOverlay}>
+                                    <Text style={styles.locationText}>📍 Challenge Location</Text>
+                                </View>
+                            </View>
+                        )}
+                        
                         <View style={[common_styles.tapeHorizontal, common_styles.tapeTopLeft]} />
                         <View style={[common_styles.tapeHorizontal, common_styles.tapeBottomRight]} />
                     </View>
@@ -561,40 +594,33 @@ const styles = StyleSheet.create({
         marginBottom: 20,
         alignItems: 'center',
     },
-    
     polaroidPost: {
         width: '100%',
         minHeight: 200,
     },
-    
     photoContainer: {
         position: 'relative',
         marginBottom: 8,
     },
-    
     postPhoto: {
         height: 120,
         borderRadius: 2,
     },
-    
     cowardPhotoContainer: {
         height: 120,
         justifyContent: 'center',
         alignItems: 'center',
         backgroundColor: colors.lightGray,
     },
-    
     cowardX: {
         ...typography.headerLarge,
         color: colors.vintageRed,
         fontWeight: '900',
     },
-    
     postCaptionArea: {
         paddingHorizontal: 8,
         paddingVertical: 4,
     },
-    
     cowardText: {
         ...typography.bodySmall,
         color: colors.vintageRed,
@@ -602,81 +628,67 @@ const styles = StyleSheet.create({
         fontWeight: '800',
         marginTop: 4,
     },
-    
     cowardUsername: {
         ...typography.stamp,
         color: colors.vintageRed,
         letterSpacing: 1,
     },
-    
     cowardLabel: {
         ...typography.bodySmall,
         color: colors.dustyRed,
     },
-    
     modalPolaroid: {
         width: '100%',
         minHeight: 300,
     },
-    
     modalPhotoContainer: {
         marginBottom: 12,
         position: 'relative',
     },
-    
     modalPostPhoto: {
         height: 200,
         borderRadius: 2,
     },
-    
     modalCowardPhotoContainer: {
         height: 200,
         justifyContent: 'center',
         alignItems: 'center',
         backgroundColor: colors.lightGray,
     },
-    
     modalCowardX: {
         ...typography.headerLarge,
         fontSize: 48,
         color: colors.vintageRed,
         fontWeight: '900',
     },
-    
     modalCaptionArea: {
         paddingHorizontal: 12,
         paddingVertical: 8,
     },
-    
     modalChallengeText: {
         fontSize: 16,
         lineHeight: 22,
         marginBottom: 10,
     },
-    
     modalCaptionText: {
         fontSize: 14,
         lineHeight: 20,
         marginBottom: 8,
     },
-    
     modalCowardText: {
         fontSize: 16,
         marginBottom: 8,
     },
-    
     modalCowardUsername: {
         ...typography.stamp,
         fontSize: 14,
         color: colors.vintageRed,
         letterSpacing: 1,
     },
-    
     modalCowardLabel: {
         color: colors.dustyRed,
         fontSize: 14,
     },
-    
     retroShareButton: {
         position: 'absolute',
         top: -25,
@@ -693,21 +705,17 @@ const styles = StyleSheet.create({
         transform: [{ rotate: '-2deg' }],
         ...shadows.lightShadow,
     },
-    
     retroShareIcon: {
         marginRight: 6,
     },
-    
     retroShareIconText: {
         fontSize: 14,
     },
-    
     retroShareText: {
         ...typography.stamp,
         color: colors.polaroidWhite,
         fontSize: 10,
     },
-    
     retroShareGlow: {
         position: 'absolute',
         top: -2,
@@ -719,13 +727,11 @@ const styles = StyleSheet.create({
         borderColor: 'rgba(255,255,255,0.3)',
         borderRadius: 6,
     },
-    
     backButton: {
         paddingVertical: 8,
         paddingHorizontal: 12,
         minWidth: 70,
     },
-    
     bottomAccent: {
         height: 4,
         backgroundColor: colors.lightBrown,
@@ -733,5 +739,33 @@ const styles = StyleSheet.create({
         marginBottom: 10,
         borderRadius: 2,
         opacity: 0.6,
+    },
+    mapContainer: {
+        marginTop: 10,
+        borderRadius: 8,
+        overflow: 'hidden',
+        height: 150,
+        position: 'relative',
+        borderWidth: 2,
+        borderColor: '#ddd',
+    },
+    modalMap: {
+        flex: 1,
+        width: '100%',
+        height: '100%',
+    },
+    mapOverlay: {
+        position: 'absolute',
+        top: 8,
+        left: 8,
+        backgroundColor: 'rgba(0, 0, 0, 0.7)',
+        paddingHorizontal: 8,
+        paddingVertical: 4,
+        borderRadius: 4,
+    },
+    locationText: {
+        color: 'white',
+        fontSize: 12,
+        fontWeight: 'bold',
     },
 });

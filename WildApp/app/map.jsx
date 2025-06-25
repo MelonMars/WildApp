@@ -7,7 +7,8 @@ import {
   Alert,
   ActivityIndicator,
   ScrollView,
-  Dimensions
+  Dimensions,
+  Image
 } from 'react-native';
 import MapView, { Marker, PROVIDER_GOOGLE } from 'react-native-maps';
 import * as Location from 'expo-location';
@@ -16,6 +17,7 @@ import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import { common_styles } from './styles';
 import { useRouter } from 'expo-router';
+import { PostService } from './services/postService';
 
 const { width, height } = Dimensions.get('window');
 
@@ -75,6 +77,7 @@ const retrostyle = [
 ];
 
 const search_options = [
+  { key: 'posts', emoji: '📸', label: 'User Posts', tag: null },
   { key: 'parks', emoji: '🌳', label: 'Parks', tag: 'leisure=park' },
   { key: 'trails', emoji: '🥾', label: 'Trails', tag: 'highway=footway' },
   { key: 'forests', emoji: '🌲', label: 'Forests', tag: 'landuse=forest' },
@@ -95,7 +98,7 @@ const MapPage = () => {
   const params = useLocalSearchParams();
   const mapRef = useRef(null);
   
-  const initialQuery = params.searchFor || 'parks';
+  const initialQuery = params.searchFor || 'posts';
   const challenge = params.challenge || null;
   const category = params.category || null;
   const router = useRouter();
@@ -103,10 +106,12 @@ const MapPage = () => {
   
   const [userLocation, setUserLocation] = useState(null);
   const [places, setPlaces] = useState([]);
+  const [posts, setPosts] = useState([]);
   const [selectedOption, setSelectedOption] = useState(initialOption);
   const [currentSearchTerm, setCurrentSearchTerm] = useState(initialOption.label);
   const [loading, setLoading] = useState(false);
   const [selectedPlace, setSelectedPlace] = useState(null);
+  const [selectedPost, setSelectedPost] = useState(null);
   const [dropdownVisible, setDropdownVisible] = useState(false);
 
   const requestLocationPermission = useCallback(async () => {
@@ -137,8 +142,39 @@ const MapPage = () => {
     }
   }, []);
 
+  const searchNearbyPosts = useCallback(async () => {
+    if (!userLocation) return;
+
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    setLoading(true);
+    setCurrentSearchTerm('User Posts');
+    
+    try {
+      const nearbyPosts = await PostService.fetchPostsByLocation(
+        userLocation.latitude,
+        userLocation.longitude,
+        10000,
+      );
+      
+      setPosts(nearbyPosts);
+      setPlaces([]);
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    } catch (error) {
+      console.error('Error fetching nearby posts:', error);
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+      Alert.alert('Search Error', 'Failed to find nearby posts');
+    } finally {
+      setLoading(false);
+    }
+  }, [userLocation]);
+
+
   const searchNearbyPlaces = useCallback(async (option) => {
     if (!userLocation) return;
+
+    if (option.key === 'posts') {
+      return searchNearbyPosts();
+    }
 
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     setLoading(true);
@@ -146,6 +182,7 @@ const MapPage = () => {
     
     try {
       await searchWithOverpassAPI(option);
+      setPosts([]);
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     } catch (error) {
       console.error('Error searching places:', error);
@@ -154,7 +191,7 @@ const MapPage = () => {
     } finally {
       setLoading(false);
     }
-  }, [userLocation]);
+  }, [userLocation, searchNearbyPosts]);
 
   const searchWithOverpassAPI = useCallback(async (option) => {
     const bbox = [
@@ -218,9 +255,22 @@ const MapPage = () => {
   const handleMarkerPress = useCallback((place) => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     setSelectedPlace(place);
+    setSelectedPost(null);
     mapRef.current?.animateToRegion({
       latitude: place.latitude,
       longitude: place.longitude,
+      latitudeDelta: 0.005,
+      longitudeDelta: 0.005,
+    }, 500); 
+  }, []);
+
+  const handlePostMarkerPress = useCallback((post) => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    setSelectedPost(post);
+    setSelectedPlace(null);
+    mapRef.current?.animateToRegion({
+      latitude: post.latitude,
+      longitude: post.longitude,
       latitudeDelta: 0.005,
       longitudeDelta: 0.005,
     }, 500); 
@@ -236,8 +286,8 @@ const MapPage = () => {
     Haptics.selectionAsync();
     setSelectedOption(option);
     setDropdownVisible(false);
-    handleSearch();
-  }, []);
+    searchNearbyPlaces(option);
+  }, [searchNearbyPlaces]);
 
   const toggleDropdown = useCallback(() => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
@@ -247,6 +297,7 @@ const MapPage = () => {
   const handlePlaceCardClose = useCallback(() => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     setSelectedPlace(null);
+    setSelectedPost(null);
   }, []);
 
   useEffect(() => {
@@ -258,6 +309,60 @@ const MapPage = () => {
       searchNearbyPlaces(selectedOption);
     }
   }, [userLocation]);
+
+  const formatTimeAgo = useCallback((timestamp) => {
+    const now = new Date();
+    const postTime = new Date(timestamp);
+    const diffMs = now - postTime;
+    const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+    const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
+    const diffMinutes = Math.floor(diffMs / (1000 * 60));
+
+    if (diffDays > 0) return `${diffDays}d ago`;
+    if (diffHours > 0) return `${diffHours}h ago`;
+    if (diffMinutes > 0) return `${diffMinutes}m ago`;
+    return 'Just now';
+  }, []);
+
+  const postCard = useMemo(() => {
+    if (!selectedPost) return null;
+
+    return (
+      <View style={styles.placeCard}>
+        <View style={styles.cardHeader}>
+          <View style={styles.postHeader}>
+            <Text style={styles.placeName}>@{selectedPost.username}</Text>
+            <Text style={styles.timeAgo}>{formatTimeAgo(selectedPost.timestamp)}</Text>
+          </View>
+          <TouchableOpacity onPress={handlePlaceCardClose}>
+            <Ionicons name="close-circle" size={28} color={colors.earthBrown} />
+          </TouchableOpacity>
+        </View>
+        
+        {selectedPost.photo && (
+          <Image source={{ uri: selectedPost.photo }} style={styles.postImage} />
+        )}
+        
+        <Text style={styles.postChallenge}>{selectedPost.challenge}</Text>
+        <Text style={styles.postCategory}>📍 {selectedPost.category}</Text>
+        
+        {selectedPost.caption && (
+          <Text style={styles.postCaption}>{selectedPost.caption}</Text>
+        )}
+        
+        <View style={styles.postStats}>
+          <View style={styles.statItem}>
+            <Ionicons name="heart" size={16} color={colors.sunsetOrange} />
+            <Text style={styles.statText}>{selectedPost.likes || 0}</Text>
+          </View>
+          <View style={styles.statItem}>
+            <Ionicons name="chatbubble" size={16} color={colors.mossGreen} />
+            <Text style={styles.statText}>{selectedPost.comments || 0}</Text>
+          </View>
+        </View>
+      </View>
+    );
+  }, [selectedPost, handlePlaceCardClose, formatTimeAgo]);
 
   const placeCard = useMemo(() => {
     if (!selectedPlace) return null;
@@ -284,7 +389,27 @@ const MapPage = () => {
     );
   }, [selectedPlace, handlePlaceCardClose]);
 
-  const markers = useMemo(() => {
+  const markers = useMemo(() => {    
+    if (posts.length > 0) {
+      return posts.map((post, index) => {
+        return (
+          <Marker
+            key={`post-${post.id}`}
+            coordinate={{
+              latitude: post.latitude,
+              longitude: post.longitude,
+            }}
+            pinColor={colors.sunsetOrange}
+            onPress={() => handlePostMarkerPress(post)}
+          >
+            <View style={styles.postMarker}>
+              <Ionicons name="camera" size={20} color={colors.warmCream} />
+            </View>
+          </Marker>
+        );
+      });
+    }
+
     return places.map((place) => (
       <Marker
         key={place.id}
@@ -298,7 +423,8 @@ const MapPage = () => {
         onPress={() => handleMarkerPress(place)}
       />
     ));
-  }, [places, getMarkerColor, handleMarkerPress]);
+  }, [places, posts, getMarkerColor, handleMarkerPress, handlePostMarkerPress]);
+
 
   if (!userLocation) {
     return (
@@ -309,7 +435,10 @@ const MapPage = () => {
     );
   }
 
-return (
+  const totalItems = posts.length > 0 ? posts.length : places.length;
+  const itemType = posts.length > 0 ? 'posts' : currentSearchTerm;
+
+  return (
     <View style={styles.container}>
         <View style={styles.headerContainer}>
             <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', marginBottom: 15 }}>
@@ -404,12 +533,13 @@ return (
             {markers}
         </MapView>
 
-        {placeCard}
+        {selectedPost && postCard}
+        {selectedPlace && placeCard}
 
-        {places.length > 0 && (
+        {totalItems > 0 && (
             <View style={styles.resultsCounter}>
                 <Text style={styles.resultsText}>
-                    🏕️ {places.length} {currentSearchTerm} discovered
+                    {posts.length > 0 ? '📸' : '🏕️'} {totalItems} {itemType} discovered
                 </Text>
             </View>
         )}
@@ -537,6 +667,20 @@ const styles = StyleSheet.create({
   map: {
     flex: 1,
   },
+  postMarker: {
+    width: 32,
+    height: 32,
+    backgroundColor: colors.sunsetOrange,
+    borderRadius: 16,
+    borderWidth: 2,
+    borderColor: colors.earthBrown,
+    justifyContent: 'center',
+    alignItems: 'center',
+    shadowColor: colors.shadow,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 3,
+  },
   placeCard: {
     position: 'absolute',
     bottom: 30,
@@ -559,12 +703,64 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: 12,
   },
+  postHeader: {
+    flex: 1,
+  },
   placeName: {
     fontSize: 20,
     fontWeight: 'bold',
     color: colors.forestGreen,
-    flex: 1,
     fontFamily: 'serif',
+  },
+  timeAgo: {
+    fontSize: 12,
+    color: colors.earthBrown,
+    fontStyle: 'italic',
+    marginTop: 2,
+  },
+  postImage: {
+    width: '100%',
+    height: 120,
+    borderRadius: 12,
+    marginBottom: 12,
+    borderWidth: 1,
+    borderColor: colors.mossGreen,
+  },
+  postChallenge: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: colors.forestGreen,
+    marginBottom: 4,
+  },
+  postCategory: {
+    fontSize: 14,
+    color: colors.earthBrown,
+    marginBottom: 8,
+  },
+  postCaption: {
+    fontSize: 14,
+    color: colors.deepWood,
+    fontStyle: 'italic',
+    marginBottom: 12,
+    lineHeight: 18,
+  },
+  postStats: {
+    flexDirection: 'row',
+    justifyContent: 'flex-start',
+    borderTopWidth: 1,
+    borderTopColor: colors.mossGreen,
+    paddingTop: 8,
+  },
+  statItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginRight: 20,
+  },
+  statText: {
+    marginLeft: 4,
+    fontSize: 14,
+    color: colors.deepWood,
+    fontWeight: '500',
   },
   placeAddress: {
     fontSize: 15,

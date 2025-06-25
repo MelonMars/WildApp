@@ -71,9 +71,15 @@ export default function Home() {
     useEffect(() => {
         const fetchTodaysChallenge = async () => {
             setLoadingTodaysChallenge(true);
-            const challenge = await PostService.getTodaysChallenge();
-            setTodaysChallenge(challenge);
-            setLoadingTodaysChallenge(false);
+            try {
+                const challenge = await PostService.getTodaysChallenge();
+                console.log('Fetched today\'s challenge:', challenge);
+                setTodaysChallenge(challenge);
+            } catch (error) {
+                console.log('Error fetching today\'s challenge:', error);
+            } finally {
+                setLoadingTodaysChallenge(false);
+            }
         };
 
         fetchTodaysChallenge();
