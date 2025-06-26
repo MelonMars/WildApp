@@ -10,7 +10,11 @@ import {
   ScrollView,
   FlatList,
   ActivityIndicator,
-  Share
+  Share,
+  Linking,
+  ActionSheetIOS,
+  Alert,
+  Platform
 } from 'react-native';
 
 import { LinearGradient } from 'expo-linear-gradient';
@@ -23,6 +27,8 @@ import MapView, { Marker } from 'react-native-maps';
 
 import { PostService } from './services/postService';
 import { common_styles, colors, typography, shadows } from './styles';
+import * as FileSystem from 'expo-file-system';
+import * as MediaLibrary from 'expo-media-library';
 
 const { width, height } = Dimensions.get('window');
 const AnimatedFlatList = Animated.createAnimatedComponent(FlatList);
@@ -403,22 +409,173 @@ export default function GalleryPage() {
 
         const handleShare = async () => {
             Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-
+            
             try {
-                const shareContent = isCowardPost 
+                const shareContent = isCowardPost
                     ? `${selectedPost.username.toUpperCase()} is a COWARD! 📸 Challenge: "${selectedPost.challenge}"`
                     : `"${selectedPost.caption}" - @${selectedPost.username} 📸 Challenge: "${selectedPost.challenge}"`;
 
-                const shareOptions = {
-                    title: 'Check this out!',
-                    message: shareContent,
-                    url: selectedPost.photo || undefined, 
-                };
-
-                await Share.share(shareOptions);
+                const options = [
+                    'Share as Story',
+                    'Regular Share',
+                    'Cancel'
+                ];
+                
+                const choice = await showActionSheet(options);
+                
+                if (choice === 0) {
+                    await shareAsStory();
+                } else if (choice === 1) {
+                    await regularShare(shareContent);
+                }
+                
             } catch (error) {
                 console.log('Share cancelled or failed:', error);
             }
+        };
+
+        const shareAsStory = async () => {
+            try {
+                let localImageUri = selectedPost.photo;
+                
+                if (selectedPost.photo && selectedPost.photo.startsWith('http')) {
+                    const filename = selectedPost.photo.split('/').pop() || 'shared_image.jpg';
+                    const localUri = `${FileSystem.documentDirectory}${filename}`;
+                    
+                    const { uri } = await FileSystem.downloadAsync(selectedPost.photo, localUri);
+                    localImageUri = uri;
+                }
+                
+                const platforms = [
+                    { name: 'Instagram Stories', scheme: 'instagram-stories', action: () => shareToInstagramStory(localImageUri) },
+                    { name: 'Snapchat', scheme: 'snapchat', action: () => shareToSnapchat(localImageUri) },
+                    { name: 'Facebook Stories', scheme: 'fb', action: () => shareToFacebookStory(localImageUri) },
+                    'Cancel'
+                ];
+                
+                const platformChoice = await showActionSheet(platforms.map(p => typeof p === 'string' ? p : p.name));
+                
+                if (platformChoice !== 'Cancel' && platformChoice < platforms.length - 1) {
+                    const selectedPlatform = platforms[platformChoice];
+                    if (typeof selectedPlatform === 'object') {
+                        await selectedPlatform.action();
+                    }
+                }
+                
+            } catch (error) {
+                console.log('Story share failed:', error);
+                await regularShare();
+            }
+        };
+
+        const shareToInstagramStory = async (imageUri) => {
+            try {
+                const instagramURL = `instagram-stories://share?media=${encodeURIComponent(imageUri)}`;
+                
+                const canOpen = await Linking.canOpenURL('instagram-stories://share');
+                if (canOpen) {
+                    await Linking.openURL(instagramURL);
+                } else {
+                    throw new Error('Instagram not installed');
+                }
+            } catch (error) {
+                console.log('Instagram story share failed:', error);
+                const fallbackURL = 'instagram://story-camera';
+                const canOpenFallback = await Linking.canOpenURL(fallbackURL);
+                
+                if (canOpenFallback) {
+                    await Linking.openURL(fallbackURL);
+                } else {
+                    const storeURL = Platform.OS === 'ios' 
+                        ? 'https://apps.apple.com/app/instagram/id389801252'
+                        : 'https://play.google.com/store/apps/details?id=com.instagram.android';
+                    await Linking.openURL(storeURL);
+                }
+            }
+        };
+
+        const shareToSnapchat = async (imageUri) => {
+            try {
+                const snapchatURL = `snapchat://camera`;
+                
+                const canOpen = await Linking.canOpenURL(snapchatURL);
+                if (canOpen) {
+                    await MediaLibrary.saveToLibraryAsync(imageUri);
+                    await Linking.openURL(snapchatURL);
+                } else {
+                    throw new Error('Snapchat not installed');
+                }
+            } catch (error) {
+                console.log('Snapchat share failed:', error);
+                const storeURL = Platform.OS === 'ios'
+                    ? 'https://apps.apple.com/app/snapchat/id447188370'
+                    : 'https://play.google.com/store/apps/details?id=com.snapchat.android';
+                await Linking.openURL(storeURL);
+            }
+        };
+
+        const shareToFacebookStory = async (imageUri) => {
+            try {
+                const facebookURL = `fb://story-camera`;
+                
+                const canOpen = await Linking.canOpenURL(facebookURL);
+                if (canOpen) {
+                    await MediaLibrary.saveToLibraryAsync(imageUri);
+                    await Linking.openURL(facebookURL);
+                } else {
+                    throw new Error('Facebook not installed');
+                }
+            } catch (error) {
+                console.log('Facebook story share failed:', error);
+                const storeURL = Platform.OS === 'ios'
+                    ? 'https://apps.apple.com/app/facebook/id284882215'
+                    : 'https://play.google.com/store/apps/details?id=com.facebook.katana';
+                await Linking.openURL(storeURL);
+            }
+        };
+
+        const regularShare = async (shareContent) => {
+            const shareOptions = {
+                title: 'Check this out!',
+                message: shareContent || `"${selectedPost.caption}" - @${selectedPost.username} 📸 Challenge: "${selectedPost.challenge}"`,
+                url: selectedPost.photo || undefined,
+            };
+            
+            await Share.share(shareOptions);
+        };
+
+        const showActionSheet = async (options) => {
+            return new Promise((resolve) => {
+                if (Platform.OS === 'ios') {
+                    ActionSheetIOS.showActionSheetWithOptions(
+                        {
+                            options: options,
+                            cancelButtonIndex: options.length - 1,
+                        },
+                        (buttonIndex) => {
+                            resolve(buttonIndex);
+                        }
+                    );
+                } else {
+                    const buttons = options.slice(0, -1).map((option, index) => ({
+                        text: option,
+                        onPress: () => resolve(index),
+                    }));
+                    
+                    buttons.push({
+                        text: options[options.length - 1],
+                        style: 'cancel',
+                        onPress: () => resolve(options.length - 1),
+                    });
+
+                    Alert.alert(
+                        'Choose an option',
+                        '',
+                        buttons,
+                        { cancelable: true, onDismiss: () => resolve(options.length - 1) }
+                    );
+                }
+            });
         };
 
         return (
@@ -621,7 +778,7 @@ export default function GalleryPage() {
             <Animated.View style={[common_styles.galleryContainer, { opacity: fadeAnim }]}>
                 <AnimatedFlatList
                     ref={flatListRef}
-                    data={filteredPosts} // Changed from 'posts' to 'filteredPosts'
+                    data={filteredPosts}
                     renderItem={renderPost}
                     keyExtractor={(item) => item.id}
                     numColumns={2}

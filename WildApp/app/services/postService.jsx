@@ -259,7 +259,10 @@ export class PostService {
           difficulty,
           created_at,
           is_active,
-          finishes
+          finishes,
+          local,
+          latitude,
+          longitude
         `)
         .eq('is_active', true)
         .order('created_at', { ascending: false });
@@ -399,7 +402,10 @@ export class NewChallengeService {
           is_user_generated: typeof challengeData.isUserGenerated === 'boolean' ? challengeData.isUserGenerated : true,
           review_notes: null,
           reviewed_by: null,
-          reviewed_at: null
+          reviewed_at: null,
+          latitude: challengeData.latitude || null,
+          longitude: challengeData.longitude || null,
+          local: challengeData.local || false
         }])
         .select()
         .single();
