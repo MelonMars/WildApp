@@ -228,6 +228,14 @@ const PostChallengePage = () => {
 
       console.log('Creating post in database:', post);
       
+      try {
+        const existingPosts = JSON.parse(await AsyncStorage.getItem('posts')) || [];
+        existingPosts.push(post);
+        await AsyncStorage.setItem('posts', JSON.stringify(existingPosts));
+      } catch (error) {
+        console.error('Failed to save post to local storage:', error);
+      }
+
       const newPost = await PostService.createPost(post);
       
       const lastCompleted = await AsyncStorage.getItem('lastCompleted');

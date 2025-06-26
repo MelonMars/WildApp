@@ -17,6 +17,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { useApp } from './contexts/AppContext';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { Image } from 'expo-image';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Haptics from 'expo-haptics';
 import MapView, { Marker } from 'react-native-maps';
 
@@ -42,6 +43,9 @@ export default function GalleryPage() {
     const scrollY = useRef(new Animated.Value(0)).current;
     const flatListRef = useRef(null);
     const router = useRouter();
+    const [showMyPostsOnly, setShowMyPostsOnly] = useState(false);
+    const [myPosts, setMyPosts] = useState([]);  
+    const [filteredPosts, setFilteredPosts] = useState([]);
 
     const { newPost, challenge, category, photo, caption, completedAt, timestamp, isNewPost } = useLocalSearchParams();
     const { preloadedPosts, preloadedLastDoc, preloadedHasMore, preloadComplete } = useApp();
@@ -64,8 +68,33 @@ export default function GalleryPage() {
         }
     }, [preloadComplete, preloadedPosts, preloadedLastDoc, preloadedHasMore]);
 
+    const loadMyPosts = async () => {
+        try {
+            const storedPosts = await AsyncStorage.getItem('posts');
+            
+            if (storedPosts) {
+                const parsedPosts = JSON.parse(storedPosts);
+                setMyPosts(parsedPosts);
+            }
+        } catch (error) {
+            console.error('Failed to load user posts:', error);
+        }
+    };
+
+    useEffect(() => {
+        loadMyPosts();
+    }, []);
+
+    useEffect(() => {
+        if (showMyPostsOnly) {
+            setFilteredPosts(myPosts);
+        } else {
+            setFilteredPosts(posts);
+        }
+    }, [showMyPostsOnly, posts, myPosts]);
+
     const fetchMorePosts = async () => {
-        if (loading || !hasMore) return;
+        if (loading || !hasMore || showMyPostsOnly) return;
         setLoading(true);
         try {
             const { posts: newPosts, lastDoc: newLastDoc, hasMore: moreAvailable } =
@@ -574,6 +603,17 @@ export default function GalleryPage() {
                 <View style={{ flex: 1, alignItems: 'center' }}>
                     <Text style={common_styles.headerTitle}>THE WALL</Text>
                     <Text style={common_styles.headerSubtitle}>PROOF OF COURAGE</Text>
+                    <TouchableOpacity
+                        style={[styles.filterToggle, showMyPostsOnly && styles.filterToggleActive]}
+                        onPress={() => {
+                            setShowMyPostsOnly(!showMyPostsOnly);
+                            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                        }}
+                    >
+                        <Text style={[styles.filterToggleText, showMyPostsOnly && styles.filterToggleTextActive]}>
+                            {showMyPostsOnly ? '📱 MY POSTS' : '🌍 ALL POSTS'}
+                        </Text>
+                    </TouchableOpacity>
                 </View>
                 <View style={{ width: 70 }} />
             </Animated.View>
@@ -581,7 +621,7 @@ export default function GalleryPage() {
             <Animated.View style={[common_styles.galleryContainer, { opacity: fadeAnim }]}>
                 <AnimatedFlatList
                     ref={flatListRef}
-                    data={posts}
+                    data={filteredPosts} // Changed from 'posts' to 'filteredPosts'
                     renderItem={renderPost}
                     keyExtractor={(item) => item.id}
                     numColumns={2}
@@ -792,5 +832,27 @@ const styles = StyleSheet.create({
         justifyContent: 'center',
         alignItems: 'center',
         ...shadows.lightShadow,
-    }
+    },
+    filterToggle: {
+        marginTop: 8,
+        paddingHorizontal: 12,
+        paddingVertical: 4,
+        borderWidth: 1,
+        borderColor: colors.lightBrown,
+        borderRadius: 12,
+        backgroundColor: 'transparent',
+    },
+    filterToggleActive: {
+        backgroundColor: colors.forestGreen,
+        borderColor: colors.oliveGreen,
+    },
+    filterToggleText: {
+        ...typography.stamp,
+        fontSize: 10,
+        color: colors.lightBrown,
+        letterSpacing: 0.5,
+    },
+    filterToggleTextActive: {
+        color: colors.polaroidWhite,
+    },
 });
