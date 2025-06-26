@@ -7,6 +7,7 @@ import * as Haptics from 'expo-haptics';
 import { PostService } from './services/postService';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useFocusEffect } from '@react-navigation/native';
+import * as Location from 'expo-location';
 
 export default function Home() {
     const router = useRouter();
@@ -16,7 +17,42 @@ export default function Home() {
     const [todaysChallenge, setTodaysChallenge] = useState(null);
     const [streak, setStreak] = useState(0);
     const [needStreak, setNeedStreak] = useState(false);
-   
+    const [usersPosts, setUsersPosts] = useState(null);
+    const [userCompletedChallenges, setUserCompletedChallenges] = useState([]);
+    const [userLocation, setUserLocation] = useState(null);
+    const [locationPermission, setLocationPermission] = useState(null);
+
+    const requestLocationPermission = async () => {
+        try {
+            const { status } = await Location.requestForegroundPermissionsAsync();
+            setLocationPermission(status === 'granted');
+            
+            if (status === 'granted') {
+                const location = await Location.getCurrentPositionAsync({});
+                setUserLocation({
+                    latitude: location.coords.latitude,
+                    longitude: location.coords.longitude
+                });
+            }
+        } catch (error) {
+            console.error('Error requesting location permission:', error);
+            setLocationPermission(false);
+        }
+    };
+
+    const calculateDistance = (lat1, lon1, lat2, lon2) => {
+        const R = 6371;
+        const dLat = (lat2 - lat1) * Math.PI / 180;
+        const dLon = (lon2 - lon1) * Math.PI / 180;
+        const a = 
+            Math.sin(dLat/2) * Math.sin(dLat/2) +
+            Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * 
+            Math.sin(dLon/2) * Math.sin(dLon/2);
+        const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+        const distance = R * c;
+        return distance;
+    };
+
     const getStreak = async () => {
         try {
             const storedStreak = await AsyncStorage.getItem('streak');
@@ -51,6 +87,24 @@ export default function Home() {
             checkStreak();
         }, [])
     );
+  
+    useFocusEffect(() => {
+        const fetchUsersPosts = async () => {
+            try {
+                const posts = await AsyncStorage.getItem('posts');
+                if (posts) {
+                    const parsedPosts = JSON.parse(posts);
+                    setUsersPosts(parsedPosts);
+                    const completedChallenges = parsedPosts.filter(post => post.challenge);
+                    setUserCompletedChallenges(completedChallenges);
+                } 
+            }
+            catch (error) {
+                console.error('Error fetching user posts:', error);
+            }
+        };
+        fetchUsersPosts();
+    });
 
     useEffect(() => {
         const fetchChallenges = async () => {
@@ -67,6 +121,10 @@ export default function Home() {
         }
     }, [isPreloading, preloadComplete]);
     
+    useEffect(() => {
+        requestLocationPermission(); 
+    }, []);
+
     useEffect(() => {
         const fetchTodaysChallenge = async () => {
             setLoadingTodaysChallenge(true);
@@ -85,11 +143,37 @@ export default function Home() {
     }, []);
 
     const fetchChallenge = (type) => {
-        const challengeList = challenges[type];
+        if (!challenges || !challenges[type]) return null;
+        
+        const completedNames = userCompletedChallenges.map(post => post.challenge?.name);
+        let availableChallenges = challenges[type].filter(
+            challenge => !completedNames.includes(challenge.name)
+        );
+        
+        if (!userLocation || locationPermission !== true) {
+            availableChallenges = availableChallenges.filter(challenge => !challenge.local);
+        } else {
+            availableChallenges = availableChallenges.filter(challenge => {
+                if (!challenge.local) return true;
+                
+                const distance = calculateDistance(
+                    userLocation.latitude,
+                    userLocation.longitude,
+                    challenge.latitude,
+                    challenge.longitude
+                );
+                return distance <= 50;
+            });
+        }
+
+        const challengeList = availableChallenges.length > 0 ? availableChallenges : 
+        challenges[type].filter(challenge => !challenge.local);
+
+        if (challengeList.length === 0) return null;
+        
         const randomIndex = Math.floor(Math.random() * challengeList.length);
-        const randomChallenge = challengeList[randomIndex];
-        return randomChallenge;
-    }
+        return challengeList[randomIndex];
+    };
 
     const navigateToPage1 = () => {
         Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);

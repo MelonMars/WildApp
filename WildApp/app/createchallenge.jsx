@@ -21,6 +21,7 @@ import { PostService, NewChallengeService } from './services/postService';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { common_styles, colors } from './styles';
 import * as Haptics from 'expo-haptics';
+import * as Location from 'expo-location';
 
 const { width, height } = Dimensions.get('window');
 import { useRouter } from 'expo-router';
@@ -35,6 +36,10 @@ const CreateChallengePage = () => {
   const [photo, setPhoto] = useState(null);
   const [cameraPermission, setCameraPermission] = useState(null);
   const [selectedCategory, setSelectedCategory] = useState(null);
+  const [isLocalChallenge, setIsLocalChallenge] = useState(false);
+  const [userLocation, setUserLocation] = useState(null);
+  const [locationPermission, setLocationPermission] = useState(null);
+
 
   const router = useRouter();
 
@@ -43,6 +48,27 @@ const CreateChallengePage = () => {
     { id: 'social', name: 'SOCIAL', emoji: '👥' },
     { id: 'adventure', name: 'ADVENTURE', emoji: '🏔️' },
   ];
+
+  const requestLocationPermission = async () => {
+    try {
+      const { status } = await Location.requestForegroundPermissionsAsync();
+      setLocationPermission(status === 'granted');
+      
+      if (status === 'granted') {
+        const location = await Location.getCurrentPositionAsync({});
+        setUserLocation({
+          latitude: location.coords.latitude,
+          longitude: location.coords.longitude
+        });
+        return true;
+      }
+      return false;
+    } catch (error) {
+      console.error('Error requesting location permission:', error);
+      setLocationPermission(false);
+      return false;
+    }
+  };
 
   useEffect(() => {
     const loadUsername = async () => {
@@ -142,6 +168,18 @@ const CreateChallengePage = () => {
       return;
     }
 
+    if (isLocalChallenge && (!userLocation || !locationPermission)) {
+      Alert.alert(
+        'Location Required', 
+        'You need to enable location access to create a local challenge.',
+        [
+          { text: 'Create Global Instead', onPress: () => setIsLocalChallenge(false) },
+          { text: 'Cancel', style: 'cancel' }
+        ]
+      );
+      return;
+    }
+
     try {
       console.log('Starting user challenge post creation...');
       console.log("Using photo URI:", photo);
@@ -158,7 +196,12 @@ const CreateChallengePage = () => {
         username: username.trim() || 'anonymous',
         completedAt: new Date().toISOString(),
         timestamp: new Date().toISOString(),
-        isUserGenerated: true, 
+        isUserGenerated: true,
+        ...(isLocalChallenge && userLocation && {
+          local: true,
+          latitude: userLocation.latitude,
+          longitude: userLocation.longitude
+        })
       };
 
       console.log('Creating user challenge post in database:', post);
@@ -286,6 +329,60 @@ const CreateChallengePage = () => {
               ))}
             </View>
           </View>
+          <View style={{ marginBottom: 20 }}>
+            <Text style={[{ marginBottom: 12, color: colors.offWhite, fontSize: 14, fontWeight: '600' }]}>
+              CHALLENGE LOCATION
+            </Text>
+            
+            <TouchableOpacity
+              style={[
+                styles.localToggle,
+                isLocalChallenge && styles.localToggleActive
+              ]}
+              onPress={async () => {
+                if (!isLocalChallenge) {
+                  const locationGranted = await requestLocationPermission();
+                  if (locationGranted) {
+                    setIsLocalChallenge(true);
+                    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                  } else {
+                    Alert.alert(
+                      'Location Access Required',
+                      'To create location-based challenges, please enable location access when prompted.'
+                    );
+                  }
+                } else {
+                  setIsLocalChallenge(false);
+                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                }
+              }}
+            >
+              <Text style={styles.localToggleEmoji}>
+                {isLocalChallenge ? '📍' : '🌍'}
+              </Text>
+              <Text style={[
+                styles.localToggleText,
+                isLocalChallenge && styles.localToggleTextActive
+              ]}>
+                {isLocalChallenge ? 'LOCAL CHALLENGE' : 'GLOBAL CHALLENGE'}
+              </Text>
+              <Text style={[
+                styles.localToggleSubtext,
+                isLocalChallenge && styles.localToggleSubtextActive
+              ]}>
+                {isLocalChallenge 
+                  ? 'Only people nearby can see this' 
+                  : 'Everyone can see this challenge'
+                }
+              </Text>
+              {isLocalChallenge && !userLocation && (
+                <Text style={[styles.localToggleSubtext, { color: colors.vintageRed, marginTop: 4 }]}>
+                  Getting location...
+                </Text>
+              )}
+            </TouchableOpacity>
+          </View>
+
 
           <View style={common_styles.polaroidContainer}>
             <View style={common_styles.polaroidLarge}>
@@ -498,6 +595,43 @@ const styles = StyleSheet.create({
     marginTop: 15,
     fontStyle: 'italic',
     paddingHorizontal: 20,
+  }, 
+  localToggle: {
+    backgroundColor: colors.polaroidWhite,
+    borderRadius: 12,
+    borderWidth: 2,
+    borderColor: colors.mediumGray,
+    padding: 16,
+    marginTop: 12,
+    alignItems: 'center',
+  },
+  localToggleActive: {
+    borderColor: colors.vintageOrange,
+    backgroundColor: colors.lightBrown,
+  },
+  localToggleEmoji: {
+    fontSize: 24,
+    marginBottom: 4,
+  },
+  localToggleText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: colors.darkBrown,
+    textAlign: 'center',
+    letterSpacing: 0.5,
+    marginBottom: 2,
+  },
+  localToggleTextActive: {
+    color: colors.vintageOrange,
+  },
+  localToggleSubtext: {
+    fontSize: 10,
+    color: colors.darkGray,
+    textAlign: 'center',
+    fontStyle: 'italic',
+  },
+  localToggleSubtextActive: {
+    color: colors.mediumBrown,
   },
 });
 
