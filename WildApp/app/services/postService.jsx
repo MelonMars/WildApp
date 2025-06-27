@@ -523,6 +523,24 @@ export class PostService {
       return [];
     }
   }
+  
+  static async getAllAchievements() {
+    try {
+      const { data, error } = await supabase
+        .from('achievements')
+        .select('*');
+
+      if (error) {
+        console.error('Error fetching all achievements:', error);
+        return [];
+      }
+
+      return data || [];
+    } catch (error) {
+      console.error('Error fetching all achievements:', error);
+      return [];
+    }
+  }
 }
 
 export class NewChallengeService {

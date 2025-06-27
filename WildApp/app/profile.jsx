@@ -87,14 +87,25 @@ export default function Profile() {
 
             const level = Math.floor(stats.totalChallenges / 5) + 1;
 
-            // const userStats = await PostService.getUserStats(user.id);
-            // const userAchievements = await PostService.getUserAchievements(user.id);
-
+            const userAchievements = await PostService.getAchievements(user);
+            const allAchievements = await PostService.getAllAchievements();
+            const updatedAchievements = userAchievements.map(ua => {
+                const achievement = allAchievements.find(a => a.id === ua.id);
+                return {
+                    ...achievement,
+                    unlocked: !!ua
+                };
+            });
+            const lockedAchievements = allAchievements.filter(a => !updatedAchievements.some(ua => ua.id === a.id));
+            updatedAchievements.push(...lockedAchievements.map(a => ({
+                ...a,
+                unlocked: false
+            })));
             setProfileData({
                 level,
                 streak,
                 ...stats,
-                achievements: achievementsData
+                achievements: updatedAchievements
             });
 
         } catch (error) {
