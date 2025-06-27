@@ -465,6 +465,29 @@ export class PostService {
       throw error;
     }
   }
+
+  static async getUsersPosts(user) {
+    try {
+      if (!user || !user.id) {
+        console.error('User or user.id is undefined');
+        return [];
+      }
+      const { data, error } = await supabase
+        .from('posts')
+        .select('*')
+        .eq('owner', user.id);
+
+      if (error) {
+        console.error('Error fetching user posts:', error);
+        return [];
+      }
+
+      return data || [];
+    } catch (error) {
+      console.error('Error fetching user posts:', error);
+      return [];
+    }
+  }
 }
 
 export class NewChallengeService {

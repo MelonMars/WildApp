@@ -95,9 +95,14 @@ export default function Home() {
                 } else {
                     setNeedStreak(true);
                 }
-                const yesterday = new Date(Date.now() - 86400000).toISOString().slice(0, 10);
-                if (lastDate.getTime() < yesterday.getTime()) {
-                    streak = 0;
+                const yesterday = new Date(today);
+                yesterday.setDate(today.getDate() - 1);
+                yesterday.setHours(0, 0, 0, 0);
+
+                if (lastDate < yesterday) {
+                    setStreak(0);
+                    PostService.updateStreak(user, 0);
+                    setNeedStreak(true);
                 }
             }
         } catch (error) {
@@ -114,11 +119,10 @@ export default function Home() {
     useFocusEffect(() => {
         const fetchUsersPosts = async () => {
             try {
-                const posts = await AsyncStorage.getItem('posts');
+                const posts = await PostService.getUsersPosts(user);
                 if (posts) {
-                    const parsedPosts = JSON.parse(posts);
-                    setUsersPosts(parsedPosts);
-                    const completedChallenges = parsedPosts.filter(post => post.challenge);
+                    setUsersPosts(posts);
+                    const completedChallenges = posts.filter(post => post.challenge);
                     setUserCompletedChallenges(completedChallenges);
                 } 
             }
