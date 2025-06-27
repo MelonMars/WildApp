@@ -11,20 +11,9 @@ import { useAuth } from './contexts/AuthContext';
 import { LinearGradient } from 'expo-linear-gradient';
 
 export default function Home() {
-    const router = useRouter();
-    const { isPreloading, preloadComplete } = useApp();
-    const [challenges, setChallenges] = useState(null);
-    const [loadingTodaysChallenge, setLoadingTodaysChallenge] = useState(true);
-    const [todaysChallenge, setTodaysChallenge] = useState(null);
-    const [streak, setStreak] = useState(0);
-    const [needStreak, setNeedStreak] = useState(false);
-    const [usersPosts, setUsersPosts] = useState(null);
-    const [userCompletedChallenges, setUserCompletedChallenges] = useState([]);
-    const [userLocation, setUserLocation] = useState(null);
-    const [locationPermission, setLocationPermission] = useState(null);
     const { user, loading } = useAuth();
 
-      if (loading) {
+    if (loading) {
         return (
             <View style={common_styles.container}>
                 <StatusBar barStyle="light-content" backgroundColor={colors.darkBrown} />
@@ -41,14 +30,31 @@ export default function Home() {
     }
 
     if (!user) {
-      router.replace('/authentication');
-      return null;
+        const router = useRouter();
+        router.replace('/authentication');
+        return null;
     }
 
-  const requestLocationPermission = async () => {
-    try {
-      const { status } = await Location.requestForegroundPermissionsAsync();
-      setLocationPermission(status === 'granted');
+    return <HomeContent user={user} />;
+}
+
+function HomeContent({ user }) {
+    const router = useRouter();
+    const { isPreloading, preloadComplete } = useApp();
+    const [challenges, setChallenges] = useState(null);
+    const [loadingTodaysChallenge, setLoadingTodaysChallenge] = useState(true);
+    const [todaysChallenge, setTodaysChallenge] = useState(null);
+    const [streak, setStreak] = useState(0);
+    const [needStreak, setNeedStreak] = useState(false);
+    const [usersPosts, setUsersPosts] = useState(null);
+    const [userCompletedChallenges, setUserCompletedChallenges] = useState([]);
+    const [userLocation, setUserLocation] = useState(null);
+    const [locationPermission, setLocationPermission] = useState(null);
+
+    const requestLocationPermission = async () => {
+        try {
+            const { status } = await Location.requestForegroundPermissionsAsync();
+            setLocationPermission(status === 'granted');
 
             if (status === 'granted') {
                 const location = await Location.getCurrentPositionAsync({});
@@ -86,7 +92,7 @@ export default function Home() {
                 setStreak(0);
             }
             const streakLastUpdated = await PostService.getStreakLastUpdated(user);
-            today = new Date();
+            const today = new Date();
             if (streakLastUpdated) {
                 const lastDate = new Date(streakLastUpdated);
                 if (lastDate.toDateString() === today.toDateString()) {
@@ -112,25 +118,27 @@ export default function Home() {
     useFocusEffect(
         useCallback(() => {
             getStreak();
-        }, [])
+        }, [user])
     );
   
-    useFocusEffect(() => {
-        const fetchUsersPosts = async () => {
-            try {
-                const posts = await PostService.getUsersPosts(user);
-                if (posts) {
-                    setUsersPosts(posts);
-                    const completedChallenges = posts.filter(post => post.challenge);
-                    setUserCompletedChallenges(completedChallenges);
-                } 
-            }
-            catch (error) {
-                console.error('Error fetching user posts:', error);
-            }
-        };
-        fetchUsersPosts();
-    });
+    useFocusEffect(
+        useCallback(() => {
+            const fetchUsersPosts = async () => {
+                try {
+                    const posts = await PostService.getUsersPosts(user);
+                    if (posts) {
+                        setUsersPosts(posts);
+                        const completedChallenges = posts.filter(post => post.challenge);
+                        setUserCompletedChallenges(completedChallenges);
+                    } 
+                }
+                catch (error) {
+                    console.error('Error fetching user posts:', error);
+                }
+            };
+            fetchUsersPosts();
+        }, [user])
+    );
 
     useEffect(() => {
         const fetchChallenges = async () => {
@@ -330,7 +338,7 @@ export default function Home() {
                 <TouchableOpacity style={styles.todaysChallengeButton} onPress={handleTodaysChallenge}>
                     {!loadingTodaysChallenge ? (
                         <Text style={[common_styles.secondaryButtonText, styles.challengeButtonText]} numberOfLines={1}>
-                            {todaysChallenge.name}
+                            {todaysChallenge?.name || 'No challenge today'}
                         </Text>
                     ) : (
                         <ActivityIndicator size="small" color={colors.polaroidWhite} />
