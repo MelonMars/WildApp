@@ -87,28 +87,46 @@ function HomeContent({ user }) {
             const streak = await PostService.getStreak(user);
             if (streak !== null) {
                 setStreak(streak);
-            }
-            else {
+            } else {
                 setStreak(0);
             }
+            
             const streakLastUpdated = await PostService.getStreakLastUpdated(user);
-            const today = new Date();
+            
             if (streakLastUpdated) {
-                const lastDate = new Date(streakLastUpdated);
-                if (lastDate.toDateString() === today.toDateString()) {
-                    setNeedStreak(false);
+                const today = new Date();
+                const todayStr = today.getFullYear() + '-' + 
+                    String(today.getMonth() + 1).padStart(2, '0') + '-' + 
+                    String(today.getDate()).padStart(2, '0');
+                
+                let lastUpdatedStr;
+                if (typeof streakLastUpdated === 'string') {
+                    lastUpdatedStr = streakLastUpdated.split('T')[0];
                 } else {
-                    setNeedStreak(true);
+                    const date = new Date(streakLastUpdated);
+                    lastUpdatedStr = date.getFullYear() + '-' + 
+                        String(date.getMonth() + 1).padStart(2, '0') + '-' + 
+                        String(date.getDate()).padStart(2, '0');
                 }
-                const yesterday = new Date(today);
-                yesterday.setDate(today.getDate() - 1);
-                yesterday.setHours(0, 0, 0, 0);
-
-                if (lastDate < yesterday) {
+                
+                const todayDate = new Date(todayStr);
+                const lastDate = new Date(lastUpdatedStr);
+                const daysDiff = Math.floor((todayDate - lastDate) / (1000 * 60 * 60 * 24));
+                
+                console.log('Today:', todayStr, 'Last Updated:', lastUpdatedStr, 'Days Diff:', daysDiff);
+                
+                if (daysDiff === 0) {
+                    setNeedStreak(false);
+                } else if (daysDiff === 1) {
+                    setNeedStreak(true);
+                } else if (daysDiff > 1) {
+                    console.log('Streak expired, resetting to 0');
                     setStreak(0);
-                    PostService.updateStreak(user, 0);
+                    await PostService.updateStreak(user, 0);
                     setNeedStreak(true);
                 }
+            } else {
+                setNeedStreak(true);
             }
         } catch (error) {
             console.error('Error fetching streak:', error);
@@ -252,40 +270,6 @@ function HomeContent({ user }) {
         router.push('/createchallenge');
     }
 
-    const handleOpenNewMenu = () => {
-        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-        const showActionSheet = () => {
-            if (Platform.OS === 'ios') {
-            ActionSheetIOS.showActionSheetWithOptions(
-                {
-                options: ['Cancel', 'New Achievement', 'New Challenge'],
-                cancelButtonIndex: 0,
-                },
-                (buttonIndex) => {
-                if (buttonIndex === 1) {
-                    console.log('Create Achievement');
-                } else if (buttonIndex === 2) {
-                    handleCreateChallenge();
-                }
-                }
-            );
-            } else {
-
-                Alert.alert(
-                'Create New',
-                'Choose what to create:',
-                [
-                { text: 'Achievement', onPress: () => router.push('/createachievement') },
-                { text: 'Challenge', onPress: () => router.push('/createchallenge') },
-                { text: 'Cancel', style: 'cancel' }
-                ]
-            );
-            }
-        };
-
-        showActionSheet();
-    };
-
     const navigateToMap = () => {
         Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
         console.log('Navigate to Map');
@@ -410,8 +394,8 @@ function HomeContent({ user }) {
                 <View style={{ flexDirection: 'row', marginTop: 20, alignItems: 'center', justifyContent: 'center', gap: 16 }}>
                     <TouchableOpacity 
                         style={[common_styles.primaryButton, { marginTop: 0 }]} 
-                        onPress={handleOpenNewMenu}>
-                        <Text style={common_styles.primaryButtonText}>✏️ New</Text>
+                        onPress={handleCreateChallenge}>
+                        <Text style={common_styles.primaryButtonText}>✏️ New Challenge</Text>
                     </TouchableOpacity>
                     <TouchableOpacity 
                         style={[styles.circleButton, { marginTop: 0 }]}

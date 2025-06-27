@@ -241,17 +241,8 @@ const PostChallengePage = () => {
 
       const newPost = await PostService.createPost(post, user);
       
-      const lastCompleted = await AsyncStorage.getItem('lastCompleted');
-      const lastCompletedDate = lastCompleted ? new Date(lastCompleted) : null;
-      const today = new Date();
-      let streak = (await AsyncStorage.getItem('streak')) || "0";
-      let newStreak = lastCompletedDate && lastCompletedDate.toDateString() !== today.toDateString();
-      if (newStreak) {
-          streak = (parseInt(streak, 10) + 1).toString(); 
-      }
-
-      await AsyncStorage.setItem('streak', streak);
-      await AsyncStorage.setItem('lastCompleted', new Date().toISOString());
+      const { streakInfo } = newPost;
+      const newStreak = streakInfo.newStreak || streakInfo.streakIncreased;
 
       console.log('Post created successfully:', newPost);
       
@@ -269,7 +260,7 @@ const PostChallengePage = () => {
           params: {
             newPost: JSON.stringify(newPost),
             isNewPost: 'true',
-            streak: streak
+            streak: streakInfo.currentStreak,
           }
         })
       }

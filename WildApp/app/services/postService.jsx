@@ -142,34 +142,47 @@ export class PostService {
       }
 
       const postId = data.id;
-
       const updatedPosts = [...(userData.posts || []), postId];
       
       const { error: updateError } = await supabase
         .from('users')
         .update({ posts: updatedPosts })
         .eq('uid', user.id);
-      
-        if (updateError) {
+
+      if (updateError) {
         console.error('Error updating user posts:', updateError);
         throw updateError;
       }
 
-      var streak = await this.getStreak(user);
+      var oldStreak = await this.getStreak(user);
       const lastUpdated = await this.getStreakLastUpdated(user);
 
       const today = new Date().toISOString().slice(0, 10);
       const yesterday = new Date(Date.now() - 86400000).toISOString().slice(0, 10);
 
+      let newStreak = false;
+      let currentStreak = oldStreak;
+
       if (lastUpdated === yesterday) {
-        streak += 1;
+        currentStreak = oldStreak + 1;
+        newStreak = true; 
       } else if (lastUpdated !== today) {
-        streak = 1; 
+        currentStreak = 1;
+        newStreak = oldStreak === 0;
       }
-      await this.updateStreak(user, streak);
+
+      await this.updateStreak(user, currentStreak);
       await this.updateStreakLastUpdated(user, today);
 
-      return data;
+      return {
+        ...data,
+        streakInfo: {
+          streak: currentStreak,
+          previousStreak: oldStreak,
+          newStreak: newStreak,
+          streakIncreased: currentStreak > oldStreak
+        }
+      };
     } catch (error) {
       console.error('Error creating post:', error);
       throw error;
