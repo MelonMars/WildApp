@@ -297,7 +297,7 @@ function HomeContent({ user }) {
         console.log('Navigate to Profile');
         router.push({
             pathname: '/profile',
-            params: { streak: streak, usersPosts: usersPosts, userCompletedChallenges: userCompletedChallenges }
+            params: {  streak: streak, usersPosts: JSON.stringify(usersPosts), userCompletedChallenges: userCompletedChallenges }
         });
     };
 

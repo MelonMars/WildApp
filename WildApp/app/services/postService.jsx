@@ -488,6 +488,41 @@ export class PostService {
       return [];
     }
   }
+
+  static async getAchievements(user) {
+    try {
+      const { data, error } = await supabase
+        .from('users')
+        .select('achievements')
+        .eq('uid', user.id)
+        .single();
+
+      if (error) {
+        console.error('Error fetching user achievements:', error);
+        return [];
+      }
+
+      const achievementIds = data?.achievements || [];
+      if (!achievementIds.length) {
+        return [];
+      }
+
+      const { data: achievementData, error: achievementError } = await supabase
+        .from('achievements')
+        .select('*')
+        .in('id', achievementIds);
+
+      if (achievementError) {
+        console.error('Error fetching achievement details:', achievementError);
+        return [];
+      }
+
+      return achievementData ?? [];
+    } catch (err) {
+      console.error('Error in getAchievements:', err);
+      return [];
+    }
+  }
 }
 
 export class NewChallengeService {
