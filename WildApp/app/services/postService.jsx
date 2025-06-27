@@ -269,6 +269,7 @@ export class PostService {
         .eq('is_active', true)
         .order('created_at', { ascending: false });
 
+      console.log('Challenges fetched:', data);
       if (error) {
         throw error;
       }
