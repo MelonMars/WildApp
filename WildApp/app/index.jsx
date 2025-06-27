@@ -95,6 +95,10 @@ export default function Home() {
                 } else {
                     setNeedStreak(true);
                 }
+                const yesterday = new Date(Date.now() - 86400000).toISOString().slice(0, 10);
+                if (lastDate.getTime() < yesterday.getTime()) {
+                    streak = 0;
+                }
             }
         } catch (error) {
             console.error('Error fetching streak:', error);

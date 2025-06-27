@@ -10,6 +10,7 @@ import {
   TextInput,
   Image,
   Alert,
+  ScrollView,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Camera } from 'expo-camera';
@@ -36,7 +37,7 @@ const PostChallengePage = () => {
   const [currentLocation, setCurrentLocation] = useState(null);
   const { challenge, category, completedAt } = useLocalSearchParams();
   const { user, loading } = useAuth();
-  
+
   const router = useRouter();
 
   useEffect(() => {
@@ -298,7 +299,7 @@ const PostChallengePage = () => {
   };
 
   return (
-    <View style={common_styles.container}>
+    <ScrollView style={common_styles.container}>
       <StatusBar barStyle="light-content" backgroundColor={colors.mediumBrown} />
       
       <View style={common_styles.backgroundTexture} />
@@ -519,7 +520,7 @@ const PostChallengePage = () => {
           </Text>
         </TouchableOpacity>
       </Animated.View>
-    </View>
+    </ScrollView>
   );
 };
 

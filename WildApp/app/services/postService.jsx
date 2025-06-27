@@ -130,6 +130,45 @@ export class PostService {
         throw error;
       }
 
+      const { data: userData, error: fetchError } = await supabase
+        .from('users')
+        .select('posts')
+        .eq('uid', user.id)
+        .single();
+
+      if (fetchError) {
+        console.error('Error fetching user data:', fetchError);
+        throw fetchError;
+      }
+
+      const postId = data.id;
+
+      const updatedPosts = [...(userData.posts || []), postId];
+      
+      const { error: updateError } = await supabase
+        .from('users')
+        .update({ posts: updatedPosts })
+        .eq('uid', user.id);
+      
+        if (updateError) {
+        console.error('Error updating user posts:', updateError);
+        throw updateError;
+      }
+
+      var streak = await this.getStreak(user);
+      const lastUpdated = await this.getStreakLastUpdated(user);
+
+      const today = new Date().toISOString().slice(0, 10);
+      const yesterday = new Date(Date.now() - 86400000).toISOString().slice(0, 10);
+
+      if (lastUpdated === yesterday) {
+        streak += 1;
+      } else if (lastUpdated !== today) {
+        streak = 1; 
+      }
+      await this.updateStreak(user, streak);
+      await this.updateStreakLastUpdated(user, today);
+
       return data;
     } catch (error) {
       console.error('Error creating post:', error);
