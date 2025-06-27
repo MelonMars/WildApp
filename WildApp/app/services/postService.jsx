@@ -382,7 +382,7 @@ export class NewChallengeService {
     }
   }
 
-  static async submitNewChallenge(challengeData) {
+  static async submitNewChallenge(challengeData, user = null) {
     try {
       const validCategories = ['social', 'creative', 'adventure'];
       if (!validCategories.includes(challengeData.category)) {
@@ -406,7 +406,8 @@ export class NewChallengeService {
           reviewed_at: null,
           latitude: challengeData.latitude || null,
           longitude: challengeData.longitude || null,
-          local: challengeData.local || false
+          local: challengeData.local || false,
+          owner: user ? user.id : null
         }])
         .select()
         .single();

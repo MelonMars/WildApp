@@ -22,6 +22,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { common_styles, colors } from './styles';
 import * as Haptics from 'expo-haptics';
 import * as Location from 'expo-location';
+import { useAuth } from './contexts/AuthContext';
 
 const { width, height } = Dimensions.get('window');
 import { useRouter } from 'expo-router';
@@ -39,7 +40,7 @@ const CreateChallengePage = () => {
   const [isLocalChallenge, setIsLocalChallenge] = useState(false);
   const [userLocation, setUserLocation] = useState(null);
   const [locationPermission, setLocationPermission] = useState(null);
-
+  const { user, loading } = useAuth();
 
   const router = useRouter();
 
@@ -206,7 +207,7 @@ const CreateChallengePage = () => {
 
       console.log('Creating user challenge post in database:', post);
       
-      const newPost = await NewChallengeService.submitNewChallenge(post);
+      const newPost = await NewChallengeService.submitNewChallenge(post, user);
       
       console.log('User challenge post created successfully:', newPost);
       
