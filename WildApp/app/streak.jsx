@@ -32,7 +32,7 @@ const StreakPage = () => {
     );
 
     const router = useRouter();
-    const { newPost, streak, isNewPost } = useLocalSearchParams();
+    const { newPost, streak, isNewPost, newAchievements } = useLocalSearchParams();
 
     const streakNumber = parseInt(streak, 10) || 1;
 
@@ -138,13 +138,26 @@ const StreakPage = () => {
 
     const handleContinue = () => {
         Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
-        router.push({
-            pathname: "gallery",
-            params: {
-                newPost,
-                isNewPost,
+        if (newAchievements) {
+            const achievementsList = JSON.parse(newAchievements);
+            if (achievementsList.length > 0) {
+                router.push({
+                    pathname: "achievements",
+                    params: {
+                        achievements: achievementsList,
+                    }
+                });
+                return;
             }
-        });
+        } else {
+            router.push({
+                pathname: "gallery",
+                params: {
+                    newPost,
+                    isNewPost,
+                }
+            });
+        }
     };
 
     const getStreakMessage = (streak) => {

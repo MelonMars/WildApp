@@ -239,21 +239,38 @@ const PostChallengePage = () => {
         console.error('Failed to save post to local storage:', error);
       }
 
+      const originalAchievements = await PostService.getAchievements(user);
       const newPost = await PostService.createPost(post, user);
       
       const { streakInfo } = newPost;
       const newStreak = streakInfo.newStreak || streakInfo.streakIncreased;
 
+      const newAchievements = await PostService.getAchievements(user);
+      const newAchievementsList = newAchievements.filter(ach =>
+        !originalAchievements.some(orig => orig.id === ach.id)
+      );
+      console.log('New achievements unlocked:', newAchievementsList);
       console.log('Post created successfully:', newPost);
       
       if (!newStreak) {
-        router.push({
-          pathname: "gallery",
-          params: {
-            newPost: JSON.stringify(newPost),
-            isNewPost: 'true'
-          }
-        });
+        if (newAchievementsList.length === 0) {
+          router.push({
+            pathname: "gallery",
+            params: {
+              newPost: JSON.stringify(newPost),
+              isNewPost: 'true'
+            }
+          });
+        } else {
+          router.push({
+            pathname: "achievements",
+            params: {
+              newPost: JSON.stringify(newPost),
+              isNewPost: 'true',
+              newAchievements: JSON.stringify(newAchievementsList),
+            }
+          });
+        }
       } else {
         router.push({
           pathname: "streak",
@@ -261,6 +278,7 @@ const PostChallengePage = () => {
             newPost: JSON.stringify(newPost),
             isNewPost: 'true',
             streak: streakInfo.currentStreak,
+            newAchievements: JSON.stringify(newAchievementsList),
           }
         })
       }

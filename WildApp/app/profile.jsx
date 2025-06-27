@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useCallback } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, ActivityIndicator, StatusBar, ScrollView, Image } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, ActivityIndicator, StatusBar, ScrollView, Image, Modal } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useApp } from './contexts/AppContext';
 import { common_styles, colors, typography, shadows } from './styles'; 
@@ -25,19 +25,10 @@ export default function Profile() {
     });
     const params = useLocalSearchParams();
     const [showAllAchievements, setShowAllAchievements] = useState(false);
+    const [showAchievementsModal, setShowAchievementsModal] = useState(false);
+    const [selectedDifficulty, setSelectedDifficulty] = useState('all');
 
     const [isLoading, setIsLoading] = useState(true);
-
-    const achievementsData = [
-        { id: 1, name: 'First Steps', description: 'Complete your first challenge', icon: '🎯', unlocked: true },
-        { id: 2, name: 'Social Butterfly', description: 'Complete 5 social challenges', icon: '🦋', unlocked: true },
-        { id: 3, name: 'Explorer', description: 'Complete 5 adventure challenges', icon: '🧭', unlocked: false },
-        { id: 4, name: 'Artist', description: 'Complete 5 creative challenges', icon: '🎨', unlocked: true },
-        { id: 5, name: 'Streak Master', description: 'Maintain a 7-day streak', icon: '🔥', unlocked: false },
-        { id: 6, name: 'Daily Devotee', description: 'Complete 10 daily challenges', icon: '📅', unlocked: false },
-        { id: 7, name: 'Challenge Creator', description: 'Create your first custom challenge', icon: '✨', unlocked: true },
-        { id: 8, name: 'Legendary', description: 'Reach level 10', icon: '👑', unlocked: false },
-    ];
 
     if (loading) {
         return (
@@ -59,6 +50,15 @@ export default function Profile() {
         router.replace('/authentication');
         return null;
     }
+
+    const getFilteredAchievements = () => {
+        if (selectedDifficulty === 'all') {
+            return profileData.achievements;
+        }
+        return profileData.achievements.filter(achievement => 
+            achievement.difficulty?.toLowerCase() === selectedDifficulty.toLowerCase()
+        );
+    };
 
     const loadProfileData = async () => {
         setIsLoading(true);
@@ -243,25 +243,88 @@ export default function Profile() {
                 </View>
             </View>
 
-            <View style={styles.achievementsSection}>
+            <TouchableOpacity 
+                style={styles.achievementsSection}
+                onPress={() => {
+                    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                    setShowAchievementsModal(true);
+                }}
+                activeOpacity={0.7}
+            >
                 <Text style={styles.sectionTitle}>Achievements</Text>
                 <View style={styles.achievementsGrid}>
-                    {(showAllAchievements ? profileData.achievements : profileData.achievements.slice(0, 5)).map(renderAchievement)}
+                    {profileData.achievements.slice(0, 5).map(renderAchievement)}
                 </View>
                 {profileData.achievements.length > 5 && (
-                    <TouchableOpacity 
-                        style={styles.expandButton} 
-                        onPress={() => {
-                            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                            setShowAllAchievements(!showAllAchievements);
-                        }}
-                    >
+                    <View style={styles.expandButton}>
                         <Text style={styles.expandButtonText}>
-                            {showAllAchievements ? 'SHOW LESS' : 'SHOW MORE'}
+                            TAP TO VIEW ALL ({profileData.achievements.length})
                         </Text>
-                    </TouchableOpacity>
+                    </View>
                 )}
-            </View>
+            </TouchableOpacity>
+                <Modal
+                    visible={showAchievementsModal}
+                    animationType="slide"
+                    presentationStyle="pageSheet"
+                    onRequestClose={() => setShowAchievementsModal(false)}
+                >
+                    <View style={styles.modalContainer}>
+                        <View style={styles.modalHeader}>
+                            <Text style={styles.modalTitle}>Achievements</Text>
+                            <TouchableOpacity
+                                style={styles.closeButton}
+                                onPress={() => {
+                                    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                                    setShowAchievementsModal(false);
+                                }}
+                            >
+                                <Text style={styles.closeButtonText}>✕</Text>
+                            </TouchableOpacity>
+                        </View>
+
+                        <View style={styles.filterContainer}>
+                            <Text style={styles.filterLabel}>Filter by Difficulty:</Text>
+                            <View style={styles.filterButtons}>
+                                {['all', 'easy', 'medium', 'hard', 'expert'].map((difficulty) => (
+                                    <TouchableOpacity
+                                        key={difficulty}
+                                        style={[
+                                            styles.filterButton,
+                                            selectedDifficulty === difficulty && styles.filterButtonActive
+                                        ]}
+                                        onPress={() => {
+                                            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                                            setSelectedDifficulty(difficulty);
+                                        }}
+                                    >
+                                        <Text style={[
+                                            styles.filterButtonText,
+                                            selectedDifficulty === difficulty && styles.filterButtonTextActive
+                                        ]}>
+                                            {difficulty.charAt(0).toUpperCase() + difficulty.slice(1)}
+                                        </Text>
+                                    </TouchableOpacity>
+                                ))}
+                            </View>
+                        </View>
+
+                        <ScrollView 
+                            style={styles.modalContent}
+                            showsVerticalScrollIndicator={false}
+                            contentContainerStyle={styles.modalAchievementsGrid}
+                        >
+                            {getFilteredAchievements().map(renderAchievement)}
+                        </ScrollView>
+
+                        <View style={styles.modalFooter}>
+                            <Text style={styles.resultsCount}>
+                                Showing {getFilteredAchievements().length} of {profileData.achievements.length} achievements
+                            </Text>
+                        </View>
+                    </View>
+                </Modal>
+
             <View style={styles.actionsSection}>  
                 <TouchableOpacity style={styles.galleryButton} onPress={navigateToGallery}>
                     <Text style={styles.galleryButtonText}>🖼️ MY WALL</Text>
@@ -527,5 +590,95 @@ const styles = StyleSheet.create({
         fontWeight: '700',
         textAlign: 'center',
         letterSpacing: 1,
+    },
+    modalContainer: {
+        flex: 1,
+        backgroundColor: '#fff',
+        paddingTop: 50,
+    },
+    modalHeader: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        paddingHorizontal: 20,
+        paddingBottom: 20,
+        borderBottomWidth: 1,
+        borderBottomColor: '#f0f0f0',
+    },
+    modalTitle: {
+        fontSize: 24,
+        fontWeight: 'bold',
+        color: '#333',
+    },
+    closeButton: {
+        width: 32,
+        height: 32,
+        borderRadius: 16,
+        backgroundColor: '#f0f0f0',
+        justifyContent: 'center',
+        alignItems: 'center',
+    },
+    closeButtonText: {
+        fontSize: 18,
+        color: '#666',
+        fontWeight: 'bold',
+    },
+    filterContainer: {
+        padding: 20,
+        borderBottomWidth: 1,
+        borderBottomColor: '#f0f0f0',
+    },
+    filterLabel: {
+        fontSize: 16,
+        fontWeight: '600',
+        color: '#333',
+        marginBottom: 12,
+    },
+    filterButtons: {
+        flexDirection: 'row',
+        flexWrap: 'wrap',
+        gap: 8,
+    },
+    filterButton: {
+        paddingHorizontal: 16,
+        paddingVertical: 8,
+        borderRadius: 20,
+        backgroundColor: '#f8f8f8',
+        borderWidth: 1,
+        borderColor: '#e0e0e0',
+    },
+    filterButtonActive: {
+        backgroundColor: '#007AFF',
+        borderColor: '#007AFF',
+    },
+    filterButtonText: {
+        fontSize: 14,
+        color: '#666',
+        fontWeight: '500',
+    },
+    filterButtonTextActive: {
+        color: '#fff',
+        fontWeight: '600',
+    },
+    modalContent: {
+        flex: 1,
+        paddingHorizontal: 20,
+    },
+    modalAchievementsGrid: {
+        paddingVertical: 20,
+        flexDirection: 'row',
+        flexWrap: 'wrap',
+        justifyContent: 'space-between',
+    },
+    modalFooter: {
+        padding: 20,
+        borderTopWidth: 1,
+        borderTopColor: '#f0f0f0',
+        backgroundColor: '#f8f8f8',
+    },
+    resultsCount: {
+        fontSize: 14,
+        color: '#666',
+        textAlign: 'center',
     },
 });
