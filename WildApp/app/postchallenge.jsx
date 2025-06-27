@@ -19,6 +19,7 @@ import { PostService } from './services/postService';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { common_styles, colors } from './styles';
 import * as Haptics from 'expo-haptics';
+import { useAuth } from './contexts/AuthContext';
 
 const { width, height } = Dimensions.get('window');
 import { useRouter, useLocalSearchParams } from 'expo-router';
@@ -34,7 +35,8 @@ const PostChallengePage = () => {
   const [locationPermission, setLocationPermission] = useState(null);
   const [currentLocation, setCurrentLocation] = useState(null);
   const { challenge, category, completedAt } = useLocalSearchParams();
-
+  const { user, loading } = useAuth();
+  
   const router = useRouter();
 
   useEffect(() => {
@@ -236,7 +238,7 @@ const PostChallengePage = () => {
         console.error('Failed to save post to local storage:', error);
       }
 
-      const newPost = await PostService.createPost(post);
+      const newPost = await PostService.createPost(post, user);
       
       const lastCompleted = await AsyncStorage.getItem('lastCompleted');
       const lastCompletedDate = lastCompleted ? new Date(lastCompleted) : null;

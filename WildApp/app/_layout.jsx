@@ -1,5 +1,6 @@
 import { Stack } from 'expo-router';
 import { AppProvider } from './contexts/AppContext';
+import { AuthProvider } from './contexts/AuthContext';
 
 const originalConsoleError = console.error;
 
@@ -15,8 +16,10 @@ console.error = (...args) => {
 
 export default function Layout() {
   return (
-    <AppProvider>
-      <Stack screenOptions={{ headerShown: false }} />
-    </AppProvider>
+    <AuthProvider>
+      <AppProvider>
+        <Stack screenOptions={{ headerShown: false }} />
+      </AppProvider>
+    </AuthProvider>
   );
 }

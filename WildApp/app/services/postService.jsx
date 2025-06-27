@@ -105,7 +105,7 @@ export class PostService {
     }
   }
 
-  static async createPost(postData) {
+  static async createPost(postData, user = null) {
     try {
       const { data, error } = await supabase
         .from('posts')
@@ -120,7 +120,8 @@ export class PostService {
           likes: 0,
           comments: 0,
           latitude: postData.latitude || null,
-          longitude: postData.longitude || null
+          longitude: postData.longitude || null,
+          owner: user.id || null,
         }])
         .select()
         .single();

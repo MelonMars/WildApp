@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useCallback } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, ActivityIndicator } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, ActivityIndicator, StatusBar } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useApp } from './contexts/AppContext';
 import { common_styles, colors, typography, shadows } from './styles'; 
@@ -8,6 +8,8 @@ import { PostService } from './services/postService';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useFocusEffect } from '@react-navigation/native';
 import * as Location from 'expo-location';
+import { useAuth } from './contexts/AuthContext';
+import { LinearGradient } from 'expo-linear-gradient';
 
 export default function Home() {
     const router = useRouter();
@@ -21,12 +23,34 @@ export default function Home() {
     const [userCompletedChallenges, setUserCompletedChallenges] = useState([]);
     const [userLocation, setUserLocation] = useState(null);
     const [locationPermission, setLocationPermission] = useState(null);
+    const { user, loading } = useAuth();
 
-    const requestLocationPermission = async () => {
-        try {
-            const { status } = await Location.requestForegroundPermissionsAsync();
-            setLocationPermission(status === 'granted');
-            
+      if (loading) {
+        return (
+            <View style={common_styles.container}>
+                <StatusBar barStyle="light-content" backgroundColor={colors.darkBrown} />
+                <LinearGradient
+                colors={[colors.lightBrown, colors.mediumBrown, colors.darkBrown]}
+                style={common_styles.backgroundTexture}
+                />
+                <View style={common_styles.loadingContainer}>
+                <ActivityIndicator size="large" color={colors.vintageOrange} />
+                <Text style={common_styles.loadingText}>Loading...</Text>
+                </View>
+            </View>
+        );
+    }
+
+    if (!user) {
+      router.replace('/authentication');
+      return null;
+    }
+
+  const requestLocationPermission = async () => {
+    try {
+      const { status } = await Location.requestForegroundPermissionsAsync();
+      setLocationPermission(status === 'granted');
+
             if (status === 'granted') {
                 const location = await Location.getCurrentPositionAsync({});
                 setUserLocation({
