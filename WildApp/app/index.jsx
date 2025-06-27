@@ -1,11 +1,10 @@
 import React, { useEffect, useState, useCallback } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, ActivityIndicator, StatusBar } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, ActivityIndicator, StatusBar, ActionSheetIOS, Platform, Alert } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useApp } from './contexts/AppContext';
 import { common_styles, colors, typography, shadows } from './styles'; 
 import * as Haptics from 'expo-haptics';
 import { PostService } from './services/postService';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useFocusEffect } from '@react-navigation/native';
 import * as Location from 'expo-location';
 import { useAuth } from './contexts/AuthContext';
@@ -245,6 +244,40 @@ export default function Home() {
         router.push('/createchallenge');
     }
 
+    const handleOpenNewMenu = () => {
+        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+        const showActionSheet = () => {
+            if (Platform.OS === 'ios') {
+            ActionSheetIOS.showActionSheetWithOptions(
+                {
+                options: ['Cancel', 'New Achievement', 'New Challenge'],
+                cancelButtonIndex: 0,
+                },
+                (buttonIndex) => {
+                if (buttonIndex === 1) {
+                    console.log('Create Achievement');
+                } else if (buttonIndex === 2) {
+                    handleCreateChallenge();
+                }
+                }
+            );
+            } else {
+
+                Alert.alert(
+                'Create New',
+                'Choose what to create:',
+                [
+                { text: 'Achievement', onPress: () => router.push('/createachievement') },
+                { text: 'Challenge', onPress: () => router.push('/createchallenge') },
+                { text: 'Cancel', style: 'cancel' }
+                ]
+            );
+            }
+        };
+
+        showActionSheet();
+    };
+
     const navigateToMap = () => {
         Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
         console.log('Navigate to Map');
@@ -254,7 +287,10 @@ export default function Home() {
     const navigateToProfile = () => {
         Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
         console.log('Navigate to Profile');
-        router.push('/profile');
+        router.push({
+            pathname: '/profile',
+            params: { streak: streak, usersPosts: usersPosts, userCompletedChallenges: userCompletedChallenges }
+        });
     };
 
     const handleTodaysChallenge = () => {
@@ -271,13 +307,13 @@ export default function Home() {
             <View style={styles.titleContainer}>
                 <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center' }}>
                     <Text style={styles.title}>Wild</Text>
-                    <TouchableOpacity
+                    {usersPosts && (<TouchableOpacity
                         onPress={navigateToProfile}
                         style={{ marginLeft: 16, padding: 8 }}
                         accessibilityLabel="Profile"
                     >
                         <Text style={{ fontSize: 28 }}>👤</Text>
-                    </TouchableOpacity>
+                    </TouchableOpacity>)}
                 </View>
                 <View style={styles.titleAccent} />
                 <Text style={styles.subtitle}>Time to live.</Text>
@@ -366,8 +402,8 @@ export default function Home() {
                 <View style={{ flexDirection: 'row', marginTop: 20, alignItems: 'center', justifyContent: 'center', gap: 16 }}>
                     <TouchableOpacity 
                         style={[common_styles.primaryButton, { marginTop: 0 }]} 
-                        onPress={handleCreateChallenge}>
-                        <Text style={common_styles.primaryButtonText}>✏️ New Challenge</Text>
+                        onPress={handleOpenNewMenu}>
+                        <Text style={common_styles.primaryButtonText}>✏️ New</Text>
                     </TouchableOpacity>
                     <TouchableOpacity 
                         style={[styles.circleButton, { marginTop: 0 }]}

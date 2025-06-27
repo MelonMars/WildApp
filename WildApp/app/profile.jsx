@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, ActivityIndicator, StatusBar, ScrollView, Image } from 'react-native';
-import { useRouter } from 'expo-router';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useApp } from './contexts/AppContext';
 import { common_styles, colors, typography, shadows } from './styles'; 
 import * as Haptics from 'expo-haptics';
@@ -23,6 +23,8 @@ export default function Profile() {
         dailyChallenges: 0,
         achievements: []
     });
+    const params = useLocalSearchParams();
+
     const [isLoading, setIsLoading] = useState(true);
 
     const achievementsData = [
@@ -60,10 +62,10 @@ export default function Profile() {
     const loadProfileData = async () => {
         setIsLoading(true);
         try {
-            const storedStreak = await AsyncStorage.getItem('streak');
+            const storedStreak = params?.streak || 0;
             const streak = storedStreak ? parseInt(storedStreak, 10) : 0;
 
-            const posts = await AsyncStorage.getItem('posts');
+            const posts = params.usersPosts;
             let stats = {
                 totalChallenges: 0,
                 socialChallenges: 0,
