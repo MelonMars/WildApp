@@ -249,6 +249,7 @@ export class PostService {
   }
 
   static async fetchChallenges() {
+    console.log('Fetching challenges from Supabase...'); 
     try {
       const { data, error } = await supabase
         .from('challenges')
@@ -341,6 +342,87 @@ export class PostService {
     } catch (error) {
       console.error('Error fetching today\'s challenge:', error);
       return null;
+    }
+  }
+
+  static async getStreakLastUpdated(user) {
+    try {
+      const { data, error } = await supabase
+        .from('users')
+        .select("streak_last_updated")
+        .eq('uid', user.id)
+        .single();
+      if (error) {
+        console.error('Error fetching user data:', error);
+        return null;
+      }
+
+      return data.streak_last_updated || null;
+    } catch (error) {
+      console.error('Error fetching user streak last updated:', error);
+      return null;
+    }
+  }
+
+  static async updateStreakLastUpdated(user, date) {
+    try {
+      const { data, error } = await supabase
+        .from('users')
+        .update({ streak_last_updated: date })
+        .eq('uid', user.id)
+        .select()
+        .single();
+
+      if (error) {
+        console.error('Error updating user streak last updated:', error);
+        throw error;
+      }
+
+      return data;
+    } catch (error) {
+      console.error('Error updating streak last updated:', error);
+      throw error;
+    }
+  }
+
+  static async getStreak(user) {
+    try {
+      const { data, error } = await supabase
+        .from('users')
+        .select("streak")
+        .eq('uid', user.id)
+        .single();
+
+      if (error) {
+        console.error('Error fetching user streak:', error);
+        return 0;
+      }
+
+      return data.streak || 0;
+    } catch (error) {
+      console.error('Error fetching user streak:', error);
+      return 0;
+    }
+  }
+
+  static async updateStreak(user, newStreak) {
+    try {
+      const { data, error } = await supabase
+        .from('users')
+        .update({ streak: newStreak })
+        .eq('uid', user.id)
+        .select()
+        .single();
+
+      if (error) {
+        console.error('Error updating user streak:', error);
+        throw error;
+      }
+
+      return data;
+    } catch (error) {
+      console.error('Error updating streak:', error);
+      throw error;
     }
   }
 }

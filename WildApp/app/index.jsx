@@ -79,21 +79,17 @@ export default function Home() {
 
     const getStreak = async () => {
         try {
-            const storedStreak = await AsyncStorage.getItem('streak');
-            if (storedStreak) {
-                setStreak(parseInt(storedStreak, 10));
+            const streak = await PostService.getStreak(user);
+            if (streak !== null) {
+                setStreak(streak);
             }
-        } catch (error) {
-            console.error('Error fetching streak:', error);
-        }
-    };
-
-    const checkStreak = async () => {
-        try {
-            const lastCompleted = await AsyncStorage.getItem('lastCompleted');
-            if (lastCompleted) {
-                const lastDate = new Date(lastCompleted);
-                const today = new Date();
+            else {
+                setStreak(0);
+            }
+            const streakLastUpdated = await PostService.getStreakLastUpdated(user);
+            today = new Date();
+            if (streakLastUpdated) {
+                const lastDate = new Date(streakLastUpdated);
                 if (lastDate.toDateString() === today.toDateString()) {
                     setNeedStreak(false);
                 } else {
@@ -101,14 +97,13 @@ export default function Home() {
                 }
             }
         } catch (error) {
-            console.error('Error checking streak:', error);
+            console.error('Error fetching streak:', error);
         }
     };
 
     useFocusEffect(
         useCallback(() => {
             getStreak();
-            checkStreak();
         }, [])
     );
   
@@ -140,10 +135,10 @@ export default function Home() {
             }
         };
 
-        if (isPreloading) {
+        if (preloadComplete && !challenges) {
             fetchChallenges();
         }
-    }, [isPreloading, preloadComplete]);
+    }, [isPreloading, preloadComplete, challenges]);
     
     useEffect(() => {
         requestLocationPermission(); 
@@ -203,6 +198,7 @@ export default function Home() {
         Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
         console.log('Navigate to Page 1');
         const challenge = fetchChallenge('social');
+        console.log('Fetched challenge:', challenge);
         router.push({
             pathname: '/challenge', 
             params: { challenge: challenge.name, finishes: challenge.finishes, category: 'social' }
@@ -247,6 +243,12 @@ export default function Home() {
         router.push('/map');
     };
 
+    const navigateToProfile = () => {
+        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+        console.log('Navigate to Profile');
+        router.push('/profile');
+    };
+
     const handleTodaysChallenge = () => {
         Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
         router.push({
@@ -259,7 +261,16 @@ export default function Home() {
         <View style={common_styles.container}>
             <View style={common_styles.backgroundTexture} />
             <View style={styles.titleContainer}>
-                <Text style={styles.title}>Wild</Text>
+                <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center' }}>
+                    <Text style={styles.title}>Wild</Text>
+                    <TouchableOpacity
+                        onPress={navigateToProfile}
+                        style={{ marginLeft: 16, padding: 8 }}
+                        accessibilityLabel="Profile"
+                    >
+                        <Text style={{ fontSize: 28 }}>👤</Text>
+                    </TouchableOpacity>
+                </View>
                 <View style={styles.titleAccent} />
                 <Text style={styles.subtitle}>Time to live.</Text>
                 
@@ -286,16 +297,40 @@ export default function Home() {
                 </Text>
             </View>
             <View style={styles.middleButtonsContainer}>
-                <TouchableOpacity style={styles.categoryButton} onPress={navigateToPage1}>
-                    <Text style={styles.categoryButtonText}>🤝SOCIAL</Text>
+                <TouchableOpacity
+                    style={styles.categoryButton}
+                    onPress={navigateToPage1}
+                    disabled={!challenges || Object.keys(challenges).length === 0}
+                >
+                    {!challenges || Object.keys(challenges).length === 0 ? (
+                        <ActivityIndicator size="small" color={colors.polaroidWhite} />
+                    ) : (
+                        <Text style={styles.categoryButtonText}>🤝SOCIAL</Text>
+                    )}
                 </TouchableOpacity>
 
-                <TouchableOpacity style={[styles.categoryButton, styles.categoryButtonMiddle]} onPress={navigateToPage2}>
-                    <Text style={styles.categoryButtonText}>🧭ADVENTURE</Text>
+                <TouchableOpacity
+                    style={[styles.categoryButton, styles.categoryButtonMiddle]}
+                    onPress={navigateToPage2}
+                    disabled={!challenges || Object.keys(challenges).length === 0}
+                >
+                    {!challenges || Object.keys(challenges).length === 0 ? (
+                        <ActivityIndicator size="small" color={colors.polaroidWhite} />
+                    ) : (
+                        <Text style={styles.categoryButtonText}>🧭ADVENTURE</Text>
+                    )}
                 </TouchableOpacity>
 
-                <TouchableOpacity style={styles.categoryButton} onPress={navigateToPage3}>
-                    <Text style={styles.categoryButtonText}>🎨CREATIVE</Text>
+                <TouchableOpacity
+                    style={styles.categoryButton}
+                    onPress={navigateToPage3}
+                    disabled={!challenges || Object.keys(challenges).length === 0}
+                >
+                    {!challenges || Object.keys(challenges).length === 0 ? (
+                        <ActivityIndicator size="small" color={colors.polaroidWhite} />
+                    ) : (
+                        <Text style={styles.categoryButtonText}>🎨CREATIVE</Text>
+                    )}
                 </TouchableOpacity>
             </View>
 

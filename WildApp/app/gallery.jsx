@@ -53,7 +53,7 @@ export default function GalleryPage() {
     const [myPosts, setMyPosts] = useState([]);  
     const [filteredPosts, setFilteredPosts] = useState([]);
 
-    const { newPost, challenge, category, photo, caption, completedAt, timestamp, isNewPost } = useLocalSearchParams();
+    const { newPost, challenge, category, photo, caption, completedAt, timestamp, isNewPost, userOnly } = useLocalSearchParams();
     const { preloadedPosts, preloadedLastDoc, preloadedHasMore, preloadComplete } = useApp();
 
     useEffect(() => {
@@ -204,6 +204,13 @@ export default function GalleryPage() {
             });
         }
     }, [newPost, isNewPost, challenge, category, photo, caption, completedAt, timestamp]);
+
+    useEffect(() => {
+        if (userOnly) {
+            setShowMyPostsOnly(true);
+            setFilteredPosts(myPosts);
+        }
+    }, [userOnly, myPosts]);
 
     const formatTimeAgo = (dateString) => {
         if (!dateString) {
