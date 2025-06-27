@@ -24,6 +24,7 @@ export default function Profile() {
         achievements: []
     });
     const params = useLocalSearchParams();
+    const [showAllAchievements, setShowAllAchievements] = useState(false);
 
     const [isLoading, setIsLoading] = useState(true);
 
@@ -245,11 +246,23 @@ export default function Profile() {
             <View style={styles.achievementsSection}>
                 <Text style={styles.sectionTitle}>Achievements</Text>
                 <View style={styles.achievementsGrid}>
-                    {profileData.achievements.map(renderAchievement)}
+                    {(showAllAchievements ? profileData.achievements : profileData.achievements.slice(0, 5)).map(renderAchievement)}
                 </View>
+                {profileData.achievements.length > 5 && (
+                    <TouchableOpacity 
+                        style={styles.expandButton} 
+                        onPress={() => {
+                            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                            setShowAllAchievements(!showAllAchievements);
+                        }}
+                    >
+                        <Text style={styles.expandButtonText}>
+                            {showAllAchievements ? 'SHOW LESS' : 'SHOW MORE'}
+                        </Text>
+                    </TouchableOpacity>
+                )}
             </View>
-
-            <View style={styles.actionsSection}>
+            <View style={styles.actionsSection}>  
                 <TouchableOpacity style={styles.galleryButton} onPress={navigateToGallery}>
                     <Text style={styles.galleryButtonText}>🖼️ MY WALL</Text>
                     <View style={styles.galleryButtonDistress} />
@@ -495,5 +508,24 @@ const styles = StyleSheet.create({
         bottom: 20,
         right: 30,
         transform: [{ rotate: '12deg' }],
+    },
+    expandButton: {
+        backgroundColor: colors.forestGreen,
+        paddingVertical: 12,
+        paddingHorizontal: 30,
+        borderRadius: 6,
+        borderWidth: 2,
+        borderColor: colors.oliveGreen,
+        alignSelf: 'center',
+        marginTop: 15,
+        transform: [{ rotate: '0.5deg' }],
+        ...shadows.lightShadow,
+    },
+    expandButtonText: {
+        ...typography.bodyMedium,
+        color: colors.polaroidWhite,
+        fontWeight: '700',
+        textAlign: 'center',
+        letterSpacing: 1,
     },
 });
