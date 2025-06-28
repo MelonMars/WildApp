@@ -385,7 +385,7 @@ export class PostService {
       return null;
     }
   }
-  
+
   static async getTodaysChallenge() {
     try {
       const today = new Date().toISOString().slice(0, 10);
@@ -572,6 +572,29 @@ export class PostService {
     } catch (error) {
       console.error('Error fetching all achievements:', error);
       return [];
+    }
+  }
+
+  static async updateUserName(user, newName) {
+    try {
+      const { data, error } = await supabase
+        .from('users')
+        .update({
+          name: newName
+        })
+        .eq('uid', user.id)
+        .select()
+        .single();
+
+      if (error) {
+        console.error('Error updating user name:', error);
+        throw error;
+      }
+
+      return data;
+    } catch (error) {
+      console.error('Error updating user name:', error);
+      throw error;
     }
   }
 }

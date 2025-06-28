@@ -43,10 +43,7 @@ const PostChallengePage = () => {
   useEffect(() => {
     const loadUsername = async () => {
       try {
-        const storedUsername = await AsyncStorage.getItem('username');
-        if (storedUsername) {
-          setUsername(storedUsername);
-        }
+        setUsername(user.name || user.email.split('@')[0] || 'anonymous');
       } catch (error) {
         console.error('Failed to load username:', error);
       }
@@ -477,31 +474,6 @@ const PostChallengePage = () => {
                   if (typeof Keyboard !== 'undefined') Keyboard.dismiss();
                 }}
               />
-              
-              <TextInput
-                style={[
-                  common_styles.textInput,
-                  {
-                    textAlign: 'center',
-                    marginBottom: 15,
-                  }
-                ]}
-                placeholder="Your name (optional)"
-                placeholderTextColor={colors.darkGray}
-                value={username}
-                onChangeText={text => {
-                  setUsername(text);
-                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                }}
-                maxLength={30}
-                textAlignVertical="top"
-                blurOnSubmit={true}
-                returnKeyType="done"
-                onSubmitEditing={() => {
-                  if (typeof Keyboard !== 'undefined') Keyboard.dismiss();
-                }}
-              />
-
               <View style={common_styles.polaroidFooter}>
                 <Text style={common_styles.usernameStamp}>{category.toUpperCase()}</Text>
                 <Text style={common_styles.dateStamp}>{formatDate(completedAt)}</Text>

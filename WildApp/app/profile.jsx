@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useCallback } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, ActivityIndicator, StatusBar, ScrollView, Image, Modal } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, ActivityIndicator, StatusBar, ScrollView, Image, Modal, TextInput } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useApp } from './contexts/AppContext';
 import { common_styles, colors, typography, shadows } from './styles'; 
@@ -12,7 +12,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 
 export default function Profile() {
     const router = useRouter();
-    const { user, loading } = useAuth();
+    const { user, loading, logOut } = useAuth();
     const [profileData, setProfileData] = useState({
         level: 1,
         streak: 0,
@@ -27,6 +27,9 @@ export default function Profile() {
     const [showAllAchievements, setShowAllAchievements] = useState(false);
     const [showAchievementsModal, setShowAchievementsModal] = useState(false);
     const [selectedDifficulty, setSelectedDifficulty] = useState('all');
+    const [isEditingName, setIsEditingName] = useState(false);
+    const [tempName, setTempName] = useState('');
+    const [username, setUsername] = useState(user?.name || user?.email.split('@')[0] || 'anonymous');
 
     const [isLoading, setIsLoading] = useState(true);
 
@@ -140,6 +143,29 @@ export default function Profile() {
         return (challengesInCurrentLevel / 5) * 100;
     };
 
+    const handleNameSave = async () => {
+        if (tempName.trim() && tempName !== username) {
+            try {
+                await PostService.updateUserName(user, tempName.trim());
+                setUsername(tempName.trim());
+            } catch (error) {
+                console.error('Error updating name:', error);
+            }
+        }
+        setIsEditingName(false);
+    };
+
+    const handleLogout = async () => {
+        try {
+            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+            await logOut();
+            router.replace('/authentication');
+        } catch (error) {
+            console.error('Error logging out:', error);
+        }
+    };
+
+
     const renderAchievement = (achievement) => (
         <View 
             key={achievement.id} 
@@ -187,13 +213,38 @@ export default function Profile() {
                     {/* <Image source={{ uri: user.profilePicture }} style={styles.profilePicture} /> */}
                     <View style={styles.profilePicture}>
                         <Text style={styles.profilePictureText}>
-                            {user?.email ? user.email.charAt(0).toUpperCase() : '?'}
+                            {username
+                                ? username.charAt(0).toUpperCase()
+                                : user?.email
+                                    ? user.email.charAt(0).toUpperCase()
+                                    : '?'}
                         </Text>
                     </View>
                     <View style={styles.profilePictureTape} />
                 </View>
                 
-                <Text style={styles.userName}>{user?.email || 'Wild Explorer'}</Text>
+                {isEditingName ? (
+                    <View style={styles.nameEditContainer}>
+                        <TextInput
+                            style={styles.nameInput}
+                            value={tempName}
+                            onChangeText={setTempName}
+                            onBlur={handleNameSave}
+                            onSubmitEditing={handleNameSave}
+                            autoFocus
+                            placeholder="Enter your name"
+                            placeholderTextColor={colors.peach}
+                        />
+                    </View>
+                ) : (
+                    <TouchableOpacity onPress={() => {
+                        setTempName(username || '');
+                        setIsEditingName(true);
+                        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                    }}>
+                        <Text style={styles.userName}>{username || 'Wild Explorer'}✏️</Text>
+                    </TouchableOpacity>
+                )}
                 
                 <View style={styles.levelContainer}>
                     <Text style={styles.levelText}>Level {profileData.level}</Text>
@@ -329,6 +380,9 @@ export default function Profile() {
                 <TouchableOpacity style={styles.galleryButton} onPress={navigateToGallery}>
                     <Text style={styles.galleryButtonText}>🖼️ MY WALL</Text>
                     <View style={styles.galleryButtonDistress} />
+                </TouchableOpacity>
+                <TouchableOpacity style={styles.logoutButtonBottom} onPress={handleLogout}>
+                    <Text style={styles.logoutButtonBottomText}>🚪 LOG OUT</Text>
                 </TouchableOpacity>
                 <View style={[common_styles.tapeHorizontal, styles.bottomTape]} />
             </View>
@@ -680,5 +734,35 @@ const styles = StyleSheet.create({
         fontSize: 14,
         color: '#666',
         textAlign: 'center',
+    },
+    nameEditContainer: {
+        marginBottom: 20,
+    },
+    nameInput: {
+        ...typography.headerMedium,
+        color: colors.tan,
+        textAlign: 'center',
+        fontWeight: '700',
+        borderBottomWidth: 2,
+        borderBottomColor: colors.vintageOrange,
+        paddingVertical: 5,
+        minWidth: 200,
+    },
+    logoutButtonBottom: {
+        backgroundColor: colors.vintageRed,
+        paddingVertical: 12,
+        paddingHorizontal: 30,
+        borderWidth: 2,
+        borderColor: colors.tan,
+        marginTop: 15,
+        transform: [{ rotate: '0.5deg' }],
+        ...shadows.lightShadow,
+    },
+    logoutButtonBottomText: {
+        ...typography.bodyMedium,
+        color: colors.polaroidWhite,
+        textAlign: 'center',
+        fontWeight: '700',
+        letterSpacing: 2,
     },
 });

@@ -100,6 +100,11 @@ export default function AuthPage() {
         const { data, error } = await supabase.auth.signUp({
           email: formData.email,
           password: formData.password,
+          options: {
+            data: {
+              username: formData.username || formData.email.split('@')[0],
+            },
+          }, 
         });
 
         if (error) throw error;
@@ -244,24 +249,40 @@ export default function AuthPage() {
                 </View>
 
                 {!isLogin && (
-                  <View style={styles.inputGroup}>
-                    <Text style={styles.inputLabel}>CONFIRM PASSWORD</Text>
-                    <TextInput
-                      style={[
-                        styles.input,
-                        errors.confirmPassword && styles.inputError
-                      ]}
-                      value={formData.confirmPassword}
-                      onChangeText={(text) => handleInputChange('confirmPassword', text)}
-                      placeholder="••••••••"
-                      placeholderTextColor={colors.dustyBrown}
-                      secureTextEntry
-                      autoCapitalize="none"
-                    />
-                    {errors.confirmPassword && (
-                      <Text style={styles.errorText}>{errors.confirmPassword}</Text>
-                    )}
-                  </View>
+                  <>
+                    <View style={styles.inputGroup}>
+                      <Text style={styles.inputLabel}>CONFIRM PASSWORD</Text>
+                      <TextInput
+                        style={[
+                          styles.input,
+                          errors.confirmPassword && styles.inputError
+                        ]}
+                        value={formData.confirmPassword}
+                        onChangeText={(text) => handleInputChange('confirmPassword', text)}
+                        placeholder="••••••••"
+                        placeholderTextColor={colors.dustyBrown}
+                        secureTextEntry
+                        autoCapitalize="none"
+                      />
+                      {errors.confirmPassword && (
+                        <Text style={styles.errorText}>{errors.confirmPassword}</Text>
+                      )}
+                    </View>
+                    <View style={styles.inputGroup}>
+                      <Text style={styles.inputLabel}>USERNAME</Text>
+                      <TextInput
+                        style={[styles.input, styles.inputError]}
+                        value={formData.username}
+                        onChangeText={(text) => handleInputChange('username', text)}
+                        placeholder="your_username"
+                        placeholderTextColor={colors.dustyBrown}
+                        autoCapitalize="none"
+                      />
+                      {errors.username && (
+                        <Text style={styles.errorText}>{errors.username}</Text>
+                      )}
+                    </View>
+                  </>
                 )}
 
                 <TouchableOpacity
