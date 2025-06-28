@@ -7,27 +7,63 @@ import {
   Animated, 
   BackHandler,
   Vibration,
-  ScrollView
+  ScrollView,
+  Image,
+  ActivityIndicator
 } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { common_styles, colors, typography, shadows } from './styles';
-import { PostService } from './services/postService';
+import { common_styles, colors, typography, shadows } from '../../styles';
+import { PostService } from '../../services/postService';
 import * as Haptics from 'expo-haptics';
 import { Share } from 'react-native';
-import * as Linking from 'expo-linking';
 
-const ChallengePage = () => {
+const InvitePage = () => {
     const [pulseAnim] = useState(new Animated.Value(1));
     const [shakeAnim] = useState(new Animated.Value(0));
     const [wobbleAnim] = useState(new Animated.Value(0));
     const [fillAnim] = useState(new Animated.Value(0));
     const [isHolding, setIsHolding] = useState(false);
     const [showConfirmation, setShowConfirmation] = useState(false);
+    const [challengeData, setChallengeData] = useState(null);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState(null);
+    const [participants, setParticipants] = useState([]);
+    
     const holdingRef = useRef(false);
     const fillAnimationRef = useRef(null);
-    const { challenge, finishes, category, challengeId } = useLocalSearchParams();
+    const { id: challengeId, inviter } = useLocalSearchParams();
+    console.log('Challenge ID:', challengeId);
+    console.log('Inviter:', inviter);
     const router = useRouter();
+
+    useEffect(() => {
+        const fetchChallengeData = async () => {
+            try {
+                setLoading(true);
+                const data = await PostService.getChallengeById(challengeId);
+                setChallengeData(data);
+                
+                setParticipants([
+                    {
+                        id: 1,
+                        username: inviter || 'adventure_seeker',
+                        profilePicture: null,
+                        isInviter: true
+                    }
+                ]);
+            } catch (err) {
+                setError(err.message);
+                console.error('Error fetching challenge:', err);
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        if (challengeId) {
+            fetchChallengeData();
+        }
+    }, [challengeId, inviter]);
 
     useEffect(() => {
         const backAction = () => {
@@ -130,8 +166,9 @@ const ChallengePage = () => {
         
         try {
             const cowardData = {
-                challenge: challenge,
+                challenge: challengeData.name,
                 username: await AsyncStorage.getItem('username') || 'anonymous',
+                challengeId: challengeId,
             };
 
             const result = await PostService.cowardPost(cowardData);
@@ -142,7 +179,7 @@ const ChallengePage = () => {
 
         setTimeout(() => {
             router.push(
-                { pathname: 'coward', params: { challenge, category } }
+                { pathname: 'coward', params: { challenge: challengeData.name, category: challengeData.category } }
             );
         }, 500);
     };
@@ -160,13 +197,16 @@ const ChallengePage = () => {
         }).start();
     };
 
-    const handleCompletePress = () => {
+    const handleJoinChallenge = () => {
         Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
         router.push({
             pathname: 'postchallenge',
             params: { 
-                challenge, 
-                category,
+                challenge: challengeData.name, 
+                category: challengeData.category,
+                challengeId: challengeId,
+                isGroupChallenge: true,
+                participants: JSON.stringify(participants),
                 completedAt: new Date().toISOString()
             }
         });
@@ -179,10 +219,9 @@ const ChallengePage = () => {
 
     const handleShareChallenge = async () => {
         Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-        const url = Linking.createURL(`challenge/${challengeId}/Carter`); // wildapp://challenge/${challengeId} in production
         try {
             await Share.share({
-                message: `Join me on this WildApp challenge!\n\n"${challenge}"\n\nCategory: ${category}\n\nOpen in app: ${url}`,
+                message: `Join me on this WildApp challenge!\n\n"${challengeData.name}"\n\nCategory: ${challengeData.category}\n\nOpen in app: wildapp://challenge/${challengeId}`,
                 title: 'WildApp Challenge Invitation',
             });
         } catch (error) {
@@ -194,9 +233,53 @@ const ChallengePage = () => {
         Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
         router.push({
             pathname: 'map',
-            params: { challenge: challenge, category: category }
+            params: { challenge: challengeData.name, category: challengeData.category }
         })
     };
+
+    const renderParticipantAvatar = (participant, index) => (
+        <View key={participant.id} style={[styles.participantAvatar, { zIndex: participants.length - index }]}>
+            {participant.profilePicture ? (
+                <Image source={{ uri: participant.profilePicture }} style={styles.avatarImage} />
+            ) : (
+                <View style={styles.avatarPlaceholder}>
+                    <Text style={styles.avatarInitial}>
+                        {participant.username.charAt(0).toUpperCase()}
+                    </Text>
+                </View>
+            )}
+            {participant.isInviter && (
+                <View style={styles.inviterBadge}>
+                    <Text style={styles.inviterBadgeText}>👑</Text>
+                </View>
+            )}
+        </View>
+    );
+
+    if (loading) {
+        return (
+            <View style={[common_styles.container, styles.loadingContainer]}>
+                <StatusBar barStyle="light-content" backgroundColor={colors.darkBrown} />
+                <ActivityIndicator size="large" color={colors.forestGreen} />
+                <Text style={styles.loadingText}>Loading challenge...</Text>
+            </View>
+        );
+    }
+
+    if (error || !challengeData) {
+        return (
+            <View style={[common_styles.container, styles.errorContainer]}>
+                <StatusBar barStyle="light-content" backgroundColor={colors.darkBrown} />
+                <Text style={styles.errorText}>❌ Challenge not found</Text>
+                <TouchableOpacity 
+                    style={common_styles.primaryButton} 
+                    onPress={() => router.back()}
+                >
+                    <Text style={common_styles.primaryButtonText}>Go Back</Text>
+                </TouchableOpacity>
+            </View>
+        );
+    }
 
     return (
         <Animated.View 
@@ -215,11 +298,35 @@ const ChallengePage = () => {
                 <View style={styles.header}>
                     <View style={common_styles.categoryBadge}>
                         <Text style={common_styles.categoryBadgeText}>
-                            {category.toUpperCase()}
+                            {challengeData.category.toUpperCase()}
                         </Text>
                     </View>
                     <View style={[common_styles.headerLine, styles.headerAccent]} />
-                    <Text style={styles.missionLabel}>FIELD MISSION</Text>
+                    <Text style={styles.missionLabel}>GROUP MISSION</Text>
+                </View>
+
+                <View style={styles.invitationBanner}>
+                    <Text style={styles.invitationTitle}>🎯 CHALLENGE INVITATION</Text>
+                    <Text style={styles.invitationText}>
+                        You've been invited to join this adventure!
+                    </Text>
+                </View>
+
+                <View style={styles.participantsSection}>
+                    <Text style={styles.participantsTitle}>BRAVE EXPLORERS ({participants.length})</Text>
+                    <View style={styles.participantsContainer}>
+                        {participants.map((participant, index) => renderParticipantAvatar(participant, index))}
+                        <TouchableOpacity
+                            style={styles.addParticipantButton}
+                            onPress={handleShareChallenge}
+                            activeOpacity={0.7}
+                        >
+                            <Text style={styles.addParticipantText}>+</Text>
+                        </TouchableOpacity>
+                    </View>
+                    <Text style={styles.participantsSubtext}>
+                        Invite more friends to join this group challenge!
+                    </Text>
                 </View>
 
                 <View style={common_styles.contentContainer}>
@@ -241,10 +348,10 @@ const ChallengePage = () => {
                                 <View style={common_styles.photoPlaceholderContent}>
                                     <Text style={styles.adventureIcon}>🏞️</Text>
                                     <Text style={common_styles.photoPlaceholderText}>
-                                        YOUR ADVENTURE
+                                        GROUP ADVENTURE
                                     </Text>
                                     <Text style={common_styles.photoPlaceholderSubtext}>
-                                        awaits capture
+                                        together we explore
                                     </Text>
                                 </View>
                             </View>
@@ -252,12 +359,12 @@ const ChallengePage = () => {
                             <View style={common_styles.captionArea}>
                                 <Text style={styles.challengeLabel}>MISSION BRIEFING:</Text>
                                 <Text style={[common_styles.challengeText, styles.challengeContent]}>
-                                    {challenge}
+                                    {challengeData.name}
                                 </Text>
                             </View>
                             
                             <View style={common_styles.polaroidFooter}>
-                                <Text style={common_styles.usernameStamp}>EXPLORER</Text>
+                                <Text style={common_styles.usernameStamp}>TEAM EXPLORER</Text>
                                 <Text style={common_styles.dateStamp}>
                                     {new Date().toLocaleDateString()}
                                 </Text>
@@ -267,22 +374,23 @@ const ChallengePage = () => {
 
                     <View style={styles.warningContainer}>
                         <Text style={styles.warningText}>
-                            THE WILD CALLS TO YOU.{'\n'}
-                            ANSWER OR RETREAT IN SHAME.
+                            THE WILD CALLS TO YOUR TEAM.{'\n'}
+                            UNITE AND CONQUER TOGETHER!
                         </Text> 
-                        <Text style={[styles.warningText, { rotateX: '-80deg' }]}>
-                            JOIN {finishes} BRAVE EXPLORERS
+                        <Text style={[styles.warningText, { transform: [{ rotate: '0deg' }] }]}>
+                            JOIN {challengeData.finishes || 0} COMPLETED EXPEDITIONS
                         </Text>
                     </View>
                 </View>
+
                 <View style={{ flexDirection: 'row', justifyContent: 'center', alignItems: 'center', gap: 16, marginBottom: 10 }}>
                     <TouchableOpacity 
                         style={[common_styles.secondaryButton, { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', width: 'auto', alignSelf: 'center', paddingHorizontal: 16 }]}
                         onPress={handleShareChallenge}
                         activeOpacity={0.8}
                     >
-                        <Text style={{ fontSize: 22, marginRight: 8 }}>📤</Text>
-                        <Text style={common_styles.secondaryButtonText}>SHARE & INVITE FRIENDS</Text>
+                        <Text style={{ fontSize: 22, marginRight: 8 }}>👥</Text>
+                        <Text style={common_styles.secondaryButtonText}>INVITE MORE FRIENDS</Text>
                     </TouchableOpacity>
                     <TouchableOpacity 
                         style={[styles.circleButton, { marginTop: 0 }]}
@@ -290,13 +398,14 @@ const ChallengePage = () => {
                         <Text style={{ fontSize: 32 }}>🌎</Text>
                     </TouchableOpacity>
                 </View>
+
                 <View style={styles.buttonContainer}>
                     <TouchableOpacity 
                         style={[common_styles.primaryButton, styles.completeButton]}
-                        onPress={handleCompletePress}
+                        onPress={handleJoinChallenge}
                         activeOpacity={0.8}
                     >
-                        <Text style={common_styles.primaryButtonText}>🏁 MISSION COMPLETE</Text>
+                        <Text style={common_styles.primaryButtonText}>🚀 JOIN THE MISSION</Text>
                     </TouchableOpacity>
 
                     <Animated.View 
@@ -318,7 +427,7 @@ const ChallengePage = () => {
                                 ]}
                             />
                             <Text style={[common_styles.dangerButtonText, styles.cowardButtonText]}>
-                                {isHolding ? '🐔 HOLD TO RETREAT...' : '🐔 RETREAT TO SAFETY'}
+                                {isHolding ? '🐔 HOLD TO DECLINE...' : '🐔 DECLINE INVITATION'}
                             </Text>
                         </TouchableOpacity>
                     </Animated.View>
@@ -329,24 +438,24 @@ const ChallengePage = () => {
                 {showConfirmation && (
                     <View style={styles.modalOverlay}>
                         <View style={styles.confirmationModal}>
-                            <Text style={styles.confirmationTitle}>⚠️ RETREAT CONFIRMATION</Text>
+                            <Text style={styles.confirmationTitle}>⚠️ DECLINE INVITATION</Text>
                             <Text style={styles.confirmationMessage}>
-                                Are you absolutely certain you want to abandon this mission and retreat to safety?
+                                Are you sure you want to decline this group challenge invitation?
                                 {'\n\n'}
-                                This action will mark you as a coward for this challenge.
+                                Your team is counting on you! This action will mark you as unavailable for this mission.
                             </Text>
                             <View style={styles.confirmationButtons}>
                                 <TouchableOpacity 
                                     style={[common_styles.primaryButton, styles.cancelButton]}
                                     onPress={handleCancelRetreat}
                                 >
-                                    <Text style={common_styles.primaryButtonText}>🛡️ STAY BRAVE</Text>
+                                    <Text style={common_styles.primaryButtonText}>🛡️ STAY WITH TEAM</Text>
                                 </TouchableOpacity>
                                 <TouchableOpacity 
                                     style={[common_styles.dangerButton, styles.confirmButton]}
                                     onPress={handleConfirmRetreat}
                                 >
-                                    <Text style={common_styles.dangerButtonText}>🐱 CONFIRM RETREAT</Text>
+                                    <Text style={common_styles.dangerButtonText}>🏃 CONFIRM DECLINE</Text>
                                 </TouchableOpacity>
                             </View>
                         </View>
@@ -385,6 +494,106 @@ const styles = {
         marginTop: 15,
         letterSpacing: 3,
         fontFamily: typography.fontFamily,
+    },
+    invitationBanner: {
+        backgroundColor: 'rgba(34, 139, 34, 0.1)',
+        marginHorizontal: 20,
+        marginBottom: 15,
+        padding: 20,
+        borderRadius: 12,
+        borderWidth: 2,
+        borderColor: colors.forestGreen,
+        alignItems: 'center',
+    },
+    invitationTitle: {
+        ...typography.headerSmall,
+        color: colors.forestGreen,
+        marginBottom: 8,
+        textAlign: 'center',
+    },
+    invitationText: {
+        ...typography.bodyMedium,
+        color: colors.darkBrown,
+        textAlign: 'center',
+    },
+    participantsSection: {
+        marginHorizontal: 20,
+        marginBottom: 20,
+        alignItems: 'center',
+    },
+    participantsTitle: {
+        ...typography.label,
+        color: colors.darkBrown,
+        marginBottom: 15,
+        letterSpacing: 2,
+    },
+    participantsContainer: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        marginBottom: 10,
+    },
+    participantAvatar: {
+        marginLeft: -10,
+        borderWidth: 3,
+        borderColor: colors.cream,
+        borderRadius: 25,
+    },
+    avatarImage: {
+        width: 50,
+        height: 50,
+        borderRadius: 25,
+    },
+    avatarPlaceholder: {
+        width: 50,
+        height: 50,
+        borderRadius: 25,
+        backgroundColor: colors.forestGreen,
+        justifyContent: 'center',
+        alignItems: 'center',
+    },
+    avatarInitial: {
+        color: colors.cream,
+        fontSize: 20,
+        fontWeight: 'bold',
+    },
+    inviterBadge: {
+        position: 'absolute',
+        top: -5,
+        right: -5,
+        width: 20,
+        height: 20,
+        backgroundColor: colors.vintageOrange,
+        borderRadius: 10,
+        justifyContent: 'center',
+        alignItems: 'center',
+        borderWidth: 2,
+        borderColor: colors.cream,
+    },
+    inviterBadgeText: {
+        fontSize: 12,
+    },
+    addParticipantButton: {
+        width: 50,
+        height: 50,
+        borderRadius: 25,
+        backgroundColor: 'rgba(34, 139, 34, 0.3)',
+        borderWidth: 2,
+        borderStyle: 'dashed',
+        borderColor: colors.forestGreen,
+        justifyContent: 'center',
+        alignItems: 'center',
+        marginLeft: 10,
+    },
+    addParticipantText: {
+        fontSize: 24,
+        color: colors.forestGreen,
+        fontWeight: 'bold',
+    },
+    participantsSubtext: {
+        ...typography.bodySmall,
+        color: colors.darkBrown,
+        textAlign: 'center',
+        fontStyle: 'italic',
     },
     challengePolaroid: {
         backgroundColor: colors.polaroidWhite,
@@ -532,6 +741,26 @@ const styles = {
         alignItems: 'center',
         ...shadows.lightShadow,
     },
+    loadingContainer: {
+        justifyContent: 'center',
+        alignItems: 'center',
+    },
+    loadingText: {
+        ...typography.bodyMedium,
+        color: colors.darkBrown,
+        marginTop: 20,
+    },
+    errorContainer: {
+        justifyContent: 'center',
+        alignItems: 'center',
+        paddingHorizontal: 30,
+    },
+    errorText: {
+        ...typography.headerSmall,
+        color: colors.darkBrown,
+        textAlign: 'center',
+        marginBottom: 30,
+    },
 };
 
-export default ChallengePage;
+export default InvitePage;

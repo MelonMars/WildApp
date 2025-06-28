@@ -33,6 +33,7 @@
     "expo-location": "~18.1.5",
     "expo-media-library": "~17.1.7",
     "expo-router": "~5.1.0",
+    "expo-secure-store": "~14.2.3",
     "expo-splash-screen": "~0.30.9",
     "expo-status-bar": "~2.2.3",
     "expo-symbols": "~0.4.5",
@@ -52,7 +53,7 @@
     "react-native-share": "^12.1.0",
     "react-native-web": "~0.20.0",
     "react-native-webview": "13.13.5",
-    "expo-secure-store": "~14.2.3"
+    "react-navigation": "^5.0.0"
   },
   "devDependencies": {
     "@babel/core": "^7.25.2",

@@ -332,7 +332,8 @@ export class PostService {
         }
         acc[challenge.category].push({
           name: challenge.name,
-          finishes: challenge.finishes
+          finishes: challenge.finishes,
+          id: challenge.id,
         });
         return acc;
       }, {});
@@ -366,6 +367,25 @@ export class PostService {
     }
   }
 
+  static async getChallengeById(challengeId) {
+    try {
+      const { data, error } = await supabase
+        .from('challenges')
+        .select('*')
+        .eq('id', challengeId)
+        .eq('is_active', true)
+        .single();
+      if (error) {
+        console.warn('Challenge not found:', challengeId);
+        return null;
+      }
+      return data;
+    } catch (error) {
+      console.error('Error fetching challenge by ID:', error);
+      return null;
+    }
+  }
+  
   static async getTodaysChallenge() {
     try {
       const today = new Date().toISOString().slice(0, 10);

@@ -233,8 +233,8 @@ function HomeContent({ user }) {
         const challenge = fetchChallenge('social');
         console.log('Fetched challenge:', challenge);
         router.push({
-            pathname: '/challenge', 
-            params: { challenge: challenge.name, finishes: challenge.finishes, category: 'social' }
+            pathname: '/challenge',
+            params: { challenge: challenge.name, finishes: challenge.finishes, category: 'social', challengeId: challenge.id }
         });
     };
 
@@ -244,7 +244,7 @@ function HomeContent({ user }) {
         const challenge = fetchChallenge('adventure');
         router.push({
             pathname: '/challenge', 
-            params: { challenge: challenge.name, finishes: challenge.finishes, category: 'adventure' }
+            params: { challenge: challenge.name, finishes: challenge.finishes, category: 'adventure', challengeId: challenge.id }
         });
     };
 
@@ -254,7 +254,7 @@ function HomeContent({ user }) {
         const challenge = fetchChallenge('creative');
         router.push({
             pathname: '/challenge', 
-            params: { challenge: challenge.name, finishes: challenge.finishes, category: 'creative' }
+            params: { challenge: challenge.name, finishes: challenge.finishes, category: 'creative', challengeId: challenge.id }
         });
     };
 
