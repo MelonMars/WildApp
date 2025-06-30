@@ -56,7 +56,8 @@ export class PostService {
           timestamp,
           created_at,
           latitude,
-          longitude
+          longitude,
+          users_who_liked
         `)
         .order('completed_at', { ascending: false })
         .limit(pageSize);
@@ -185,6 +186,45 @@ export class PostService {
       };
     } catch (error) {
       console.error('Error creating post:', error);
+      throw error;
+    }
+  }
+
+  static async togglePostLike(postId, user) {
+    console.log('toggling like...');
+    try {
+      if (!user || !user.id) {
+        throw new Error('User must be authenticated to like posts');
+      }
+  
+      if (!postId) {
+        throw new Error('Post ID is required');
+      }
+  
+      console.log('Toggling like for post:', postId, 'by user:', user.id);
+      const { data, error } = await supabase
+        .rpc('toggle_post_like', {
+          post_id: postId,
+          user_id: user.id
+        });
+  
+      if (error) {
+        console.error('Error toggling post like:', error);
+        throw error;
+      }
+  
+      const result = data[0];
+      
+      return {
+        success: true,
+        liked: result.liked,
+        newLikesCount: result.new_likes_count,
+        userId: user.id,
+        postId: postId
+      };
+  
+    } catch (error) {
+      console.error('Error in togglePostLike:', error);
       throw error;
     }
   }

@@ -24,6 +24,7 @@ import { Image } from 'expo-image';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Haptics from 'expo-haptics';
 import MapView, { Marker } from 'react-native-maps';
+import { useAuth } from './contexts/AuthContext';
 
 import { PostService } from './services/postService';
 import { common_styles, colors, typography, shadows } from './styles';
@@ -52,9 +53,10 @@ export default function GalleryPage() {
     const [showMyPostsOnly, setShowMyPostsOnly] = useState(false);
     const [myPosts, setMyPosts] = useState([]);  
     const [filteredPosts, setFilteredPosts] = useState([]);
-
+    
     const { newPost, challenge, category, photo, caption, completedAt, timestamp, isNewPost, userOnly } = useLocalSearchParams();
     const { preloadedPosts, preloadedLastDoc, preloadedHasMore, preloadComplete } = useApp();
+    const { user, loading: isAuthLoading } = useAuth();
 
     useEffect(() => {
         Animated.timing(fadeAnim, {
@@ -310,6 +312,48 @@ export default function GalleryPage() {
         );
     };
 
+    const renderLikesAndComments = (item) => {
+        return (
+            <View style={common_styles.polaroidFooter}>
+                <TouchableOpacity 
+                    onPress={() => handleLike(item).catch(e => console.error('HandleLike error', e))}
+                    activeOpacity={0.7}
+                >
+                    <Text style={common_styles.likesCount}>
+                        {item.likes ? `${item.likes} ❤️` : '0 ❤️'}
+                    </Text>
+                </TouchableOpacity>
+                <TouchableOpacity 
+                    onPress={() => handleComment(item)}
+                    activeOpacity={0.7}
+                >
+                    <Text style={common_styles.commentsCount}>
+                        {item.comments ? `${item.comments} 💬` : '0 💬'}
+                    </Text>
+                </TouchableOpacity>
+            </View>
+        );
+    };
+
+    const handleLike = async (item) => {
+        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+        console.log('Like post:', item.id);
+        const res = await PostService.togglePostLike(item.id, user);
+        if (res.success) {
+          setPosts(posts => posts.map(p =>
+            p.id === item.id
+              ? { ...p, likes: res.newLikesCount, likedByUser: res.liked }
+              : p
+          ));
+        }
+    };      
+    
+    const handleComment = (item) => {
+        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+        // Add your comment logic here
+        console.log('Comment on post:', item.id);
+    };
+
     const renderPost = ({ item, index }) => {
         const inputRange = [-1, 0, (index + 1) * 200, (index + 2) * 200];
         const scale = scrollY.interpolate({
@@ -389,6 +433,9 @@ export default function GalleryPage() {
                         renderCowardCaption(item) :
                         renderNormalCaption(item)
                     }
+                    <View onStartShouldSetResponder={() => true}>
+                        {!isCowardPost && renderLikesAndComments(item)}
+                    </View>
                     <View style={[
                         common_styles.tapeHorizontal,
                         common_styles.tapeTopLeft,

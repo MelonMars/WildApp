@@ -297,7 +297,7 @@ function HomeContent({ user }) {
         <View style={common_styles.container}>
             <View style={common_styles.backgroundTexture} />
             <View style={styles.titleContainer}>
-                <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center' }}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', marginLeft: 64 }}>
                     <Text style={styles.title}>Wild</Text>
                     {usersPosts && (<TouchableOpacity
                         onPress={navigateToProfile}
