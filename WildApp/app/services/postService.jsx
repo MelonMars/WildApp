@@ -680,6 +680,74 @@ export class PostService {
       return null;
     }
   }
+
+  static async getProfilePicture(user) {
+    try {
+      const { data, error } = await supabase
+        .from('users')
+        .select('profile_picture')
+        .eq('uid', user.id)
+        .single();
+
+      if (error) {
+        console.error('Error fetching profile picture:', error);
+        return null;
+      }
+
+      return data?.profile_picture || null;
+    } catch (error) {
+      console.error('Error fetching profile picture:', error);
+      return null;
+    }
+  }
+  
+  static async uploadProfilePicture(user, photoUri) {
+    try {
+      if (!user || !user.id) {
+        throw new Error('User must be authenticated to upload profile picture');
+      }
+
+      const base64 = await FileSystem.readAsStringAsync(photoUri, {
+        encoding: FileSystem.EncodingType.Base64,
+      });
+
+      const uniqueFileName = `profile_${user.id}_${Date.now()}.jpg`;
+
+      const { data, error } = await supabase.storage
+        .from('profile-pictures')
+        .upload(uniqueFileName, decode(base64), {
+          contentType: 'image/jpeg',
+          upsert: true
+        });
+
+      if (error) {
+        console.error('Supabase upload error:', error);
+        throw error;
+      }
+
+      const { data: { publicUrl } } = supabase.storage
+        .from('profile-pictures')
+        .getPublicUrl(data.path);
+
+      const { data: updatedUser, error: updateError } = await supabase
+        .from('users')
+        .update({ profile_picture: publicUrl })
+        .eq('uid', user.id)
+        .select()
+        .single();
+
+      if (updateError) {
+        console.error('Error updating user profile picture:', updateError);
+        throw updateError;
+      }
+
+      console.log('Profile picture uploaded successfully, public URL:', publicUrl);
+      return updatedUser.profile_picture;
+    } catch (error) {
+      console.error('Error uploading profile picture:', error);
+      throw error;
+    }
+  }
 }
 
 export class NewChallengeService {

@@ -9,6 +9,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useFocusEffect } from '@react-navigation/native';
 import { useAuth } from './contexts/AuthContext';
 import { LinearGradient } from 'expo-linear-gradient';
+import * as ImagePicker from 'expo-image-picker';
 
 export default function Profile() {
     const router = useRouter();
@@ -30,6 +31,8 @@ export default function Profile() {
     const [isEditingName, setIsEditingName] = useState(false);
     const [tempName, setTempName] = useState('');
     const [username, setUsername] = useState(user?.name || user?.email.split('@')[0] || 'anonymous');
+    const [profilePicture, setProfilePicture] = useState(null);
+    const [isUploadingImage, setIsUploadingImage] = useState(false);
 
     const [isLoading, setIsLoading] = useState(true);
 
@@ -62,6 +65,46 @@ export default function Profile() {
             achievement.difficulty?.toLowerCase() === selectedDifficulty.toLowerCase()
         );
     };
+
+    const selectProfilePicture = async () => {
+        try {
+            const permissionResult = await ImagePicker.requestMediaLibraryPermissionsAsync();
+            
+            if (permissionResult.granted === false) {
+                alert("Permission to access camera roll is required!");
+                return;
+            }
+    
+            const result = await ImagePicker.launchImageLibraryAsync({
+                mediaTypes: ImagePicker.MediaTypeOptions.Images,
+                allowsEditing: true,
+                aspect: [1, 1],
+                quality: 0.8,
+            });
+    
+            if (!result.canceled && result.assets[0]) {
+                setIsUploadingImage(true);
+                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+                
+                const imageUri = result.assets[0].uri;
+                
+                try {
+                    const uploadedImageUrl = await PostService.uploadProfilePicture(user, imageUri);
+                    setProfilePicture(uploadedImageUrl);
+                    
+                    await AsyncStorage.setItem(`profilePicture_${user.id}`, uploadedImageUrl);
+                } catch (error) {
+                    console.error('Error uploading profile picture:', error);
+                    alert('Failed to upload profile picture. Please try again.');
+                } finally {
+                    setIsUploadingImage(false);
+                }
+            }
+        } catch (error) {
+            console.error('Error selecting profile picture:', error);
+            setIsUploadingImage(false);
+        }
+    };    
 
     const loadProfileData = async () => {
         setIsLoading(true);
@@ -105,6 +148,20 @@ export default function Profile() {
                 ...a,
                 unlocked: false
             })));
+            const savedProfilePicture = await AsyncStorage.getItem(`profilePicture_${user.id}`);
+            if (savedProfilePicture) {
+                setProfilePicture(savedProfilePicture);
+            } else {
+                try {
+                    const serverProfilePicture = await PostService.getProfilePicture(user);
+                    if (serverProfilePicture) {
+                        setProfilePicture(serverProfilePicture);
+                        await AsyncStorage.setItem(`profilePicture_${user.id}`, serverProfilePicture);
+                    }
+                } catch (error) {
+                    console.error('Error loading profile picture from server:', error);
+                }
+            }
             setProfileData({
                 level,
                 streak,
@@ -210,16 +267,34 @@ export default function Profile() {
 
             <View style={styles.profileSection}>
                 <View style={styles.profilePictureContainer}>
-                    {/* <Image source={{ uri: user.profilePicture }} style={styles.profilePicture} /> */}
-                    <View style={styles.profilePicture}>
-                        <Text style={styles.profilePictureText}>
-                            {username
-                                ? username.charAt(0).toUpperCase()
-                                : user?.email
-                                    ? user.email.charAt(0).toUpperCase()
-                                    : '?'}
-                        </Text>
-                    </View>
+                    <TouchableOpacity 
+                        style={styles.profilePictureContainer}
+                        onPress={selectProfilePicture}
+                        disabled={isUploadingImage}
+                        activeOpacity={0.7}
+                    >
+                        {isUploadingImage ? (
+                            <View style={styles.profilePicture}>
+                                <ActivityIndicator size="large" color={colors.polaroidWhite} />
+                            </View>
+                        ) : profilePicture ? (
+                            <Image source={{ uri: profilePicture }} style={styles.profilePictureImage} />
+                        ) : (
+                            <View style={styles.profilePicture}>
+                                <Text style={styles.profilePictureText}>
+                                    {username
+                                        ? username.charAt(0).toUpperCase()
+                                        : user?.email
+                                            ? user.email.charAt(0).toUpperCase()
+                                            : '?'}
+                                </Text>
+                            </View>
+                        )}
+                        <View style={styles.profilePictureTape} />
+                        <View style={styles.cameraOverlay}>
+                            <Text style={styles.cameraIcon}>📷</Text>
+                        </View>
+                    </TouchableOpacity>
                     <View style={styles.profilePictureTape} />
                 </View>
                 
@@ -766,4 +841,29 @@ const styles = StyleSheet.create({
         fontWeight: '700',
         letterSpacing: 2,
     },
+    profilePictureImage: {
+        width: 100,
+        height: 100,
+        borderRadius: 50,
+        borderWidth: 3,
+        borderColor: colors.tan,
+        ...shadows.lightShadow,
+    },
+    cameraOverlay: {
+        position: 'absolute',
+        bottom: 0,
+        right: 0,
+        width: 30,
+        height: 30,
+        borderRadius: 15,
+        backgroundColor: colors.vintageOrange,
+        justifyContent: 'center',
+        alignItems: 'center',
+        borderWidth: 2,
+        borderColor: colors.tan,
+        ...shadows.lightShadow,
+    },
+    cameraIcon: {
+        fontSize: 16,
+    },    
 });
