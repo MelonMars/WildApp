@@ -244,6 +244,7 @@ const PostChallengePage = () => {
       }
 
       const originalAchievements = await PostService.getAchievements(user);
+      const originalLevel = await PostService.getLevel(user);
       const newPost = await PostService.createPost(post, user);
       
       const { streakInfo } = newPost;
@@ -255,36 +256,54 @@ const PostChallengePage = () => {
       );
       console.log('New achievements unlocked:', newAchievementsList);
       console.log('Post created successfully:', newPost);
+      const newLevel = await PostService.getLevel(user);
+      const levelChanged = newLevel !== originalLevel;
+      console.log("New level: ", newLevel, "Level changed:", levelChanged);
       setIsPostLoading(false);
       if (!newStreak) {
         if (newAchievementsList.length === 0) {
-          router.push({
-            pathname: "gallery",
-            params: {
-              newPost: JSON.stringify(newPost),
-              isNewPost: 'true'
-            }
-          });
+          if (levelChanged) {
+        router.push({
+          pathname: "level",
+          params: {
+            newPost: JSON.stringify(newPost),
+            isNewPost: 'true',
+            newLevel: newLevel,
+          }
+        });
+          } else {
+        router.push({
+          pathname: "gallery",
+          params: {
+            newPost: JSON.stringify(newPost),
+            isNewPost: 'true'
+          }
+        });
+          }
         } else {
           router.push({
-            pathname: "achievements",
-            params: {
-              newPost: JSON.stringify(newPost),
-              isNewPost: 'true',
-              newAchievements: JSON.stringify(newAchievementsList),
-            }
+        pathname: "achievements",
+        params: {
+          newPost: JSON.stringify(newPost),
+          isNewPost: 'true',
+          newAchievements: JSON.stringify(newAchievementsList),
+          levelChanged: levelChanged,
+          newLevel: newLevel,
+        }
           });
         }
       } else {
         router.push({
           pathname: "streak",
           params: {
-            newPost: JSON.stringify(newPost),
-            isNewPost: 'true',
-            streak: streakInfo.currentStreak,
-            newAchievements: JSON.stringify(newAchievementsList),
+        newPost: JSON.stringify(newPost),
+        isNewPost: 'true',
+        streak: streakInfo.currentStreak,
+        newAchievements: JSON.stringify(newAchievementsList),
+        levelChanged: levelChanged,
+        newLevel: newLevel,
           }
-        })
+        });
       }
       
     } catch (error) {

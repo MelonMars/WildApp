@@ -89,7 +89,7 @@ export default function Profile() {
                 stats.dailyChallenges = completedChallenges.filter(c => c.challenge.category === 'daily').length;
             }
 
-            const level = Math.floor(stats.totalChallenges / 5) + 1;
+            const level = await PostService.getLevel(user);
 
             const userAchievements = await PostService.getAchievements(user);
             const allAchievements = await PostService.getAllAchievements();
@@ -242,25 +242,12 @@ export default function Profile() {
                         setIsEditingName(true);
                         Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
                     }}>
-                        <Text style={styles.userName}>{username || 'Wild Explorer'}✏️</Text>
+                        <Text style={styles.userName}>{username || 'Wild Explorer'} ✏️</Text>
                     </TouchableOpacity>
                 )}
                 
                 <View style={styles.levelContainer}>
                     <Text style={styles.levelText}>Level {profileData.level}</Text>
-                    <View style={styles.progressBarContainer}>
-                        <View style={styles.progressBarBackground}>
-                            <View 
-                                style={[
-                                    styles.progressBarFill,
-                                    { width: `${getNextLevelProgress()}%` }
-                                ]}
-                            />
-                        </View>
-                        <Text style={styles.progressText}>
-                            {profileData.totalChallenges % 5}/5 to next level
-                        </Text>
-                    </View>
                 </View>
             </View>
 

@@ -175,6 +175,8 @@ export class PostService {
       await this.updateStreak(user, currentStreak);
       await this.updateStreakLastUpdated(user, today);
 
+      const levelData = await this.getLevel(user);
+
       return {
         ...data,
         streakInfo: {
@@ -182,7 +184,8 @@ export class PostService {
           previousStreak: oldStreak,
           newStreak: newStreak,
           streakIncreased: currentStreak > oldStreak
-        }
+        },
+        level: levelData,
       };
     } catch (error) {
       console.error('Error creating post:', error);
@@ -636,6 +639,45 @@ export class PostService {
     } catch (error) {
       console.error('Error updating user name:', error);
       throw error;
+    }
+  }
+
+  static async getLevels() {
+    try {
+      const { data, error } = await supabase
+        .from('levels')
+        .select('*')
+        .order('level', { ascending: true });
+
+      if (error) {
+        console.error('Error fetching levels:', error);
+        return [];
+      }
+
+      return data || [];
+    } catch (error) {
+      console.error('Error fetching levels:', error);
+      return [];
+    }
+  }
+
+  static async getLevel(user) {
+    try {
+      const { data, error } = await supabase
+        .from('users')
+        .select('level')
+        .eq('uid', user.id)
+        .single();
+
+      if (error) {
+        console.error('Error fetching user level:', error);
+        return null;
+      }
+
+      return data?.level || 0;
+    } catch (error) {
+      console.error('Error fetching level:', error);
+      return null;
     }
   }
 }
