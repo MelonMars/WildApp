@@ -220,7 +220,8 @@ export class PostService {
         liked: result.liked,
         newLikesCount: result.new_likes_count,
         userId: user.id,
-        postId: postId
+        postId: postId,  
+        usersWhoLiked: result.users_who_liked
       };
   
     } catch (error) {

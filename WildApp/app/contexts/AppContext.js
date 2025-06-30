@@ -45,6 +45,7 @@ export const AppProvider = ({ children }) => {
         preloadedHasMore,
         isPreloading,
         preloadComplete,
+        setPreloadedPosts,
         refreshPreloadedData: preloadGalleryData
     };
 

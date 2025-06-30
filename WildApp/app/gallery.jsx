@@ -55,7 +55,7 @@ export default function GalleryPage() {
     const [filteredPosts, setFilteredPosts] = useState([]);
     
     const { newPost, challenge, category, photo, caption, completedAt, timestamp, isNewPost, userOnly } = useLocalSearchParams();
-    const { preloadedPosts, preloadedLastDoc, preloadedHasMore, preloadComplete } = useApp();
+    const { preloadedPosts, preloadedLastDoc, preloadedHasMore, preloadComplete, setPreloadedPosts } = useApp();
     const { user, loading: isAuthLoading } = useAuth();
 
     useEffect(() => {
@@ -108,27 +108,13 @@ export default function GalleryPage() {
             const { posts: newPosts, lastDoc: newLastDoc, hasMore: moreAvailable } =
                 await PostService.fetchPosts(lastDoc, 2);
             setPosts(prevPosts => [...prevPosts, ...newPosts]);
+            setPreloadedPosts(prevPosts => [...prevPosts, ...newPosts]);
             setLastDoc(newLastDoc);
             setHasMore(moreAvailable);
         } catch (error) {
             console.error('Failed to fetch more posts:', error);
         } finally {
             setLoading(false);
-        }
-    };
-
-    const onRefresh = async () => {
-        setRefreshing(true);
-        try {
-            const { posts: freshPosts, lastDoc: newLastDoc, hasMore: moreAvailable } =
-                await PostService.fetchPosts(null, 6);
-            setPosts(freshPosts);
-            setLastDoc(newLastDoc);
-            setHasMore(moreAvailable);
-        } catch (error) {
-            console.error('Failed to refresh posts:', error);
-        } finally {
-            setRefreshing(false);
         }
     };
 
@@ -185,6 +171,7 @@ export default function GalleryPage() {
                 completed_at: parsedPost.completedAt || parsedPost.completed_at
             };
             setPosts(prevPosts => [formattedPost, ...prevPosts]);
+            setPreloadedPosts(prevPosts => [formattedPost, ...prevPosts]);
             setIsNewPostAnimating(true);
             Animated.sequence([
                 Animated.timing(newPostAnim, {
@@ -313,6 +300,8 @@ export default function GalleryPage() {
     };
 
     const renderLikesAndComments = (item) => {
+        const has_user_liked = item.users_who_liked && item.users_who_liked.includes(user?.id);
+        const heart_emoji = has_user_liked ? '❤️' : '🖤';
         return (
             <View style={common_styles.polaroidFooter}>
                 <TouchableOpacity 
@@ -320,7 +309,7 @@ export default function GalleryPage() {
                     activeOpacity={0.7}
                 >
                     <Text style={common_styles.likesCount}>
-                        {item.likes ? `${item.likes} ❤️` : '0 ❤️'}
+                        {item.likes ? `${item.likes} ${heart_emoji}` : `0 ${heart_emoji}`}
                     </Text>
                 </TouchableOpacity>
                 <TouchableOpacity 
@@ -342,15 +331,20 @@ export default function GalleryPage() {
         if (res.success) {
           setPosts(posts => posts.map(p =>
             p.id === item.id
-              ? { ...p, likes: res.newLikesCount, likedByUser: res.liked }
+              ? { ...p, likes: res.newLikesCount, users_who_liked: res.usersWhoLiked }
               : p
           ));
+            setPreloadedPosts(preloadedPosts => preloadedPosts.map(p =>
+                p.id === item.id
+                ? { ...p, likes: res.newLikesCount, users_who_liked: res.usersWhoLiked }
+                : p
+            ));
         }
     };      
     
     const handleComment = (item) => {
         Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-        // Add your comment logic here
+
         console.log('Comment on post:', item.id);
     };
 
