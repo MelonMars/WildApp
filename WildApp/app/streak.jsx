@@ -149,15 +149,14 @@ const StreakPage = () => {
                 });
                 return;
             }
-        } else {
-            router.push({
+        }
+        router.push({
                 pathname: "gallery",
                 params: {
                     newPost,
                     isNewPost,
                 }
-            });
-        }
+        });
     };
 
     const getStreakMessage = (streak) => {

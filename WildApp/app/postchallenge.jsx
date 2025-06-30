@@ -11,6 +11,7 @@ import {
   Image,
   Alert,
   ScrollView,
+  ActivityIndicator,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Camera } from 'expo-camera';
@@ -35,6 +36,7 @@ const PostChallengePage = () => {
   const [locationEnabled, setLocationEnabled] = useState(true);
   const [locationPermission, setLocationPermission] = useState(null);
   const [currentLocation, setCurrentLocation] = useState(null);
+  const [isPostLoading, setIsPostLoading] = useState(false);
   const { challenge, category, completedAt } = useLocalSearchParams();
   const { user, loading } = useAuth();
 
@@ -184,7 +186,12 @@ const PostChallengePage = () => {
   };
 
   const handlePost = async () => {
+    if (isPostLoading) {
+      Alert.alert('Posting in progress', 'Please wait until the current post is completed.');
+      return;
+    }
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
+    setIsPostLoading(true);
     if (!photo) {
       Alert.alert('Photo Required', 'Take a photo to prove you did it!');
       return;
@@ -248,7 +255,7 @@ const PostChallengePage = () => {
       );
       console.log('New achievements unlocked:', newAchievementsList);
       console.log('Post created successfully:', newPost);
-      
+      setIsPostLoading(false);
       if (!newStreak) {
         if (newAchievementsList.length === 0) {
           router.push({
@@ -501,6 +508,12 @@ const PostChallengePage = () => {
           </Text>
         </TouchableOpacity>
       </Animated.View>
+      {isPostLoading && (
+        <View style={common_styles.modalOverlay}>
+          <ActivityIndicator size="large" color="#fff" />
+          <Text style={common_styles.loadingText}>Posting...</Text>
+        </View>
+      )}
     </ScrollView>
   );
 };
