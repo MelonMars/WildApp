@@ -107,67 +107,61 @@ export class PostService {
     }
   }
 
+  static async insertPostRow(postPayload) {
+    const { data, error } = await supabase
+      .from('posts')
+      .insert([postPayload])
+      .select()
+      .single();
+
+    if (error) throw error;
+    return data;
+  }
+
   static async createPost(postData, user = null) {
     try {
-      const { data, error } = await supabase
-        .from('posts')
-        .insert([{
-          username: postData.username || 'anonymous',
-          challenge: postData.challenge,
-          category: postData.category,
-          photo: postData.photo,
-          caption: postData.caption,
-          completed_at: postData.completedAt,
-          timestamp: postData.timestamp,
-          likes: 0,
-          comments: 0,
-          latitude: postData.latitude || null,
-          longitude: postData.longitude || null,
-          owner: user.id || null,
-        }])
-        .select()
-        .single();
+      const currentTimestamp = new Date().toISOString();
+      const payload = {
+        username: postData.username || 'anonymous',
+        challenge: postData.challenge,
+        category: postData.category,
+        photo: postData.photo,
+        caption: postData.caption,
+        completed_at: postData.completedAt || currentTimestamp,
+        timestamp: postData.timestamp || currentTimestamp,
+        likes: 0,
+        comments: 0,
+        latitude: postData.latitude || null,
+        longitude: postData.longitude || null,
+        owner: user?.id || null,
+      };
 
-      if (error) {
-        throw error;
-      }
+      const data = await this.insertPostRow(payload);
 
       const { data: userData, error: fetchError } = await supabase
         .from('users')
         .select('posts')
         .eq('id', user.id)
         .single();
+      if (fetchError) throw fetchError;
 
-      if (fetchError) {
-        console.error('Error fetching user data:', fetchError);
-        throw fetchError;
-      }
-
-      const postId = data.id;
-      const updatedPosts = [...(userData.posts || []), postId];
-      
+      const updatedPosts = [...(userData.posts || []), data.id];
       const { error: updateError } = await supabase
         .from('users')
         .update({ posts: updatedPosts })
         .eq('id', user.id);
+      if (updateError) throw updateError;
 
-      if (updateError) {
-        console.error('Error updating user posts:', updateError);
-        throw updateError;
-      }
-
-      var oldStreak = await this.getStreak(user);
+      const oldStreak = await this.getStreak(user);
       const lastUpdated = await this.getStreakLastUpdated(user);
-
       const today = new Date().toISOString().slice(0, 10);
       const yesterday = new Date(Date.now() - 86400000).toISOString().slice(0, 10);
-
-      let newStreak = false;
       let currentStreak = oldStreak;
+      let newStreak = false;
 
       if (lastUpdated === yesterday) {
         currentStreak = oldStreak + 1;
-        newStreak = true; 
+        newStreak = true;
       } else if (lastUpdated !== today) {
         currentStreak = 1;
         newStreak = oldStreak === 0;
@@ -183,8 +177,8 @@ export class PostService {
         streakInfo: {
           streak: currentStreak,
           previousStreak: oldStreak,
-          newStreak: newStreak,
-          streakIncreased: currentStreak > oldStreak
+          newStreak,
+          streakIncreased: currentStreak > oldStreak,
         },
         level: levelData,
       };
@@ -315,31 +309,30 @@ export class PostService {
     return R * c;
   }
 
-  static async cowardPost(cowardData) {
+  static async cowardPost(cowardData, user) {
     try {
       const currentTimestamp = new Date().toISOString();
-      
-      const { data, error } = await supabase
-        .from('posts')
-        .insert([{
-          username: cowardData.username || 'anonymous_coward',
-          challenge: cowardData.challenge,
-          category: 'COWARD',
-          photo: null,
-          caption: cowardData.caption || null,
-          completed_at: currentTimestamp,
-          timestamp: currentTimestamp,
-          likes: 0,
-          comments: 0
-        }])
-        .select()
-        .single();
+      const payload = {
+        username: cowardData.username || 'anonymous_coward',
+        challenge: cowardData.challenge,
+        category: 'COWARD',
+        photo: null,
+        caption: cowardData.caption || null,
+        completed_at: currentTimestamp,
+        timestamp: currentTimestamp,
+        likes: 0,
+        comments: 0,
+        latitude: null,
+        longitude: null,
+        owner: user?.id || null,
+      };
 
-      if (error) {
-        throw error;
-      }
+      const data = await this.insertPostRow(payload);
 
-      console.log('Coward post created successfully:', data);
+      await this.updateStreak(user, 0);
+      await this.updateStreakLastUpdated(user, currentTimestamp.slice(0, 10));
+
+      console.log('Coward post created and streak reset:', data);
       return data;
     } catch (error) {
       console.error('Error creating coward post:', error);
@@ -356,7 +349,7 @@ export class PostService {
           id,
           name,
           category,
-          description,
+          description, 
           difficulty,
           created_at,
           is_active,

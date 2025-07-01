@@ -219,7 +219,8 @@ export default function Profile() {
                 socialChallenges: 0,
                 adventureChallenges: 0,
                 creativeChallenges: 0,
-                dailyChallenges: 0
+                dailyChallenges: 0,
+                cowards: 0,
             };
 
             if (posts) {
@@ -227,10 +228,11 @@ export default function Profile() {
                 const completedChallenges = parsedPosts.filter(post => post.challenge);
                 
                 stats.totalChallenges = completedChallenges.length;
-                stats.socialChallenges = completedChallenges.filter(c => c.challenge.category === 'social').length;
-                stats.adventureChallenges = completedChallenges.filter(c => c.challenge.category === 'adventure').length;
-                stats.creativeChallenges = completedChallenges.filter(c => c.challenge.category === 'creative').length;
-                stats.dailyChallenges = completedChallenges.filter(c => c.challenge.category === 'daily').length;
+                stats.socialChallenges = completedChallenges.filter(c => c.category === 'social').length;
+                stats.adventureChallenges = completedChallenges.filter(c => c.category === 'adventure').length;
+                stats.creativeChallenges = completedChallenges.filter(c => c.category === 'creative').length;
+                stats.dailyChallenges = completedChallenges.filter(c => c.category === 'daily').length;
+                stats.cowards = parsedPosts.filter(c => c.category === 'COWARD').length;
             }
 
             const level = await PostService.getLevel(user);
@@ -455,6 +457,10 @@ export default function Profile() {
                     <View style={styles.statCard}>
                         <Text style={styles.statNumber}>{profileData.dailyChallenges}</Text>
                         <Text style={styles.statLabel}>📅 Daily</Text>
+                    </View>
+                    <View style={styles.cowardStatCard}>
+                        <Text style={styles.statNumber}>{profileData.cowards}</Text>
+                        <Text style={styles.statLabel}>🐔 Cowards</Text>
                     </View>
                 </View>
             </View>
@@ -875,6 +881,18 @@ const styles = StyleSheet.create({
         borderWidth: 2,
         borderColor: colors.tan,
         width: '30%',
+        alignItems: 'center',
+        marginBottom: 10,
+        transform: [{ rotate: '0.5deg' }],
+        ...shadows.lightShadow,
+    },
+    cowardStatCard: {
+        backgroundColor: colors.lightBrown,
+        padding: 15,
+        borderRadius: 8,
+        borderWidth: 2,
+        borderColor: colors.tan,
+        width: '100%',
         alignItems: 'center',
         marginBottom: 10,
         transform: [{ rotate: '0.5deg' }],

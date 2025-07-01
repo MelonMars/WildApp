@@ -16,6 +16,7 @@ import { PostService } from './services/postService';
 import * as Haptics from 'expo-haptics';
 import { Share } from 'react-native';
 import * as Linking from 'expo-linking';
+import { useAuth } from './contexts/AuthContext';
 
 const ChallengePage = () => {
     const [pulseAnim] = useState(new Animated.Value(1));
@@ -28,6 +29,7 @@ const ChallengePage = () => {
     const fillAnimationRef = useRef(null);
     const { challenge, finishes, category, challengeId } = useLocalSearchParams();
     const router = useRouter();
+    const { user, loading, logOut } = useAuth();
 
     useEffect(() => {
         const backAction = () => {
@@ -134,7 +136,7 @@ const ChallengePage = () => {
                 username: await AsyncStorage.getItem('username') || 'anonymous',
             };
 
-            const result = await PostService.cowardPost(cowardData);
+            const result = await PostService.cowardPost(cowardData, user);
             console.log('Coward post created:', result);
         } catch (error) {
             console.error('Error creating coward post:', error);
