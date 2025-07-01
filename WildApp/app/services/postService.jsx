@@ -51,7 +51,6 @@ export class PostService {
           photo,
           caption,
           likes,
-          comments,
           completed_at,
           timestamp,
           created_at,
@@ -768,8 +767,30 @@ export class PostService {
     }
   }
 
+  static async getName(user) {
+    try {
+      const { data, error } = await supabase
+        .from('users')
+        .select('name')
+        .eq('id', user.id)
+        .single();
+
+      if (error) {
+        console.error('Error fetching user name:', error);
+        return null;
+      }
+
+      return data?.name || null;
+    } catch (error) {
+      console.error('Error fetching user name:', error);
+      return null;
+    }
+  }
+
   static async addComment(postId, commentData, user) {
     console.log('Adding comment: ', commentData, 'to post:', postId, 'by user:', user?.id);
+    const username = await this.getName(user) || 'anonymous';
+    const profilePicture = await this.getProfilePicture(user) || null;
     try {
       if (!user || !user.id) {
         throw new Error('User must be authenticated to comment on posts');
@@ -795,7 +816,8 @@ export class PostService {
         text: commentData, 
         timestamp: new Date().toISOString(),
         user_id: user.id,
-        username: user.name || 'anonymous'
+        username: username || 'anonymous',
+        profile_picture: profilePicture || null,
       };
 
       comments.push(newComment);

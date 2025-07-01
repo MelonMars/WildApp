@@ -553,12 +553,19 @@ export default function GalleryPage() {
                             style={styles.commentsList}
                             showsVerticalScrollIndicator={false}
                         >
-                            {comments.map((comment, index) => (
+                            {comments.slice().reverse().map((comment, index) => (
                                 <View key={comment.id || index} style={styles.commentItem}>
                                     <View style={styles.commentAvatar}>
-                                        <Text style={styles.commentAvatarText}>
-                                            {comment.username.charAt(0).toUpperCase()}
-                                        </Text>
+                                        {comment.profile_picture ? (
+                                            <Image
+                                                source={{ uri: comment.profile_picture }}
+                                                style={styles.commentAvatarImage}
+                                            />
+                                        ) : (
+                                            <Text style={styles.commentAvatarText}>
+                                                {comment.username.charAt(0).toUpperCase()}
+                                            </Text>
+                                        )}
                                     </View>
                                     <View style={styles.commentContent}>
                                         <View style={styles.commentHeader}>
@@ -587,6 +594,7 @@ export default function GalleryPage() {
                                 onChangeText={setCommentText}
                                 multiline
                                 maxLength={200}
+                                autoCapitalize="none"
                             />
                             <TouchableOpacity
                                 style={[
@@ -1544,5 +1552,10 @@ const styles = StyleSheet.create({
     },
     commentSubmitButtonTextActive: {
         color: colors.polaroidWhite,
+    },
+    commentAvatarImage: {
+        width: '100%',
+        height: '100%',
+        borderRadius: 16, 
     },
 });
