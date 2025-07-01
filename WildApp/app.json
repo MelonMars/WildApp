@@ -11,7 +11,12 @@
     "newArchEnabled": true,
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "io.wildapp.wildapp"
+      "bundleIdentifier": "io.wildapp.wildapp",
+      "infoPlist": {
+        "NSCameraUsageDescription": "We need your camera for taking a photo of your challenge or profile picture.",
+        "NSPhotoLibraryUsageDescription": "We need access to your photo library to upload photos for challenges or your profile picture.",
+        "NSLocationWhenInUseUsageDescription": "We need access to your location for our map functionality to work."
+      }
     },
     "android": {
       "adaptiveIcon": {
