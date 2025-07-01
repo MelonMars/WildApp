@@ -566,6 +566,29 @@ export class PostService {
     }
   }
 
+  static async getPostsByUsername (username) {
+    try {
+      if (!username) {
+        console.error('Username is undefined');
+        return [];
+      }
+      const { data, error } = await supabase
+        .from('posts')
+        .select('*')
+        .eq('username', username);
+
+      if (error) {
+        console.error('Error fetching posts by username:', error);
+        return [];
+      }
+
+      return data || [];
+    } catch (error) {
+      console.error('Error fetching posts by username:', error);
+      return [];
+    }
+  }
+
   static async getAchievements(user) {
     try {
       const { data, error } = await supabase

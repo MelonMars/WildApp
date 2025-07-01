@@ -53,7 +53,8 @@ export default function GalleryPage() {
     const [showMyPostsOnly, setShowMyPostsOnly] = useState(false);
     const [myPosts, setMyPosts] = useState([]);  
     const [filteredPosts, setFilteredPosts] = useState([]);
-    
+    const [selectedUsername, setSelectedUsername] = useState(null);
+
     const { newPost, challenge, category, photo, caption, completedAt, timestamp, isNewPost, userOnly } = useLocalSearchParams();
     const { preloadedPosts, preloadedLastDoc, preloadedHasMore, preloadComplete, setPreloadedPosts } = useApp();
     const { user, loading: isAuthLoading } = useAuth();
@@ -101,6 +102,26 @@ export default function GalleryPage() {
         }
     }, [showMyPostsOnly, posts, myPosts]);
 
+    useEffect(() => {
+        if (selectedUsername) {
+            setFilteredPosts(posts.filter(post => post.username === selectedUsername));
+        } else if (showMyPostsOnly) {
+            setFilteredPosts(myPosts);
+        } else {
+            setFilteredPosts(posts);
+        }
+    }, [showMyPostsOnly, posts, myPosts, selectedUsername]);    
+
+    const handleUsernameFilter = (username) => {
+        if (selectedUsername === username) {
+            setSelectedUsername(null);
+        } else {
+            setSelectedUsername(username);
+            setShowMyPostsOnly(false);
+        }
+        closeModal();
+    };    
+
     const fetchMorePosts = async () => {
         if (loading || !hasMore || showMyPostsOnly) return;
         setLoading(true);
@@ -118,7 +139,25 @@ export default function GalleryPage() {
         }
     };
 
+    const fetchUsersPosts = async (user) => {
+        const newPosts = await PostService.getPostsByUsername(user);
+        if (newPosts && newPosts.length > 0) {
+            setPosts(prevPosts => [...prevPosts, ...newPosts]);
+            setPreloadedPosts(newPosts);
+            setLastDoc(null);
+            setHasMore(false);
+        } else {
+            setPosts([]);
+            setPreloadedPosts([]);
+            setLastDoc(null);
+            setHasMore(false);
+        }
+    }
+
     const handleEndReached = () => {
+        if (selectedUsername) {
+            fetchUsersPosts(selectedUsername);
+        }
         fetchMorePosts();
     };
 
@@ -710,7 +749,13 @@ export default function GalleryPage() {
                                 </Text>
                             )}
                             <View style={common_styles.polaroidFooter}>
+                            <TouchableOpacity
+                                onPress={() => {
+                                    handleUsernameFilter(selectedPost.username);
+                                    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                                }}>
                                 <Text style={common_styles.usernameStamp}>@{selectedPost.username}</Text>
+                            </TouchableOpacity>
                                 <Text style={common_styles.dateStamp}>{formatTimeAgo(selectedPost.completed_at)}</Text>
                             </View>
                         </View>
@@ -809,16 +854,19 @@ export default function GalleryPage() {
                     <Text style={common_styles.headerTitle}>THE WALL</Text>
                     <Text style={common_styles.headerSubtitle}>PROOF OF COURAGE</Text>
                     <TouchableOpacity
-                        style={[styles.filterToggle, showMyPostsOnly && styles.filterToggleActive]}
+                        style={[styles.filterToggle, (showMyPostsOnly || selectedUsername) && styles.filterToggleActive]}
                         onPress={() => {
                             setShowMyPostsOnly(!showMyPostsOnly);
+                            setSelectedUsername(null); 
                             Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
                         }}
                     >
-                        <Text style={[styles.filterToggleText, showMyPostsOnly && styles.filterToggleTextActive]}>
-                            {showMyPostsOnly ? '📱 MY POSTS' : '🌍 ALL POSTS'}
+                        <Text style={[styles.filterToggleText, (showMyPostsOnly || selectedUsername) && styles.filterToggleTextActive]}>
+                            {selectedUsername ? `👤 @${selectedUsername.toUpperCase()}` : 
+                            showMyPostsOnly ? '📱 MY POSTS' : '🌍 ALL POSTS'}
                         </Text>
                     </TouchableOpacity>
+
                 </View>
                 <View style={{ width: 70 }} />
             </Animated.View>
