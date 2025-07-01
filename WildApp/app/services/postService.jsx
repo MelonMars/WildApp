@@ -57,7 +57,8 @@ export class PostService {
           created_at,
           latitude,
           longitude,
-          users_who_liked
+          users_who_liked,
+          comments
         `)
         .order('completed_at', { ascending: false })
         .limit(pageSize);
@@ -256,7 +257,9 @@ export class PostService {
           completed_at,
           timestamp,
           latitude,
-          longitude
+          longitude,
+          users_who_liked,
+          comments
         `)
         .gte('latitude', minLat)
         .lte('latitude', maxLat)
@@ -768,6 +771,52 @@ export class PostService {
       return updatedUser.profile_picture;
     } catch (error) {
       console.error('Error uploading profile picture:', error);
+      throw error;
+    }
+  }
+
+  static async addComment(postId, commentData, user) {
+    console.log('Adding comment: ', commentData, 'to post:', postId, 'by user:', user?.id);
+    try {
+      if (!user || !user.id) {
+        throw new Error('User must be authenticated to comment on posts');
+      }
+
+      if (!postId || !commentData) {
+        throw new Error('Post ID and comment text are required');
+      }
+
+      const { data, error } = await supabase
+        .from('posts')
+        .select('comments')
+        .eq('id', postId)
+        .single();
+      if (error) {
+        console.error('Error fetching post comments:', error);
+        throw error;
+      }
+
+      const comments = data.comments || [];
+      const newComment = {
+        id: `comment_${Date.now()}_${Math.random().toString(36).substring(7)}`,
+        text: commentData, 
+        timestamp: new Date().toISOString(),
+        user_id: user.id,
+        username: user.name || 'anonymous'
+      };
+
+      comments.push(newComment);
+      const { error: updateError } = await supabase
+        .from('posts')
+        .update({ comments })
+        .eq('id', postId);
+      if (updateError) {
+        console.error('Error updating post comments:', updateError);
+        throw updateError;
+      }
+      return newComment;
+    } catch (error) {
+      console.error('Error adding comment:', error);
       throw error;
     }
   }

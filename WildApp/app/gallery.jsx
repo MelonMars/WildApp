@@ -14,7 +14,9 @@ import {
   Linking,
   ActionSheetIOS,
   Alert,
-  Platform
+  Platform,
+  TextInput, 
+  KeyboardAvoidingView,
 } from 'react-native';
 
 import { LinearGradient } from 'expo-linear-gradient';
@@ -54,6 +56,11 @@ export default function GalleryPage() {
     const [myPosts, setMyPosts] = useState([]);  
     const [filteredPosts, setFilteredPosts] = useState([]);
     const [selectedUsername, setSelectedUsername] = useState(null);
+
+    const [showCommentModal, setShowCommentModal] = useState(false);
+    const [commentModalAnim] = useState(new Animated.Value(0));
+    const [commentText, setCommentText] = useState('');
+    const [commentInputRef, setCommentInputRef] = useState(null);
 
     const { newPost, challenge, category, photo, caption, completedAt, timestamp, isNewPost, userOnly } = useLocalSearchParams();
     const { preloadedPosts, preloadedLastDoc, preloadedHasMore, preloadComplete, setPreloadedPosts } = useApp();
@@ -341,6 +348,11 @@ export default function GalleryPage() {
     const renderLikesAndComments = (item) => {
         const has_user_liked = item.users_who_liked && item.users_who_liked.includes(user?.id);
         const heart_emoji = has_user_liked ? '❤️' : '🖤';
+        
+        const commentCount = Array.isArray(item.comments) 
+            ? item.comments.length 
+            : (item.commentCount || item.comments || 0);
+        
         return (
             <View style={common_styles.polaroidFooter}>
                 <TouchableOpacity 
@@ -356,12 +368,13 @@ export default function GalleryPage() {
                     activeOpacity={0.7}
                 >
                     <Text style={common_styles.commentsCount}>
-                        {item.comments ? `${item.comments} 💬` : '0 💬'}
+                        {commentCount > 0 ? `${commentCount} 💬` : '0 💬'}
                     </Text>
                 </TouchableOpacity>
             </View>
         );
     };
+    
 
     const handleLike = async (item) => {
         Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
@@ -383,10 +396,188 @@ export default function GalleryPage() {
     
     const handleComment = (item) => {
         Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-
-        console.log('Comment on post:', item.id);
+        setSelectedPost(item);
+        setShowCommentModal(true);
+        
+        Animated.timing(commentModalAnim, {
+            toValue: 1,
+            duration: 300,
+            useNativeDriver: true,
+        }).start(() => {
+            setTimeout(() => {
+                commentInputRef?.focus();
+            }, 100);
+        });
     };
 
+    const closeCommentModal = () => {
+        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+        
+        Animated.timing(commentModalAnim, {
+            toValue: 0,
+            duration: 300,
+            useNativeDriver: true,
+        }).start(() => {
+            setShowCommentModal(false);
+            setSelectedPost(null);
+            setCommentText('');
+        });
+    };
+
+    const handleSubmitComment = async () => {
+        if (!commentText.trim() || !selectedPost) return;
+        
+        try {
+            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+            
+            const newComment = await PostService.addComment(selectedPost.id, commentText, user);
+            
+            console.log('Submitting comment:', commentText, 'for post:', selectedPost.id);
+            
+            setPosts(posts => posts.map(p =>
+                p.id === selectedPost.id
+                    ? { 
+                        ...p, 
+                        comments: Array.isArray(p.comments) 
+                            ? [...p.comments, newComment]
+                            : [newComment],
+                        commentCount: (p.commentCount || 0) + 1
+                    }
+                    : p
+            ));
+            
+            setPreloadedPosts(preloadedPosts => preloadedPosts.map(p =>
+                p.id === selectedPost.id
+                    ? { 
+                        ...p, 
+                        comments: Array.isArray(p.comments) 
+                            ? [...p.comments, newComment]
+                            : [newComment],
+                        commentCount: (p.commentCount || 0) + 1
+                    }
+                    : p
+            ));
+            
+            setSelectedPost(prev => ({
+                ...prev,
+                comments: Array.isArray(prev.comments) 
+                    ? [...prev.comments, newComment]
+                    : [newComment]
+            }));
+            
+            setCommentText('');
+            closeCommentModal();
+            
+        } catch (error) {
+            console.error('Failed to submit comment:', error);
+        }
+    };    
+
+    const renderCommentModal = () => {
+        if (!showCommentModal || !selectedPost) return null;
+    
+        const translateY = commentModalAnim.interpolate({
+            inputRange: [0, 1],
+            outputRange: [height, 0],
+            extrapolate: 'clamp',
+        });
+        
+        const comments = Array.isArray(selectedPost.comments) ? selectedPost.comments : [];
+        
+        return (
+            <Animated.View 
+                style={[
+                    styles.commentModalOverlay,
+                    {
+                        opacity: commentModalAnim,
+                        transform: [{ translateY }]
+                    }
+                ]}
+            >
+                <TouchableOpacity 
+                    style={StyleSheet.absoluteFill}
+                    onPress={closeCommentModal}
+                    activeOpacity={1}
+                />
+                
+                <KeyboardAvoidingView 
+                    behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+                    style={styles.commentModalContainer}
+                >
+                    <View style={styles.commentModalContent}>
+                        <View style={styles.modalHandle} />
+                        
+                        <View style={styles.commentModalHeader}>
+                            <Text style={styles.commentModalTitle}>Comments</Text>
+                            <TouchableOpacity
+                                style={styles.commentCloseButton}
+                                onPress={closeCommentModal}
+                            >
+                                <Text style={styles.commentCloseButtonText}>×</Text>
+                            </TouchableOpacity>
+                        </View>
+                                                
+                        <ScrollView 
+                            style={styles.commentsList}
+                            showsVerticalScrollIndicator={false}
+                        >
+                            {comments.map((comment, index) => (
+                                <View key={comment.id || index} style={styles.commentItem}>
+                                    <View style={styles.commentAvatar}>
+                                        <Text style={styles.commentAvatarText}>
+                                            {comment.username.charAt(0).toUpperCase()}
+                                        </Text>
+                                    </View>
+                                    <View style={styles.commentContent}>
+                                        <View style={styles.commentHeader}>
+                                            <Text style={styles.commentUsername}>@{comment.username}</Text>
+                                            <Text style={styles.commentTimestamp}>{comment.timestamp}</Text>
+                                        </View>
+                                        <Text style={styles.commentText}>{comment.text}</Text>
+                                    </View>
+                                </View>
+                            ))}
+                            
+                            {comments.length === 0 && (
+                                <View style={styles.noCommentsContainer}>
+                                    <Text style={styles.noCommentsText}>No comments yet</Text>
+                                    <Text style={styles.noCommentsSubText}>Be the first to comment!</Text>
+                                </View>
+                            )}
+                        </ScrollView>
+                        <View style={styles.commentInputContainer}>
+                            <TextInput
+                                ref={setCommentInputRef}
+                                style={styles.commentInput}
+                                placeholder="Add a comment..."
+                                placeholderTextColor={colors.dustyRed}
+                                value={commentText}
+                                onChangeText={setCommentText}
+                                multiline
+                                maxLength={200}
+                            />
+                            <TouchableOpacity
+                                style={[
+                                    styles.commentSubmitButton,
+                                    commentText.trim() ? styles.commentSubmitButtonActive : {}
+                                ]}
+                                onPress={handleSubmitComment}
+                                disabled={!commentText.trim()}
+                            >
+                                <Text style={[
+                                    styles.commentSubmitButtonText,
+                                    commentText.trim() ? styles.commentSubmitButtonTextActive : {}
+                                ]}>
+                                    POST
+                                </Text>
+                            </TouchableOpacity>
+                        </View>
+                    </View>
+                </KeyboardAvoidingView>
+            </Animated.View>
+        );
+    };
+    
     const renderPost = ({ item, index }) => {
         const inputRange = [-1, 0, (index + 1) * 200, (index + 2) * 200];
         const scale = scrollY.interpolate({
@@ -893,6 +1084,7 @@ export default function GalleryPage() {
             </Animated.View>
             <View style={styles.bottomAccent} />
             {renderModal()}
+            {renderCommentModal()}
         </View>
     );
 }
@@ -1106,6 +1298,208 @@ const styles = StyleSheet.create({
         letterSpacing: 0.5,
     },
     filterToggleTextActive: {
+        color: colors.polaroidWhite,
+    },
+    commentModalOverlay: {
+        position: 'absolute',
+        top: 0,
+        left: 0,
+        right: 0,
+        bottom: 0,
+        backgroundColor: 'rgba(0, 0, 0, 0.5)',
+        zIndex: 1000,
+    },
+    commentModalContainer: {
+        flex: 1,
+        justifyContent: 'flex-end',
+    },
+    commentModalContent: {
+        backgroundColor: colors.polaroidWhite,
+        borderTopLeftRadius: 20,
+        borderTopRightRadius: 20,
+        maxHeight: height * 0.8,
+        minHeight: height * 0.5,
+        paddingBottom: Platform.OS === 'ios' ? 34 : 20,
+    },
+    modalHandle: {
+        width: 40,
+        height: 4,
+        backgroundColor: colors.lightBrown,
+        borderRadius: 2,
+        alignSelf: 'center',
+        marginTop: 8,
+        marginBottom: 16,
+    },
+    commentModalHeader: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        paddingHorizontal: 20,
+        paddingBottom: 16,
+        borderBottomWidth: 1,
+        borderBottomColor: colors.lightBrown,
+    },
+    commentModalTitle: {
+        ...typography.headerMedium,
+        color: colors.darkBrown,
+        fontSize: 18,
+    },
+    commentCloseButton: {
+        width: 30,
+        height: 30,
+        justifyContent: 'center',
+        alignItems: 'center',
+    },
+    commentCloseButtonText: {
+        fontSize: 24,
+        color: colors.dustyRed,
+        fontWeight: 'bold',
+    },
+    commentPostPreview: {
+        flexDirection: 'row',
+        padding: 16,
+        borderBottomWidth: 1,
+        borderBottomColor: colors.lightBrown,
+    },
+    commentPostImageContainer: {
+        width: 50,
+        height: 50,
+        marginRight: 12,
+    },
+    commentPostImage: {
+        width: 50,
+        height: 50,
+        borderRadius: 4,
+    },
+    commentCowardPhoto: {
+        width: 50,
+        height: 50,
+        backgroundColor: colors.lightGray,
+        justifyContent: 'center',
+        alignItems: 'center',
+        borderRadius: 4,
+    },
+    commentCowardX: {
+        fontSize: 20,
+        color: colors.vintageRed,
+        fontWeight: '900',
+    },
+    commentPostInfo: {
+        flex: 1,
+        justifyContent: 'center',
+    },
+    commentPostUsername: {
+        ...typography.stamp,
+        color: colors.darkBrown,
+        fontSize: 14,
+        marginBottom: 4,
+    },
+    commentPostChallenge: {
+        ...typography.bodySmall,
+        color: colors.dustyRed,
+        fontSize: 12,
+    },
+    commentsList: {
+        flex: 1,
+        paddingHorizontal: 20,
+    },
+    commentItem: {
+        flexDirection: 'row',
+        paddingVertical: 12,
+        borderBottomWidth: 1,
+        borderBottomColor: 'rgba(139, 115, 85, 0.1)',
+    },
+    commentAvatar: {
+        width: 32,
+        height: 32,
+        borderRadius: 16,
+        backgroundColor: colors.forestGreen,
+        justifyContent: 'center',
+        alignItems: 'center',
+        marginRight: 12,
+    },
+    commentAvatarText: {
+        color: colors.polaroidWhite,
+        fontSize: 14,
+        fontWeight: 'bold',
+    },
+    commentContent: {
+        flex: 1,
+    },
+    commentHeader: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        marginBottom: 4,
+    },
+    commentUsername: {
+        ...typography.stamp,
+        color: colors.darkBrown,
+        fontSize: 12,
+    },
+    commentTimestamp: {
+        ...typography.bodySmall,
+        color: colors.dustyRed,
+        fontSize: 10,
+    },
+    commentText: {
+        ...typography.bodyMedium,
+        color: colors.darkBrown,
+        fontSize: 14,
+        lineHeight: 18,
+    },
+    noCommentsContainer: {
+        alignItems: 'center',
+        paddingVertical: 40,
+    },
+    noCommentsText: {
+        ...typography.headerMedium,
+        color: colors.dustyRed,
+        fontSize: 16,
+        marginBottom: 8,
+    },
+    noCommentsSubText: {
+        ...typography.bodySmall,
+        color: colors.dustyRed,
+        fontSize: 12,
+    },
+    commentInputContainer: {
+        flexDirection: 'row',
+        alignItems: 'flex-end',
+        paddingHorizontal: 20,
+        paddingTop: 16,
+        borderTopWidth: 1,
+        borderTopColor: colors.lightBrown,
+        backgroundColor: colors.polaroidWhite,
+    },
+    commentInput: {
+        flex: 1,
+        borderWidth: 1,
+        borderColor: colors.lightBrown,
+        borderRadius: 20,
+        paddingHorizontal: 16,
+        paddingVertical: 12,
+        marginRight: 12,
+        maxHeight: 80,
+        ...typography.bodyMedium,
+        color: colors.darkBrown,
+        backgroundColor: 'rgba(245, 245, 220, 0.3)',
+    },
+    commentSubmitButton: {
+        paddingHorizontal: 16,
+        paddingVertical: 12,
+        borderRadius: 20,
+        backgroundColor: colors.lightBrown,
+    },
+    commentSubmitButtonActive: {
+        backgroundColor: colors.forestGreen,
+    },
+    commentSubmitButtonText: {
+        ...typography.stamp,
+        color: colors.dustyRed,
+        fontSize: 12,
+    },
+    commentSubmitButtonTextActive: {
         color: colors.polaroidWhite,
     },
 });
