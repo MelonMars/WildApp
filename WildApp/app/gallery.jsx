@@ -17,6 +17,7 @@ import {
   Platform,
   TextInput, 
   KeyboardAvoidingView,
+  RefreshControl,
 } from 'react-native';
 
 import { LinearGradient } from 'expo-linear-gradient';
@@ -94,6 +95,37 @@ export default function GalleryPage() {
             }
         } catch (error) {
             console.error('Failed to load user posts:', error);
+        }
+    };
+
+    const onRefresh = async () => {
+        if (showMyPostsOnly || selectedUsername) {
+            if (showMyPostsOnly) {
+                await loadMyPosts();
+            }
+            setRefreshing(false);
+            return;
+        }
+        
+        setRefreshing(true);
+        try {
+            setLastDoc(null);
+            setHasMore(true);
+            
+            const { posts: newPosts, lastDoc: newLastDoc, hasMore: moreAvailable } =
+                await PostService.fetchPosts(null, 10);
+            
+            setPosts(newPosts);
+            setPreloadedPosts(newPosts);
+            setLastDoc(newLastDoc);
+            setHasMore(moreAvailable);
+            
+            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+            
+        } catch (error) {
+            console.error('Failed to refresh posts:', error);
+        } finally {
+            setRefreshing(false);
         }
     };
 
@@ -1080,6 +1112,17 @@ export default function GalleryPage() {
                     onEndReached={handleEndReached}
                     onEndReachedThreshold={0.5}
                     ListFooterComponent={renderFooter}
+                    refreshControl={
+                        <RefreshControl
+                            refreshing={refreshing}
+                            onRefresh={onRefresh}
+                            tintColor={colors.vintageOrange}
+                            colors={[colors.vintageOrange]}
+                            progressBackgroundColor={colors.polaroidWhite}
+                            title="Pull to refresh..."
+                            titleColor={colors.dustyRed}
+                        />
+                    }
                 />
             </Animated.View>
             <View style={styles.bottomAccent} />
