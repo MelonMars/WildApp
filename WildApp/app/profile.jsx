@@ -59,10 +59,11 @@ export default function Profile() {
         );
     }
 
-    if (!user) {
-        router.replace('/authentication');
-        return null;
-    }
+    useEffect(() => {
+        if (!loading && !user) {
+          router.replace('/authentication');
+        }
+      }, [user, loading]);    
 
     const loadFriendsData = async () => {
         try {
@@ -316,14 +317,9 @@ export default function Profile() {
     };
 
     const handleLogout = async () => {
-        try {
-            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-            await logOut();
-            router.replace('/authentication');
-        } catch (error) {
-            console.error('Error logging out:', error);
-        }
-    };
+        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+        await logOut();
+    };      
 
 
     const renderAchievement = (achievement) => (

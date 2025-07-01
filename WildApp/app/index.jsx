@@ -29,11 +29,12 @@ export default function Home() {
         );
     }
 
-    if (!user) {
+    useEffect(() => {
         const router = useRouter();
-        router.replace('/authentication');
-        return null;
-    }
+        if (!user && !loading) {
+          router.replace('/authentication');
+        }
+    }, [user, loading]); 
 
     return <HomeContent user={user} />;
 }
