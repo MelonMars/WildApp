@@ -34,6 +34,13 @@ export default function Profile() {
     const [profilePicture, setProfilePicture] = useState(null);
     const [isUploadingImage, setIsUploadingImage] = useState(false);
 
+    const [showFriendsModal, setShowFriendsModal] = useState(false);
+    const [friendRequests, setFriendRequests] = useState([]);
+    const [friends, setFriends] = useState([]);
+    const [searchTerm, setSearchTerm] = useState('');
+    const [searchResults, setSearchResults] = useState([]);
+    const [activeTab, setActiveTab] = useState('friends');
+
     const [isLoading, setIsLoading] = useState(true);
 
     if (loading) {
@@ -57,6 +64,100 @@ export default function Profile() {
         return null;
     }
 
+    const loadFriendsData = async () => {
+        try {
+          const [requests, friendsList] = await Promise.all([
+            PostService.getPendingFriendRequests(user),
+            PostService.getFriends(user)
+          ]);
+          setFriendRequests(requests);
+          setFriends(friendsList);
+        } catch (error) {
+          console.error('Error loading friends data:', error);
+        }
+    };
+
+    const searchUsers = async () => {
+        if (!searchTerm.trim()) {
+          setSearchResults([]);
+          return;
+        }
+        
+        try {
+          const results = await PostService.searchUsers(user, searchTerm.trim());
+          const resultsWithStatus = await Promise.all(
+            results.map(async (result) => {
+              const statusData = await PostService.getFriendshipStatus(user, result.id);
+              let friendshipStatus = 'none';
+              
+              if (statusData) {
+                if (statusData.status === 'accepted') {
+                  friendshipStatus = 'friends';
+                } else if (statusData.status === 'pending') {
+                  if (statusData.requester_id === user.id) {
+                    friendshipStatus = 'sent';
+                  } else {
+                    friendshipStatus = 'pending';
+                  }
+                }
+              }
+              
+              return { ...result, friendshipStatus };
+            })
+          );
+          console.log('Search results:', resultsWithStatus);
+          setSearchResults(resultsWithStatus);
+        } catch (error) {
+          console.error('Error searching users:', error);
+        }
+    };
+    
+
+    const sendFriendRequest = async (targetUserId) => {
+        console.log(`Sending friend request to user ID: ${targetUserId}`);
+        try {
+          const existingStatus = await PostService.getFriendshipStatus(user, targetUserId);
+          if (existingStatus) {
+            alert('Friend request already exists or you are already friends!');
+            return;
+          }
+          
+          setSearchResults(prevResults => 
+            prevResults.map(result => 
+              result.id === targetUserId 
+                ? { ...result, friendshipStatus: 'sent' }
+                : result
+            )
+          );
+          
+          await PostService.sendFriendRequest(user, targetUserId);
+          Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+        } catch (error) {
+          console.error('Error sending friend request:', error);
+          
+          setSearchResults(prevResults => 
+            prevResults.map(result => 
+              result.id === targetUserId 
+                ? { ...result, friendshipStatus: 'none' }
+                : result
+            )
+          );
+          
+          alert('Failed to send friend request');
+        }
+    };
+
+    const respondToRequest = async (requestId, response) => {
+        try {
+          await PostService.respondToFriendRequest(requestId, response);
+          Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+          loadFriendsData();
+        } catch (error) {
+          console.error('Error responding to friend request:', error);
+          alert('Failed to respond to friend request');
+        }
+    };      
+      
     const getFilteredAchievements = () => {
         if (selectedDifficulty === 'all') {
             return profileData.achievements;
@@ -309,6 +410,8 @@ export default function Profile() {
                             autoFocus
                             placeholder="Enter your name"
                             placeholderTextColor={colors.peach}
+                            autoCapitalize="none"
+                            autoCorrect={false}
                         />
                     </View>
                 ) : (
@@ -437,11 +540,202 @@ export default function Profile() {
                         </View>
                     </View>
                 </Modal>
+                <Modal
+                    visible={showFriendsModal}
+                    animationType="slide"
+                    presentationStyle="pageSheet"
+                    onRequestClose={() => setShowFriendsModal(false)}
+                    >
+                    <View style={styles.modalContainer}>
+                        <View style={styles.modalHeader}>
+                        <Text style={styles.modalTitle}>Friends</Text>
+                        <TouchableOpacity
+                            style={styles.closeButton}
+                            onPress={() => {
+                            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                            setShowFriendsModal(false);
+                            }}
+                        >
+                            <Text style={styles.closeButtonText}>✕</Text>
+                        </TouchableOpacity>
+                        </View>
+
+                        <View style={styles.tabContainer}>
+                        {['friends', 'requests', 'search'].map((tab) => (
+                            <TouchableOpacity
+                            key={tab}
+                            style={[styles.tab, activeTab === tab && styles.activeTab]}
+                            onPress={() => {
+                                setActiveTab(tab);
+                                if (tab === 'search') searchUsers();
+                            }}
+                            >
+                            <Text style={[styles.tabText, activeTab === tab && styles.activeTabText]}>
+                                {tab === 'friends' && `Friends (${friends.length})`}
+                                {tab === 'requests' && `Requests ${friendRequests.length > 0 ? `(${friendRequests.length})` : ''}`}
+                                {tab === 'search' && 'Add Friends'}
+                            </Text>
+                            </TouchableOpacity>
+                        ))}
+                        </View>
+
+                        <ScrollView style={styles.modalContent}>
+  {activeTab === 'search' && (
+    <View style={styles.searchContainer}>
+      <TextInput
+        style={styles.searchInput}
+        placeholder="Search by email or name..."
+        value={searchTerm}
+        onChangeText={setSearchTerm}
+        onSubmitEditing={searchUsers}
+        placeholderTextColor={colors.peach}
+        autoCapitalize="none"
+        autoCorrect={false}
+      />
+      <TouchableOpacity style={styles.searchButton} onPress={searchUsers}>
+        <Text style={styles.searchButtonText}>🔍</Text>
+      </TouchableOpacity>
+    </View>
+  )}
+
+  {activeTab === 'friends' && (
+    <View style={styles.friendsContainer}>
+      {friends.length === 0 ? (
+        <View style={styles.emptyState}>
+          <Text style={styles.emptyStateIcon}>👥</Text>
+          <Text style={styles.emptyStateText}>No friends yet</Text>
+          <Text style={styles.emptyStateSubtext}>Search for friends to get started!</Text>
+        </View>
+      ) : (
+        friends.map((friend) => (
+          <View key={friend.id} style={styles.userCard}>
+            <View style={styles.userAvatar}>
+              <Text style={styles.userAvatarText}>
+                {friend.name ? friend.name.charAt(0).toUpperCase() : friend.email.charAt(0).toUpperCase()}
+              </Text>
+            </View>
+            <View style={styles.userInfo}>
+              <Text style={styles.userName}>{friend.name || friend.email.split('@')[0]}</Text>
+              <Text style={styles.userEmail}>{friend.email}</Text>
+            </View>
+            <View style={styles.friendBadge}>
+              <Text style={styles.friendBadgeText}>Friend</Text>
+            </View>
+          </View>
+        ))
+      )}
+    </View>
+  )}
+
+  {activeTab === 'requests' && (
+    <View style={styles.requestsContainer}>
+      {friendRequests.length === 0 ? (
+        <View style={styles.emptyState}>
+          <Text style={styles.emptyStateIcon}>📬</Text>
+          <Text style={styles.emptyStateText}>No friend requests</Text>
+          <Text style={styles.emptyStateSubtext}>You're all caught up!</Text>
+        </View>
+      ) : (
+        friendRequests.map((request) => (
+          <View key={request.id} style={styles.userCard}>
+            <View style={styles.userAvatar}>
+              <Text style={styles.userAvatarText}>
+                {request.sender.name ? request.sender.name.charAt(0).toUpperCase() : request.sender.email.charAt(0).toUpperCase()}
+              </Text>
+            </View>
+            <View style={styles.userInfo}>
+              <Text style={styles.userName}>{request.sender.name || request.sender.email.split('@')[0]}</Text>
+              <Text style={styles.userEmail}>{request.sender.email}</Text>
+            </View>
+            <View style={styles.requestActions}>
+              <TouchableOpacity
+                style={styles.acceptButton}
+                onPress={() => respondToRequest(request.id, 'accept')}
+              >
+                <Text style={styles.acceptButtonText}>✓</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.declineButton}
+                onPress={() => respondToRequest(request.id, 'decline')}
+              >
+                <Text style={styles.declineButtonText}>✕</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        ))
+      )}
+    </View>
+  )}
+
+  {activeTab === 'search' && searchResults.length > 0 && (
+    <View style={styles.searchResultsContainer}>
+      <Text style={styles.searchResultsTitle}>Search Results</Text>
+      {searchResults.map((result) => (
+        <View key={result.id} style={styles.userCard}>
+          <View style={styles.userAvatar}>
+            <Text style={styles.userAvatarText}>
+              {result.name ? result.name.charAt(0).toUpperCase() : result.email.charAt(0).toUpperCase()}
+            </Text>
+          </View>
+          <View style={styles.userInfo}>
+            <Text style={styles.userName}>{result.name || result.email.split('@')[0]}</Text>
+            <Text style={styles.userEmail}>{result.email}</Text>
+          </View>
+          <View style={styles.actionButton}>
+            {result.friendshipStatus === 'friends' ? (
+              <View style={styles.friendBadge}>
+                <Text style={styles.friendBadgeText}>Friend</Text>
+              </View>
+            ) : result.friendshipStatus === 'pending' || result.friendshipStatus === 'sent' ? (
+              <View style={styles.sentBadge}>
+                <Text style={styles.sentBadgeText}>Sent</Text>
+              </View>
+            ) : (
+              <TouchableOpacity
+                style={styles.addButton}
+                onPress={() => sendFriendRequest(result.id)}
+              >
+                <Text style={styles.addButtonText}>Add</Text>
+              </TouchableOpacity>
+            )}
+          </View>
+        </View>
+      ))}
+    </View>
+  )}
+
+  {activeTab === 'search' && searchTerm.trim() !== '' && searchResults.length === 0 && (
+    <View style={styles.emptyState}>
+      <Text style={styles.emptyStateIcon}>🔍</Text>
+      <Text style={styles.emptyStateText}>No users found</Text>
+      <Text style={styles.emptyStateSubtext}>Try searching with a different email or name</Text>
+    </View>
+  )}
+</ScrollView>
+                    </View>
+                    </Modal>
 
             <View style={styles.actionsSection}>  
                 <TouchableOpacity style={styles.galleryButton} onPress={navigateToGallery}>
                     <Text style={styles.galleryButtonText}>🖼️ MY WALL</Text>
                     <View style={styles.galleryButtonDistress} />
+                </TouchableOpacity>
+                <TouchableOpacity 
+                    style={[styles.galleryButton, { marginTop: 15 }]} 
+                    onPress={() => {
+                        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                        loadFriendsData();
+                        setShowFriendsModal(true);
+                    }}
+                >
+                    <Text style={styles.galleryButtonText}>
+                        👥 FRIENDS {friendRequests.length > 0 && `(${friendRequests.length})`}
+                    </Text>
+                    {friendRequests.length > 0 && (
+                        <View style={styles.notificationBadge}>
+                        <Text style={styles.notificationText}>{friendRequests.length}</Text>
+                        </View>
+                    )}
                 </TouchableOpacity>
                 <TouchableOpacity style={styles.logoutButtonBottom} onPress={handleLogout}>
                     <Text style={styles.logoutButtonBottomText}>🚪 LOG OUT</Text>
@@ -866,4 +1160,265 @@ const styles = StyleSheet.create({
     cameraIcon: {
         fontSize: 16,
     },    
+    tabContainer: {
+        flexDirection: 'row',
+        backgroundColor: colors.mediumBrown,
+        borderBottomWidth: 2,
+        borderBottomColor: colors.tan,
+    }, 
+    tab: {
+        flex: 1,
+        paddingVertical: 12,
+        paddingHorizontal: 16,
+        alignItems: 'center',
+        borderBottomWidth: 3,
+        borderBottomColor: 'transparent',
+    },
+    activeTab: {
+        borderBottomColor: colors.vintageOrange,
+        backgroundColor: colors.lightBrown,
+    },
+    tabText: {
+        ...typography.bodyMedium,
+        color: colors.peach,
+        fontWeight: '600',
+        fontSize: 12,
+    },
+    activeTabText: {
+        color: colors.polaroidWhite,
+        fontWeight: '700',
+    },
+    searchContainer: {
+        flexDirection: 'row',
+        padding: 20,
+        gap: 10,
+    },
+    searchInput: {
+        flex: 1,
+        backgroundColor: colors.mediumBrown,
+        borderWidth: 2,
+        borderColor: colors.tan,
+        borderRadius: 8,
+        paddingHorizontal: 15,
+        paddingVertical: 12,
+        color: colors.tan,
+        fontSize: 16,
+        fontWeight: '600',
+    },
+    searchButton: {
+        backgroundColor: colors.vintageOrange,
+        borderWidth: 2,
+        borderColor: colors.tan,
+        borderRadius: 8,
+        paddingHorizontal: 15,
+        paddingVertical: 12,
+        justifyContent: 'center',
+        alignItems: 'center',
+        ...shadows.lightShadow,
+    },
+    searchButtonText: {
+        fontSize: 18,
+    },
+    friendsContainer: {
+        padding: 20,
+    },
+      requestsContainer: {
+        padding: 20,
+    },
+    searchResultsContainer: {
+        padding: 20,
+        paddingTop: 0,
+    },
+    searchResultsTitle: {
+        ...typography.headerSmall,
+        color: colors.tan,
+        fontWeight: '800',
+        marginBottom: 15,
+        letterSpacing: 1,
+    },
+    userCard: {
+        backgroundColor: colors.mediumBrown,
+        borderWidth: 2,
+        borderColor: colors.tan,
+        borderRadius: 12,
+        paddingHorizontal: 15,
+        paddingVertical: 12,
+        flexDirection: 'row',
+        alignItems: 'center',
+        marginBottom: 12,
+        transform: [{ rotate: '0.3deg' }],
+        ...shadows.lightShadow,
+    },
+    userAvatar: {
+        width: 40,
+        height: 40,
+        borderRadius: 20,
+        backgroundColor: colors.forestGreen,
+        justifyContent: 'center',
+        alignItems: 'center',
+        borderWidth: 2,
+        borderColor: colors.tan,
+        marginRight: 12,
+    },
+    userAvatarText: {
+        color: colors.polaroidWhite,
+        fontSize: 18,
+        fontWeight: 'bold',
+    },
+    userInfo: {
+        flex: 1,
+    },
+    userName: {
+        ...typography.bodyMedium,
+        color: colors.tan,
+        fontWeight: '700',
+        fontSize: 16,
+        marginBottom: 2,
+    },
+    userEmail: {
+        ...typography.bodySmall,
+        color: colors.peach,
+        fontSize: 12,
+    },
+    actionButton: {
+        marginLeft: 8,
+    },
+    addButton: {
+        backgroundColor: colors.vintageOrange,
+        borderWidth: 2,
+        borderColor: colors.tan,
+        borderRadius: 20,
+        paddingHorizontal: 16,
+        paddingVertical: 8,
+        transform: [{ rotate: '-1deg' }],
+        ...shadows.lightShadow,
+    },
+    addButtonText: {
+        color: colors.polaroidWhite,
+        fontWeight: '700',
+        fontSize: 14,
+    },
+    friendBadge: {
+        backgroundColor: colors.forestGreen,
+        borderWidth: 2,
+        borderColor: colors.oliveGreen,
+        borderRadius: 20,
+        paddingHorizontal: 12,
+        paddingVertical: 6,
+        transform: [{ rotate: '1deg' }],
+    },
+    friendBadgeText: {
+        color: colors.polaroidWhite,
+        fontWeight: '600',
+        fontSize: 12,
+    },
+    pendingBadge: {
+        backgroundColor: colors.darkGray,
+        borderWidth: 2,
+        borderColor: colors.mediumGray,
+        borderRadius: 20,
+        paddingHorizontal: 12,
+        paddingVertical: 6,
+        transform: [{ rotate: '-0.5deg' }],
+    },
+    pendingBadgeText: {
+        color: colors.peach,
+        fontWeight: '600',
+        fontSize: 12,
+    },
+    sentBadge: {
+        backgroundColor: colors.vintageOrange,
+        borderWidth: 2,
+        borderColor: colors.tan,
+        borderRadius: 20,
+        paddingHorizontal: 12,
+        paddingVertical: 6,
+        transform: [{ rotate: '0.5deg' }],
+        opacity: 0.8,
+    },
+    sentBadgeText: {
+        color: colors.polaroidWhite,
+        fontWeight: '600',
+        fontSize: 12,
+    },    
+    requestActions: {
+        flexDirection: 'row',
+        gap: 8,
+    },
+    acceptButton: {
+        backgroundColor: colors.forestGreen,
+        borderWidth: 2,
+        borderColor: colors.oliveGreen,
+        borderRadius: 20,
+        width: 36,
+        height: 36,
+        justifyContent: 'center',
+        alignItems: 'center',
+        transform: [{ rotate: '2deg' }],
+        ...shadows.lightShadow,
+    },
+    acceptButtonText: {
+        color: colors.polaroidWhite,
+        fontSize: 18,
+        fontWeight: 'bold',
+    },
+    declineButton: {
+        backgroundColor: colors.vintageRed,
+        borderWidth: 2,
+        borderColor: colors.tan,
+        borderRadius: 20,
+        width: 36,
+        height: 36,
+        justifyContent: 'center',
+        alignItems: 'center',
+        transform: [{ rotate: '-2deg' }],
+        ...shadows.lightShadow,
+    },
+    declineButtonText: {
+        color: colors.polaroidWhite,
+        fontSize: 16,
+        fontWeight: 'bold',
+    },
+    emptyState: {
+        alignItems: 'center',
+        justifyContent: 'center',
+        paddingVertical: 60,
+        paddingHorizontal: 40,
+    },
+    emptyStateIcon: {
+        fontSize: 48,
+        marginBottom: 16,
+    },
+    emptyStateText: {
+        ...typography.headerMedium,
+        color: colors.tan,
+        fontWeight: '700',
+        textAlign: 'center',
+        marginBottom: 8,
+    },
+    emptyStateSubtext: {
+        ...typography.bodyMedium,
+        color: colors.peach,
+        textAlign: 'center',
+        lineHeight: 20,
+    },
+    notificationBadge: {
+        position: 'absolute',
+        top: -8,
+        right: -8,
+        backgroundColor: colors.vintageRed,
+        borderRadius: 12,
+        minWidth: 24,
+        height: 24,
+        justifyContent: 'center',
+        alignItems: 'center',
+        borderWidth: 2,
+        borderColor: colors.polaroidWhite,
+        ...shadows.lightShadow,
+    },
+    notificationText: {
+        color: colors.polaroidWhite,
+        fontSize: 12,
+        fontWeight: 'bold',
+    },
 });

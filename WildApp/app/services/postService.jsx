@@ -135,7 +135,7 @@ export class PostService {
       const { data: userData, error: fetchError } = await supabase
         .from('users')
         .select('posts')
-        .eq('uid', user.id)
+        .eq('id', user.id)
         .single();
 
       if (fetchError) {
@@ -149,7 +149,7 @@ export class PostService {
       const { error: updateError } = await supabase
         .from('users')
         .update({ posts: updatedPosts })
-        .eq('uid', user.id);
+        .eq('id', user.id);
 
       if (updateError) {
         console.error('Error updating user posts:', updateError);
@@ -470,7 +470,7 @@ export class PostService {
       const { data, error } = await supabase
         .from('users')
         .select("streak_last_updated")
-        .eq('uid', user.id)
+        .eq('id', user.id)
         .single();
       if (error) {
         console.error('Error fetching user data:', error);
@@ -489,7 +489,7 @@ export class PostService {
       const { data, error } = await supabase
         .from('users')
         .update({ streak_last_updated: date })
-        .eq('uid', user.id)
+        .eq('id', user.id)
         .select()
         .single();
 
@@ -510,7 +510,7 @@ export class PostService {
       const { data, error } = await supabase
         .from('users')
         .select("streak")
-        .eq('uid', user.id)
+        .eq('id', user.id)
         .single();
 
       if (error) {
@@ -530,7 +530,7 @@ export class PostService {
       const { data, error } = await supabase
         .from('users')
         .update({ streak: newStreak })
-        .eq('uid', user.id)
+        .eq('id', user.id)
         .select()
         .single();
 
@@ -597,7 +597,7 @@ export class PostService {
       const { data, error } = await supabase
         .from('users')
         .select('achievements')
-        .eq('uid', user.id)
+        .eq('id', user.id)
         .single();
 
       if (error) {
@@ -652,7 +652,7 @@ export class PostService {
         .update({
           name: newName
         })
-        .eq('uid', user.id)
+        .eq('id', user.id)
         .select()
         .single();
 
@@ -692,7 +692,7 @@ export class PostService {
       const { data, error } = await supabase
         .from('users')
         .select('level')
-        .eq('uid', user.id)
+        .eq('id', user.id)
         .single();
 
       if (error) {
@@ -712,7 +712,7 @@ export class PostService {
       const { data, error } = await supabase
         .from('users')
         .select('profile_picture')
-        .eq('uid', user.id)
+        .eq('id', user.id)
         .single();
 
       if (error) {
@@ -758,7 +758,7 @@ export class PostService {
       const { data: updatedUser, error: updateError } = await supabase
         .from('users')
         .update({ profile_picture: publicUrl })
-        .eq('uid', user.id)
+        .eq('id', user.id)
         .select()
         .single();
 
@@ -819,6 +819,107 @@ export class PostService {
       console.error('Error adding comment:', error);
       throw error;
     }
+  }
+
+  static async respondToFriendRequest(requestId, response) {
+    const status = response === 'accept' ? 'accepted' : 'declined';
+    const { data, error } = await supabase
+      .from('friendships')
+      .update({ status, updated_at: new Date().toISOString() })
+      .eq('id', requestId);
+    
+    if (error) throw error;
+    return data;
+  } 
+  
+  static async searchUsers(currentUser, searchTerm) { 
+    const { data, error } = await supabase
+      .from('users')
+      .select('id, name, email, profile_picture')
+      .neq('id', currentUser.id)
+      .or(`email.ilike.%${searchTerm}%,name.ilike.%${searchTerm}%`)
+      .limit(20);
+    
+    if (error) throw error; 
+    return data;
+  }
+  
+  static async sendFriendRequest(currentUser, targetUserId) {
+    const { data, error } = await supabase
+      .from('friendships')
+      .insert({
+        requester_id: currentUser.id,
+        addressee_id: targetUserId,
+        status: 'pending'
+      });
+    
+    if (error) throw error;
+    return data;
+  }
+
+  static async getPendingFriendRequests(currentUser) {
+    const { data, error } = await supabase
+      .from('friendships')
+      .select(`
+        id,
+        requester_id,
+        created_at,
+        requester:requester_id (
+          id,
+          name,
+          email,
+          profile_picture
+        )
+      `)
+      .eq('addressee_id', currentUser.id)
+      .eq('status', 'pending');
+    
+    if (error) throw error;
+    return data;
+  } 
+ 
+  static async getFriends(currentUser) {
+    const { data, error } = await supabase
+      .from('friendships')
+      .select(`
+        id,
+        requester_id,
+        addressee_id,
+        friend:requester_id (
+          id,
+          name,
+          email,
+          profile_picture
+        ),
+        friend2:addressee_id (
+          id,
+          name,
+          email,
+          profile_picture
+        )
+      `)
+      .or(`requester_id.eq.${currentUser.id},addressee_id.eq.${currentUser.id}`)
+      .eq('status', 'accepted');
+    
+    if (error) throw error;
+    
+    return data.map(friendship => {
+      const friend = friendship.requester_id === currentUser.id 
+        ? friendship.friend2 
+        : friendship.friend;
+      return { ...friendship, friend };
+    });
+  } 
+
+  static async getFriendshipStatus(currentUser, targetUserId) {
+    const { data, error } = await supabase
+      .from('friendships')
+      .select('status, requester_id')
+      .or(`and(requester_id.eq.${currentUser.id},addressee_id.eq.${targetUserId}),and(requester_id.eq.${targetUserId},addressee_id.eq.${currentUser.id})`)
+      .maybeSingle();
+    
+    if (error && error.code !== 'PGRST116') throw error;
+    return data;
   }
 }
 
