@@ -1082,6 +1082,47 @@ export class PostService {
       return [];
     }
   }
+
+  static async removeInvite(inviteId, userId) {
+    try {
+      const { data: invite, error: fetchError } = await supabase
+        .from('invites')
+        .select('*')
+        .eq('id', inviteId)
+        .single();
+
+      if (fetchError) {
+        console.error('Error fetching invite:', fetchError);
+        throw fetchError;
+      }
+
+      if (!invite) {
+        throw new Error('Invite not found');
+      }
+
+      const updatedPending = (invite.pending_participants || []).filter(id => id !== userId);
+      const updatedParticipants = (invite.participants || []).filter(id => id !== userId);
+
+      const { data, error } = await supabase
+        .from('invites')
+        .update({
+          pending_participants: updatedPending,
+          participants: updatedParticipants
+        })
+        .eq('id', inviteId)
+        .select();
+
+      if (error) {
+        console.error('Error updating invite:', error);
+        throw error;
+      }
+
+      return data[0];
+    } catch (error) {
+      console.error('Error removing invite:', error);
+      throw error;
+    }
+  }
 }
 
 export class NewChallengeService {

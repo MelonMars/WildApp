@@ -235,7 +235,8 @@ const InvitePage = () => {
                     challengeId: challengeId,
                     isGroupChallenge: true,
                     participants: JSON.stringify(participants),
-                    completedAt: new Date().toISOString()
+                    completedAt: new Date().toISOString(),
+                    invitationId: invitationId,
                 } 
             });
         } catch (error) {

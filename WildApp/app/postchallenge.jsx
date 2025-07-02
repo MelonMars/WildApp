@@ -37,7 +37,7 @@ const PostChallengePage = () => {
   const [locationPermission, setLocationPermission] = useState(null);
   const [currentLocation, setCurrentLocation] = useState(null);
   const [isPostLoading, setIsPostLoading] = useState(false);
-  const { challenge, category, completedAt } = useLocalSearchParams();
+  const { challenge, category, completedAt, participants, invitationId } = useLocalSearchParams();
   const { user, loading } = useAuth();
 
   const router = useRouter();
@@ -65,6 +65,14 @@ const PostChallengePage = () => {
     };
     saveUsername();
   }, [username]);
+
+  useEffect(async () => {
+    if (participants && participants.length > 0) {
+      const participantNames = participants.map(p => p.name || p.email.split('@')[0] || 'anonymous');
+      setUsername(participantNames.join(', '));
+    }
+    await PostService.removeInvite(invitationId, user.id);
+  }, [participants]);
 
   useEffect(() => {
     Animated.parallel([

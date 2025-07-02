@@ -51,6 +51,8 @@ function HomeContent({ user }) {
     const [userCompletedChallenges, setUserCompletedChallenges] = useState([]);
     const [userLocation, setUserLocation] = useState(null);
     const [locationPermission, setLocationPermission] = useState(null);
+    const [challengeInvites, setChallengeInvites] = useState(0);
+    const [friendRequests, setFriendRequests] = useState(0);
 
     const requestLocationPermission = async () => {
         try {
@@ -195,6 +197,36 @@ function HomeContent({ user }) {
         fetchTodaysChallenge();
     }, []);
 
+    useEffect(() => {
+        const fetchChallengeInvites = async () => {
+            try {
+                const invites = await PostService.getUserInvitations(user.id);
+                setChallengeInvites(invites.length);
+            } catch (error) {
+                console.error('Error fetching challenge invites:', error);
+            }
+        };
+
+        if (user) {
+            fetchChallengeInvites();
+        }
+    }, [user]);
+
+    useEffect(() => {
+        const fetchFriendRequests = async () => {
+            try {
+                const requests = await PostService.getPendingFriendRequests(user);
+                setFriendRequests(requests.length);
+            } catch (error) {
+                console.error('Error fetching friend requests:', error);
+            }
+        };
+
+        if (user) {
+            fetchFriendRequests();
+        }
+    }, [user]);
+
     const fetchChallenge = (type) => {
         if (!challenges || !challenges[type]) return null;
         
@@ -313,6 +345,27 @@ function HomeContent({ user }) {
                     >
                         <Text style={{ fontSize: 28 }}>👤</Text>
                     </TouchableOpacity>)}
+                    {friendRequests > 0 && (
+                        <View style={{
+                            position: 'absolute',
+                            top: -5,
+                            right: -5,
+                            backgroundColor: 'red',
+                            borderRadius: 10,
+                            width: 20,
+                            height: 20,
+                            justifyContent: 'center',
+                            alignItems: 'center',
+                        }}>
+                            <Text style={{
+                                color: 'white',
+                                fontSize: 12,
+                                fontWeight: 'bold',
+                            }}>
+                                {friendRequests}
+                            </Text>
+                        </View>
+                    )}
                     <TouchableOpacity
                         onPress={navigateToInvite}
                         style={{ marginLeft: 16, padding: 8 }}
@@ -320,6 +373,27 @@ function HomeContent({ user }) {
                     >
                         <Text style={{ fontSize: 28 }}>📩</Text>
                     </TouchableOpacity>
+                    {challengeInvites > 0 && (
+                        <View style={{
+                            position: 'absolute',
+                            top: -5,
+                            right: -5,
+                            backgroundColor: 'red',
+                            borderRadius: 10,
+                            width: 20,
+                            height: 20,
+                            justifyContent: 'center',
+                            alignItems: 'center',
+                        }}>
+                            <Text style={{
+                                color: 'white',
+                                fontSize: 12,
+                                fontWeight: 'bold',
+                            }}>
+                                {challengeInvites}
+                            </Text>
+                        </View>
+                    )}
                 </View>
                 <View style={styles.titleAccent} />
                 <Text style={styles.subtitle}>Time to live.</Text>
