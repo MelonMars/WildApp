@@ -33,39 +33,12 @@ const InvitePage = () => {
     
     const holdingRef = useRef(false);
     const fillAnimationRef = useRef(null);
-    const { id: challengeId, inviter } = useLocalSearchParams();
+    const [challengeId, setChallengeId] = useState(null);
+    const { id: invitationId, inviter } = useLocalSearchParams();
     const {user} = useAuth();
-    console.log('Challenge ID:', challengeId);
+    console.log('Challenge ID:', invitationId);
     console.log('Inviter:', inviter);
     const router = useRouter();
-
-    useEffect(() => {
-        const fetchChallengeData = async () => {
-            try {
-                setLoading(true);
-                const data = await PostService.getChallengeById(challengeId);
-                setChallengeData(data);
-                
-                setParticipants([
-                    {
-                        id: 1,
-                        username: inviter || 'adventure_seeker',
-                        profilePicture: null,
-                        isInviter: true
-                    }
-                ]);
-            } catch (err) {
-                setError(err.message);
-                console.error('Error fetching challenge:', err);
-            } finally {
-                setLoading(false);
-            }
-        };
-
-        if (challengeId) {
-            fetchChallengeData();
-        }
-    }, [challengeId, inviter]);
 
     useEffect(() => {
         const backAction = () => {
@@ -77,6 +50,55 @@ const InvitePage = () => {
         return () => backHandler.remove();
     }, [router]);
 
+    useEffect(() => {
+        const fetchChallengeData = async () => {
+            try {
+                setLoading(true);
+                
+                const inviteData = await PostService.getInviteData(invitationId);
+                const actualChallengeId = inviteData.challenge_id;
+                setChallengeId(actualChallengeId);
+                
+                const [challengeData] = await Promise.all([
+                    PostService.getChallengeById(actualChallengeId)
+                ]);
+                
+                setChallengeData(challengeData);
+                
+                if (inviteData) {
+                    const allParticipants = [
+                        ...(inviteData.participants || []),
+                        ...(inviteData.pending_participants || [])
+                    ];
+                    
+                    const participantProfiles = await Promise.all(
+                        allParticipants.map(async (participantId) => {
+                            return await PostService.getUserInfo(participantId);
+                        })
+                    );
+                    
+                    const participantsWithStatus = participantProfiles.map(profile => ({
+                        ...profile,
+                        isInviter: profile.id === inviteData.sender,
+                        isPending: inviteData.pending_participants?.includes(profile.id),
+                        profilePicture: profile.avatar_url
+                    }));
+                    
+                    setParticipants(participantsWithStatus);
+                }
+            } catch (err) {
+                setError(err.message);
+                console.error('Error fetching data:', err);
+            } finally {
+                setLoading(false);
+            }
+        };
+    
+        if (invitationId) {
+            fetchChallengeData();
+        }
+    }, [invitationId, inviter]);
+    
     useEffect(() => {
         const pulse = Animated.loop(
             Animated.sequence([
@@ -110,53 +132,6 @@ const InvitePage = () => {
         );
         wobble.start();
     }, []);
-
-    useEffect(() => {
-        const fetchChallengeData = async () => {
-            try {
-                setLoading(true);
-                
-                const [challengeData, inviteData] = await Promise.all([
-                    PostService.getChallengeById(challengeId),
-                    PostService.getInviteData(challengeId)
-                ]);
-                
-                setChallengeData(challengeData);
-                
-                if (inviteData) {
-                    const allParticipants = [
-                        ...(inviteData.participants || []),
-                        ...(inviteData.pending_participants || [])
-                    ];
-                    // exp://192.168.1.163:8081/--/challenge/19/Carter
-                    const participantProfiles = await Promise.all(
-                        allParticipants.map(async (participantId) => {
-                            const profile = await PostService.getUserInfo(participantId);
-                            return profile;
-                        })
-                    );
-                    
-                    const participantsWithStatus = participantProfiles.map(profile => ({
-                        ...profile,
-                        isInviter: profile.id === inviteData.sender,
-                        isPending: inviteData.pending_participants?.includes(profile.id),
-                        profilePicture: profile.avatar_url
-                    }));
-                    
-                    setParticipants(participantsWithStatus);
-                }
-            } catch (err) {
-                setError(err.message);
-                console.error('Error fetching data:', err);
-            } finally {
-                setLoading(false);
-            }
-        };
-    
-        if (challengeId) {
-            fetchChallengeData();
-        }
-    }, [challengeId, inviter]);    
 
     const handleCowardPressIn = () => {
         console.log('Press in - starting hold');
@@ -252,25 +227,98 @@ const InvitePage = () => {
         try {
             await PostService.acceptInvite(challengeId, user.id);
             
-            // router.push({
-            //     pathname: 'postchallenge',
-            //     params: { 
-            //         challenge: challengeData.name, 
-            //         category: challengeData.category,
-            //         challengeId: challengeId,
-            //         isGroupChallenge: true,
-            //         participants: JSON.stringify(participants),
-            //         completedAt: new Date().toISOString()
-            //     } 
-            // });
+            router.push({
+                pathname: 'postchallenge',
+                params: { 
+                    challenge: challengeData.name, 
+                    category: challengeData.category,
+                    challengeId: challengeId,
+                    isGroupChallenge: true,
+                    participants: JSON.stringify(participants),
+                    completedAt: new Date().toISOString()
+                } 
+            });
         } catch (error) {
             console.error('Error joining challenge:', error);
         }
     };
 
+    const ShareModal = ({ visible, onClose, challenge, category, challengeId, onInviteFriend, friends = [] }) => {
+        console.log("Got friends:", friends);
+        const handleExternalShare = async () => {
+            const url = Linking.createURL(`challenge/${invitationId}/Carter`);
+            try {
+                await Share.share({
+                    message: `Join me on this WildApp challenge!\n\n"${challenge}"\n\nCategory: ${category}\n\nOpen in app: ${url}`,
+                    title: 'WildApp Challenge Invitation',
+                });
+            } catch (error) {
+                console.error('Error sharing challenge:', error);
+            }
+        };
+    
+        const handleMessagesShare = async () => {
+            handleExternalShare();
+        };
+    
+        if (!visible) return null;
+    
+        return (
+            <View style={styles.overlay}>
+                <View style={styles.modal}>
+                    <View style={styles.header}>
+                        <Text style={styles.title}>Share to Friends</Text>
+                        <TouchableOpacity onPress={onClose} style={styles.closeButton}>
+                            <Text style={styles.closeText}>✕</Text>
+                        </TouchableOpacity>
+                    </View>
+    
+                    <ScrollView style={styles.friendsList} showsVerticalScrollIndicator={false}>
+                        {friends.map((friend, index) => (
+                            <TouchableOpacity
+                                key={friend.friend.id}
+                                style={styles.friendItem}
+                                onPress={() => onInviteFriend(friend)}
+                                activeOpacity={0.7}
+                            >
+                                <View style={styles.friendAvatar}>
+                                    <Text style={styles.friendInitial}>
+                                        {friend.friend.name.charAt(0).toUpperCase()}
+                                    </Text>
+                                </View>
+                                <Text style={styles.friendName}>{friend.friend.name}</Text>
+                                <View style={styles.inviteButton}>
+                                    <Text style={styles.inviteButtonText}>Invite</Text>
+                                </View>
+                            </TouchableOpacity>
+                        ))}
+                        
+                        {friends.length === 0 && (
+                            <View style={styles.emptyState}>
+                                <Text style={styles.emptyText}>No friends found</Text>
+                                <Text style={styles.emptySubtext}>Add friends to invite them to challenges!</Text>
+                            </View>
+                        )}
+                    </ScrollView>
+    
+                    <View style={styles.externalButtons}>
+                        <TouchableOpacity
+                            style={styles.externalButton}
+                            onPress={handleExternalShare}
+                            activeOpacity={0.8}
+                        >
+                            <Text style={styles.externalButtonIcon}>📤</Text>
+                            <Text style={styles.externalButtonText}>Share Outside App</Text>
+                        </TouchableOpacity>
+                    </View>
+                </View>
+            </View>
+        );
+    };
+
     const fillHeight = fillAnim.interpolate({
         inputRange: [0, 1],
-        outputRange: ['0%', '100%'],
+        outputRange: ['0%', '100%'],  
     });
 
     const handleShareChallenge = async () => {
@@ -330,7 +378,7 @@ const InvitePage = () => {
                 <Text style={styles.errorText}>❌ Challenge not found</Text>
                 <TouchableOpacity 
                     style={common_styles.primaryButton} 
-                    onPress={() => router.back()}
+                    onPress={() => router.push('/')}
                 >
                     <Text style={common_styles.primaryButtonText}>Go Back</Text>
                 </TouchableOpacity>

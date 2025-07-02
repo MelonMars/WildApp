@@ -29,7 +29,7 @@ const ChallengePage = () => {
     const fillAnimationRef = useRef(null);
     const [showShareModal, setShowShareModal] = useState(false);
     const [friends, setFriends] = useState([]);
-
+    const [invitationId, setInvitationId] = useState(null);
     const { challenge, finishes, category, challengeId } = useLocalSearchParams();
     const router = useRouter();
     const { user, loading, logOut } = useAuth();
@@ -199,13 +199,13 @@ const ChallengePage = () => {
 
     const handleInviteFriend = async (friend) => {
         try {
-            await PostService.createInvite({
+            setInvitationId(await PostService.createInvite({
                 challengeId: challengeId,
                 senderId: user.id,
                 recipientId: friend.friend.id,
                 challenge: challenge,
                 category: category
-            }, user);
+            }, user));
             
             Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
             console.log(`Invited ${friend.friend.name} to challenge`);
@@ -222,8 +222,17 @@ const ChallengePage = () => {
     const ShareModal = ({ visible, onClose, challenge, category, challengeId, onInviteFriend, friends = [] }) => {
         console.log("Got friends:", friends);
         const handleExternalShare = async () => {
-            const url = Linking.createURL(`challenge/${challengeId}/Carter`);
             try {
+                const inviteId = await PostService.createInvite({
+                    challengeId: challengeId,
+                    senderId: user.id,
+                    recipientId: null,
+                    challenge: challenge,
+                    category: category,
+                }, user);
+                
+                const url = Linking.createURL(`challenge/${inviteId}/Carter`);
+                
                 await Share.share({
                     message: `Join me on this WildApp challenge!\n\n"${challenge}"\n\nCategory: ${category}\n\nOpen in app: ${url}`,
                     title: 'WildApp Challenge Invitation',

@@ -1001,7 +1001,7 @@ export class PostService {
       try {
           const { data: existingInvite } = await supabase
               .from('invites')
-              .select('*')
+              .select('id, pending_participants')
               .eq('challenge_id', challengeId)
               .single();
 
@@ -1014,12 +1014,12 @@ export class PostService {
                       .from('invites')
                       .update({ pending_participants: pendingParticipants })
                       .eq('id', existingInvite.id)
-                      .select();
+                      .select('id');
                   
                   if (error) throw error;
-                  return data[0];
+                  return data[0]?.id;
               }
-              return existingInvite;
+              return existingInvite.id;
           } else {
               const { data, error } = await supabase
                   .from('invites')
@@ -1029,10 +1029,10 @@ export class PostService {
                       pending_participants: [recipientId],
                       participants: [senderId]
                   })
-                  .select();
+                  .select('id');
               
               if (error) throw error;
-              return data[0];
+              return data[0]?.id;
           }
       } catch (error) {
           console.error('Error creating invite:', error);
@@ -1040,7 +1040,7 @@ export class PostService {
       }
   }
 
-  static async getInviteData(challengeId) {
+  static async getInviteData(inviteId) {
       try {
           const { data, error } = await supabase
               .from('invites')
@@ -1048,7 +1048,7 @@ export class PostService {
                   *,
                   sender_profile:users!sender(id, name, profile_picture)
               `)
-              .eq('challenge_id', challengeId)
+              .eq('id', inviteId)
               .single();
                   
           if (error) throw error;
@@ -1057,6 +1057,30 @@ export class PostService {
           console.error('Error fetching invite data:', error);
           throw error;
       }
+  }
+
+  static async getUserInvitations(userId) {
+    try {
+      const { data, error } = await supabase
+        .from('invites')
+        .select(`
+          *,
+          sender_profile:users!sender(id, name, profile_picture)
+        `)
+        .or(`pending_participants.cs.{${userId}},participants.cs.{${userId}}`)
+        .order('created_at', { ascending: false });
+
+      if (error) {
+        console.error('Error fetching user invitations:', error);
+        throw error;
+      }
+
+      console.log("Fetched invitation data:", data);
+      return data || [];
+    } catch (error) {
+      console.error('Error fetching user invitations:', error);
+      return [];
+    }
   }
 }
 
