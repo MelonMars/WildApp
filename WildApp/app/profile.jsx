@@ -67,11 +67,13 @@ export default function Profile() {
 
     const loadFriendsData = async () => {
         try {
-          const [requests, friendsList] = await Promise.all([
-            PostService.getPendingFriendRequests(user),
-            PostService.getFriends(user)
-          ]);
-          setFriendRequests(requests);
+            const [requests, friendsList] = await Promise.all([
+                PostService.getPendingFriendRequests(user),
+                PostService.getFriends(user)
+            ]);
+            console.log('Friend requests:', requests);
+            setFriendRequests(requests);
+            console.log('Friends list:', friendsList);
           setFriends(friendsList);
         } catch (error) {
           console.error('Error loading friends data:', error);
@@ -320,7 +322,6 @@ export default function Profile() {
         Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
         await logOut();
     };      
-
 
     const renderAchievement = (achievement) => (
         <View 
@@ -613,12 +614,12 @@ export default function Profile() {
           <View key={friend.id} style={styles.userCard}>
             <View style={styles.userAvatar}>
               <Text style={styles.userAvatarText}>
-                {friend.name ? friend.name.charAt(0).toUpperCase() : friend.email.charAt(0).toUpperCase()}
+                {friend.name ? friend.friend.name.charAt(0).toUpperCase() : friend.friend.email.charAt(0).toUpperCase()}
               </Text>
             </View>
             <View style={styles.userInfo}>
-              <Text style={styles.userName}>{friend.name || friend.email.split('@')[0]}</Text>
-              <Text style={styles.userEmail}>{friend.email}</Text>
+              <Text style={styles.userName}>{friend.friend.name || friend.friend.email.split('@')[0]}</Text>
+              <Text style={styles.userEmail}>{friend.friend.email}</Text>
             </View>
             <View style={styles.friendBadge}>
               <Text style={styles.friendBadgeText}>Friend</Text>
@@ -642,12 +643,12 @@ export default function Profile() {
           <View key={request.id} style={styles.userCard}>
             <View style={styles.userAvatar}>
               <Text style={styles.userAvatarText}>
-                {request.sender.name ? request.sender.name.charAt(0).toUpperCase() : request.sender.email.charAt(0).toUpperCase()}
+                {request.requester.name ? request.requester.name.charAt(0).toUpperCase() : request.requester.email.charAt(0).toUpperCase()}
               </Text>
             </View>
             <View style={styles.userInfo}>
-              <Text style={styles.userName}>{request.sender.name || request.sender.email.split('@')[0]}</Text>
-              <Text style={styles.userEmail}>{request.sender.email}</Text>
+              <Text style={styles.userName}>{request.requester.name || request.requester.email.split('@')[0]}</Text>
+              <Text style={styles.userEmail}>{request.requester.email}</Text>
             </View>
             <View style={styles.requestActions}>
               <TouchableOpacity

@@ -227,6 +227,66 @@ export class PostService {
     }
   }
 
+  static async getUserInfo(userId) {
+    try {
+      if (!userId) {
+        throw new Error('User ID is required to fetch user info');
+      }
+      const { data, error } = await supabase
+        .from('users')
+        .select('id, name, email, profile_picture, posts, streak, streak_last_updated, achievements')
+        .eq('id', userId)
+        .single();
+      if (error) {
+        console.error('Error fetching user info:', error);
+        throw error;
+      }
+      return {
+        id: data.id,
+        name: data.name || 'Anonymous',
+        email: data.email || 'No email provided',
+        profilePicture: data.profile_picture || null,
+        posts: data.posts || [],
+        streak: data.streak || 0,
+        streakLastUpdated: data.streak_last_updated || null,
+        achievements: data.achievements || []
+      };
+    } catch (error) {
+      console.error('Error fetching user info:', error);
+      throw error;
+    }
+  }
+
+  static async acceptInvite(challengeId, userId) {
+      try {
+          const { data: invite } = await supabase
+              .from('invites')
+              .select('*')
+              .eq('challenge_id', challengeId)
+              .single();
+
+          if (!invite) throw new Error('Invite not found');
+
+          const pendingParticipants = (invite.pending_participants || []).filter(id => id !== userId);
+          const participants = [...(invite.participants || []), userId];
+
+          const { data, error } = await supabase
+              .from('invites')
+              .update({
+                  pending_participants: pendingParticipants,
+                  participants: participants
+              })
+              .eq('id', invite.id)
+              .select();
+
+          if (error) throw error;
+          return data[0];
+      } catch (error) {
+          console.error('Error accepting invite:', error);
+          throw error;
+      }
+  }
+
   static async fetchPostsByLocation(latitude, longitude, radius = 10000) {
     try {
       const radiusDegrees = radius / 111320;
@@ -935,6 +995,68 @@ export class PostService {
     
     if (error && error.code !== 'PGRST116') throw error;
     return data;
+  }
+
+  static async createInvite({ challengeId, senderId, recipientId, challenge, category }) {
+      try {
+          const { data: existingInvite } = await supabase
+              .from('invites')
+              .select('*')
+              .eq('challenge_id', challengeId)
+              .single();
+
+          if (existingInvite) {
+              const pendingParticipants = existingInvite.pending_participants || [];
+              if (!pendingParticipants.includes(recipientId)) {
+                  pendingParticipants.push(recipientId);
+                  
+                  const { data, error } = await supabase
+                      .from('invites')
+                      .update({ pending_participants: pendingParticipants })
+                      .eq('id', existingInvite.id)
+                      .select();
+                  
+                  if (error) throw error;
+                  return data[0];
+              }
+              return existingInvite;
+          } else {
+              const { data, error } = await supabase
+                  .from('invites')
+                  .insert({
+                      challenge_id: challengeId,
+                      sender: senderId,
+                      pending_participants: [recipientId],
+                      participants: [senderId]
+                  })
+                  .select();
+              
+              if (error) throw error;
+              return data[0];
+          }
+      } catch (error) {
+          console.error('Error creating invite:', error);
+          throw error;
+      }
+  }
+
+  static async getInviteData(challengeId) {
+      try {
+          const { data, error } = await supabase
+              .from('invites')
+              .select(`
+                  *,
+                  sender_profile:users!sender(id, name, profile_picture)
+              `)
+              .eq('challenge_id', challengeId)
+              .single();
+                  
+          if (error) throw error;
+          return data;
+      } catch (error) {
+          console.error('Error fetching invite data:', error);
+          throw error;
+      }
   }
 }
 

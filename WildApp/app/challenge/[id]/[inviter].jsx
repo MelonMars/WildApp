@@ -17,6 +17,7 @@ import { common_styles, colors, typography, shadows } from '../../styles';
 import { PostService } from '../../services/postService';
 import * as Haptics from 'expo-haptics';
 import { Share } from 'react-native';
+import { useAuth } from '../../contexts/AuthContext';
 
 const InvitePage = () => {
     const [pulseAnim] = useState(new Animated.Value(1));
@@ -33,6 +34,7 @@ const InvitePage = () => {
     const holdingRef = useRef(false);
     const fillAnimationRef = useRef(null);
     const { id: challengeId, inviter } = useLocalSearchParams();
+    const {user} = useAuth();
     console.log('Challenge ID:', challengeId);
     console.log('Inviter:', inviter);
     const router = useRouter();
@@ -108,6 +110,53 @@ const InvitePage = () => {
         );
         wobble.start();
     }, []);
+
+    useEffect(() => {
+        const fetchChallengeData = async () => {
+            try {
+                setLoading(true);
+                
+                const [challengeData, inviteData] = await Promise.all([
+                    PostService.getChallengeById(challengeId),
+                    PostService.getInviteData(challengeId)
+                ]);
+                
+                setChallengeData(challengeData);
+                
+                if (inviteData) {
+                    const allParticipants = [
+                        ...(inviteData.participants || []),
+                        ...(inviteData.pending_participants || [])
+                    ];
+                    // exp://192.168.1.163:8081/--/challenge/19/Carter
+                    const participantProfiles = await Promise.all(
+                        allParticipants.map(async (participantId) => {
+                            const profile = await PostService.getUserInfo(participantId);
+                            return profile;
+                        })
+                    );
+                    
+                    const participantsWithStatus = participantProfiles.map(profile => ({
+                        ...profile,
+                        isInviter: profile.id === inviteData.sender,
+                        isPending: inviteData.pending_participants?.includes(profile.id),
+                        profilePicture: profile.avatar_url
+                    }));
+                    
+                    setParticipants(participantsWithStatus);
+                }
+            } catch (err) {
+                setError(err.message);
+                console.error('Error fetching data:', err);
+            } finally {
+                setLoading(false);
+            }
+        };
+    
+        if (challengeId) {
+            fetchChallengeData();
+        }
+    }, [challengeId, inviter]);    
 
     const handleCowardPressIn = () => {
         console.log('Press in - starting hold');
@@ -197,19 +246,26 @@ const InvitePage = () => {
         }).start();
     };
 
-    const handleJoinChallenge = () => {
+    const handleJoinChallenge = async () => {
         Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-        router.push({
-            pathname: 'postchallenge',
-            params: { 
-                challenge: challengeData.name, 
-                category: challengeData.category,
-                challengeId: challengeId,
-                isGroupChallenge: true,
-                participants: JSON.stringify(participants),
-                completedAt: new Date().toISOString()
-            }
-        });
+        
+        try {
+            await PostService.acceptInvite(challengeId, user.id);
+            
+            // router.push({
+            //     pathname: 'postchallenge',
+            //     params: { 
+            //         challenge: challengeData.name, 
+            //         category: challengeData.category,
+            //         challengeId: challengeId,
+            //         isGroupChallenge: true,
+            //         participants: JSON.stringify(participants),
+            //         completedAt: new Date().toISOString()
+            //     } 
+            // });
+        } catch (error) {
+            console.error('Error joining challenge:', error);
+        }
     };
 
     const fillHeight = fillAnim.interpolate({
@@ -238,13 +294,14 @@ const InvitePage = () => {
     };
 
     const renderParticipantAvatar = (participant, index) => (
+        console.log('Rendering participant:', participant),
         <View key={participant.id} style={[styles.participantAvatar, { zIndex: participants.length - index }]}>
             {participant.profilePicture ? (
                 <Image source={{ uri: participant.profilePicture }} style={styles.avatarImage} />
             ) : (
                 <View style={styles.avatarPlaceholder}>
                     <Text style={styles.avatarInitial}>
-                        {participant.username.charAt(0).toUpperCase()}
+                        {(participant.name?.charAt(0).toUpperCase() ?? participant.username?.charAt(0).toUpperCase()) || 'A'}
                     </Text>
                 </View>
             )}

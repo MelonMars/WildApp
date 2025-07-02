@@ -27,6 +27,9 @@ const ChallengePage = () => {
     const [showConfirmation, setShowConfirmation] = useState(false);
     const holdingRef = useRef(false);
     const fillAnimationRef = useRef(null);
+    const [showShareModal, setShowShareModal] = useState(false);
+    const [friends, setFriends] = useState([]);
+
     const { challenge, finishes, category, challengeId } = useLocalSearchParams();
     const router = useRouter();
     const { user, loading, logOut } = useAuth();
@@ -181,16 +184,113 @@ const ChallengePage = () => {
 
     const handleShareChallenge = async () => {
         Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-        const url = Linking.createURL(`challenge/${challengeId}/Carter`); // wildapp://challenge/${challengeId} in production
+        
         try {
-            await Share.share({
-                message: `Join me on this WildApp challenge!\n\n"${challenge}"\n\nCategory: ${category}\n\nOpen in app: ${url}`,
-                title: 'WildApp Challenge Invitation',
-            });
+            const userFriends = await PostService.getFriends(user);
+            console.log('Fetched friends:', userFriends);
+            setFriends(userFriends);
         } catch (error) {
-            console.error('Error sharing challenge:', error);
+            console.error('Error fetching friends:', error);
+            setFriends([]);
         }
+        
+        setShowShareModal(true);
     };
+
+    const handleInviteFriend = async (friend) => {
+        try {
+            await PostService.createInvite({
+                challengeId: challengeId,
+                senderId: user.id,
+                recipientId: friend.friend.id,
+                challenge: challenge,
+                category: category
+            }, user);
+            
+            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+            console.log(`Invited ${friend.friend.name} to challenge`);
+        } catch (error) {
+            console.error('Error inviting friend:', error);
+        }
+    };    
+
+    const handleCloseShareModal = () => {
+        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+        setShowShareModal(false);
+    };
+
+    const ShareModal = ({ visible, onClose, challenge, category, challengeId, onInviteFriend, friends = [] }) => {
+        console.log("Got friends:", friends);
+        const handleExternalShare = async () => {
+            const url = Linking.createURL(`challenge/${challengeId}/Carter`);
+            try {
+                await Share.share({
+                    message: `Join me on this WildApp challenge!\n\n"${challenge}"\n\nCategory: ${category}\n\nOpen in app: ${url}`,
+                    title: 'WildApp Challenge Invitation',
+                });
+            } catch (error) {
+                console.error('Error sharing challenge:', error);
+            }
+        };
+    
+        const handleMessagesShare = async () => {
+            handleExternalShare();
+        };
+    
+        if (!visible) return null;
+    
+        return (
+            <View style={styles.overlay}>
+                <View style={styles.modal}>
+                    <View style={styles.header}>
+                        <Text style={styles.title}>Share to Friends</Text>
+                        <TouchableOpacity onPress={onClose} style={styles.closeButton}>
+                            <Text style={styles.closeText}>✕</Text>
+                        </TouchableOpacity>
+                    </View>
+    
+                    <ScrollView style={styles.friendsList} showsVerticalScrollIndicator={false}>
+                        {friends.map((friend, index) => (
+                            <TouchableOpacity
+                                key={friend.friend.id}
+                                style={styles.friendItem}
+                                onPress={() => onInviteFriend(friend)}
+                                activeOpacity={0.7}
+                            >
+                                <View style={styles.friendAvatar}>
+                                    <Text style={styles.friendInitial}>
+                                        {friend.friend.name.charAt(0).toUpperCase()}
+                                    </Text>
+                                </View>
+                                <Text style={styles.friendName}>{friend.friend.name}</Text>
+                                <View style={styles.inviteButton}>
+                                    <Text style={styles.inviteButtonText}>Invite</Text>
+                                </View>
+                            </TouchableOpacity>
+                        ))}
+                        
+                        {friends.length === 0 && (
+                            <View style={styles.emptyState}>
+                                <Text style={styles.emptyText}>No friends found</Text>
+                                <Text style={styles.emptySubtext}>Add friends to invite them to challenges!</Text>
+                            </View>
+                        )}
+                    </ScrollView>
+    
+                    <View style={styles.externalButtons}>
+                        <TouchableOpacity
+                            style={styles.externalButton}
+                            onPress={handleExternalShare}
+                            activeOpacity={0.8}
+                        >
+                            <Text style={styles.externalButtonIcon}>📤</Text>
+                            <Text style={styles.externalButtonText}>Share Outside App</Text>
+                        </TouchableOpacity>
+                    </View>
+                </View>
+            </View>
+        );
+    };    
 
     const navigateToMap = () => {
         Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
@@ -354,6 +454,15 @@ const ChallengePage = () => {
                         </View>
                     </View>
                 )}
+                <ShareModal
+                    visible={showShareModal}
+                    onClose={handleCloseShareModal}
+                    challenge={challenge}
+                    category={category}
+                    challengeId={challengeId}
+                    onInviteFriend={handleInviteFriend}
+                    friends={friends}
+                />
             </ScrollView>
         </Animated.View>
     );
@@ -533,6 +642,135 @@ const styles = {
         justifyContent: 'center',
         alignItems: 'center',
         ...shadows.lightShadow,
+    },
+    overlay: {
+        position: 'absolute',
+        top: 0,
+        left: 0,
+        right: 0,
+        bottom: 0,
+        backgroundColor: 'rgba(0, 0, 0, 0.5)',
+        justifyContent: 'flex-end',
+        zIndex: 1000,
+    },
+    modal: {
+        backgroundColor: colors.cream,
+        borderTopLeftRadius: 20,
+        borderTopRightRadius: 20,
+        paddingTop: 20,
+        paddingHorizontal: 20,
+        paddingBottom: 40,
+        maxHeight: '80%',
+        borderWidth: 2,
+        borderBottomWidth: 0,
+        borderColor: colors.darkBrown,
+    },
+    header: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        marginBottom: 20,
+        paddingBottom: 10,
+        borderBottomWidth: 1,
+        borderBottomColor: colors.lightGray,
+    },
+    title: {
+        ...typography.headerSmall,
+        color: colors.darkBrown,
+        fontSize: 18,
+    },
+    closeButton: {
+        padding: 5,
+    },
+    closeText: {
+        fontSize: 20,
+        color: colors.darkBrown,
+        fontWeight: 'bold',
+    },
+    friendsList: {
+        maxHeight: 300,
+        marginBottom: 20,
+    },
+    friendItem: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        paddingVertical: 12,
+        paddingHorizontal: 15,
+        backgroundColor: 'rgba(255, 255, 255, 0.5)',
+        borderRadius: 10,
+        marginBottom: 8,
+        borderWidth: 1,
+        borderColor: colors.lightGray,
+    },
+    friendAvatar: {
+        width: 40,
+        height: 40,
+        borderRadius: 20,
+        backgroundColor: colors.forestGreen,
+        justifyContent: 'center',
+        alignItems: 'center',
+        marginRight: 12,
+    },
+    friendInitial: {
+        color: colors.cream,
+        fontSize: 16,
+        fontWeight: 'bold',
+    },
+    friendName: {
+        flex: 1,
+        ...typography.bodyMedium,
+        color: colors.darkBrown,
+        fontWeight: '600',
+    },
+    inviteButton: {
+        backgroundColor: colors.forestGreen,
+        paddingHorizontal: 15,
+        paddingVertical: 6,
+        borderRadius: 15,
+    },
+    inviteButtonText: {
+        color: colors.cream,
+        fontSize: 12,
+        fontWeight: 'bold',
+    },
+    emptyState: {
+        alignItems: 'center',
+        paddingVertical: 40,
+    },
+    emptyText: {
+        ...typography.bodyMedium,
+        color: colors.darkBrown,
+        fontWeight: 'bold',
+        marginBottom: 5,
+    },
+    emptySubtext: {
+        ...typography.bodySmall,
+        color: colors.darkBrown,
+        textAlign: 'center',
+        opacity: 0.7,
+    },
+    externalButtons: {
+        gap: 12,
+    },
+    externalButton: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center',
+        backgroundColor: colors.forestGreen,
+        paddingVertical: 12,
+        paddingHorizontal: 20,
+        borderRadius: 10,
+        borderWidth: 2,
+        borderColor: colors.darkBrown,
+    },
+    externalButtonIcon: {
+        fontSize: 18,
+        marginRight: 10,
+    },
+    externalButtonText: {
+        color: colors.cream,
+        ...typography.bodyMedium,
+        fontWeight: 'bold',
     },
 };
 

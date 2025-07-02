@@ -286,6 +286,12 @@ function HomeContent({ user }) {
         });
     };
 
+    const navigateToInvite = () => {
+        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+        console.log('Navigate to Invite');
+        router.push('/invite');
+    }
+
     const handleTodaysChallenge = () => {
         Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
         router.push({
@@ -307,6 +313,13 @@ function HomeContent({ user }) {
                     >
                         <Text style={{ fontSize: 28 }}>👤</Text>
                     </TouchableOpacity>)}
+                    <TouchableOpacity
+                        onPress={navigateToInvite}
+                        style={{ marginLeft: 16, padding: 8 }}
+                        accessibilityLabel="Invite Friends"
+                    >
+                        <Text style={{ fontSize: 28 }}>📩</Text>
+                    </TouchableOpacity>
                 </View>
                 <View style={styles.titleAccent} />
                 <Text style={styles.subtitle}>Time to live.</Text>
