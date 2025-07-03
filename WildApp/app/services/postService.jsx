@@ -336,7 +336,7 @@ export class PostService {
           if (!invite) throw new Error('Invite not found');
 
           const pendingParticipants = (invite.pending_participants || []).filter(id => id !== userId);
-          const participants = [...(invite.participants || []), userId];
+          const participants = Array.from(new Set([...(invite.participants || []), userId]));
 
           const { data, error } = await supabase
               .from('invites')
@@ -1191,7 +1191,7 @@ export class PostService {
           *,
           sender_profile:users!sender(id, name, profile_picture)
         `)
-        .or(`pending_participants.cs.{${userId}},participants.cs.{${userId}}`)
+        .contains('pending_participants', [userId])
         .order('created_at', { ascending: false });
 
       if (error) {
@@ -1226,12 +1226,17 @@ export class PostService {
 
       const updatedPending = (invite.pending_participants || []).filter(id => id !== userId);
       const updatedParticipants = (invite.participants || []).filter(id => id !== userId);
+      const completedParticipants = invite.completed_participants || [];
+      if (!completedParticipants.includes(userId)) {
+        completedParticipants.push(userId);
+      }
 
       const { data, error } = await supabase
         .from('invites')
         .update({
           pending_participants: updatedPending,
-          participants: updatedParticipants
+          participants: updatedParticipants,
+          completed_participants: completedParticipants
         })
         .eq('id', inviteId)
         .select();
