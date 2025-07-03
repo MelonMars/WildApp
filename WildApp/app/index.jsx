@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useCallback } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, ActivityIndicator, StatusBar, ActionSheetIOS, Platform, Alert } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, ActivityIndicator, StatusBar, ActionSheetIOS, Platform, Alert, Image, } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useApp } from './contexts/AppContext';
 import { common_styles, colors, typography, shadows } from './styles'; 
@@ -345,7 +345,12 @@ function HomeContent({ user }) {
                                     style={styles.iconButton}
                                     accessibilityLabel="Profile"
                                 >
-                                    <Text style={styles.iconText}>👤</Text>
+                                    <Image
+                                        source={require('../assets/images/profileicon.png')}
+                                        style={common_styles.iconImage}
+                                        accessibilityLabel="Profile Icon"
+                                        resizeMode="contain"
+                                    />
                                     {friendRequests > 0 && (
                                         <View style={styles.notificationBadge}>
                                             <Text style={styles.badgeText}>
@@ -360,7 +365,12 @@ function HomeContent({ user }) {
                                 style={styles.iconButton}
                                 accessibilityLabel="Invite Friends"
                             >
-                                <Text style={styles.iconText}>📩</Text>
+                                <Image
+                                    source={require('../assets/images/mailbox.png')}
+                                    style={common_styles.iconImage}
+                                    accessibilityLabel="Mailbox Icon"
+                                    resizeMode="contain"
+                                />
                                 {challengeInvites > 0 && (
                                     <View style={styles.notificationBadge}>
                                         <Text style={styles.badgeText}>
@@ -391,9 +401,13 @@ function HomeContent({ user }) {
                         <ActivityIndicator size="small" color={colors.polaroidWhite} />
                     )}
                 </TouchableOpacity>
-                <Text style={styles.streakCounter}>
-                    {streak} {needStreak ? '⌛' : '🔥'}
-                </Text>
+                <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                    <Text style={styles.streakCounter}>{streak}</Text>
+                    <Image 
+                        source={require('../assets/images/flame.png')} 
+                        style={{ width: 24, height: 24 }} 
+                    />
+                </View>
             </View>
             <View style={styles.middleButtonsContainer}>
                 <TouchableOpacity
@@ -413,11 +427,16 @@ function HomeContent({ user }) {
                     onPress={navigateToPage2}
                     disabled={!challenges || Object.keys(challenges).length === 0}
                 >
-                    {!challenges || Object.keys(challenges).length === 0 ? (
-                        <ActivityIndicator size="small" color={colors.polaroidWhite} />
-                    ) : (
-                        <Text style={styles.categoryButtonText}>🧭ADVENTURE</Text>
-                    )}
+                    <View>
+                        {!challenges || Object.keys(challenges).length === 0 ? (
+                            <ActivityIndicator size="small" color={colors.polaroidWhite} />
+                        ) : (
+                            <View style={common_styles.categoryContent}>
+                                <Image source={require('../assets/images/compass.png')} style={common_styles.iconImage} resizeMode='contain'/>
+                                <Text style={styles.categoryButtonText}>ADVENTURE</Text>
+                            </View>
+                        )}
+                    </View>
                 </TouchableOpacity>
 
                 <TouchableOpacity
@@ -428,7 +447,15 @@ function HomeContent({ user }) {
                     {!challenges || Object.keys(challenges).length === 0 ? (
                         <ActivityIndicator size="small" color={colors.polaroidWhite} />
                     ) : (
-                        <Text style={styles.categoryButtonText}>🎨CREATIVE</Text>
+                        <View style={common_styles.categoryContent}>
+                            <Image
+                                source={require('../assets/images/palette.png')}
+                                style={common_styles.iconImage}
+                                accessibilityLabel="Creative Icon"
+                                resizeMode="contain"
+                            />
+                            <Text style={styles.categoryButtonText}>CREATIVE</Text>
+                        </View>
                     )}
                 </TouchableOpacity>
             </View>
@@ -441,9 +468,17 @@ function HomeContent({ user }) {
                     onPress={navigateToGallery}
                     disabled={isPreloading}
                 >
-                    <Text style={styles.galleryButtonText}>
-                        {isPreloading ? 'LOADING...' : '🖼️ THE WALL'}
-                    </Text>
+                    <View style={[common_styles.categoryContent, {top: 2}]}> 
+                        <Image
+                            source={require('../assets/images/painting.png')}
+                            style={common_styles.iconImage}
+                            accessibilityLabel="Painting Icon"
+                            resizeMode="contain"
+                        />
+                        <Text style={styles.galleryButtonText}>
+                            {isPreloading ? 'LOADING...' : 'THE WALL'}
+                        </Text>
+                    </View>
                     {isPreloading && (
                         <ActivityIndicator 
                             size="small" 
@@ -457,12 +492,25 @@ function HomeContent({ user }) {
                     <TouchableOpacity 
                         style={[common_styles.primaryButton, { marginTop: 0 }]} 
                         onPress={handleCreateChallenge}>
-                        <Text style={common_styles.primaryButtonText}>✏️ New Challenge</Text>
+                        <View style={[common_styles.categoryContent, {top: 0}]}>
+                            <Image
+                                source={require('../assets/images/pencil.png')}
+                                style={{height: 24, width: 24, marginRight: 4}}
+                                accessibilityLabel="Pencil Icon"
+                                resizeMode="contain"
+                            />
+                            <Text style={common_styles.primaryButtonText}>New Challenge</Text>
+                        </View>
                     </TouchableOpacity>
                     <TouchableOpacity 
                         style={[styles.circleButton, { marginTop: 0 }]}
                         onPress={navigateToMap}>
-                        <Text style={{ fontSize: 32 }}>🌎</Text>
+                        <Image
+                            source={require('../assets/images/globe.png')}
+                            style={common_styles.iconImage}
+                            accessibilityLabel="Globe Icon"
+                            resizeMode="contain"
+                        />
                     </TouchableOpacity>
                 </View>
                 <View style={[common_styles.tapeHorizontal, styles.bottomTape]} />

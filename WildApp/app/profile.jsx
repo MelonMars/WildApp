@@ -1,7 +1,6 @@
 import React, { useEffect, useState, useCallback } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, ActivityIndicator, StatusBar, ScrollView, Image, Modal, TextInput } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, ActivityIndicator, StatusBar, ScrollView, Image, Modal, TextInput, Share, } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { useApp } from './contexts/AppContext';
 import { common_styles, colors, typography, shadows } from './styles'; 
 import * as Haptics from 'expo-haptics';
 import { PostService } from './services/postService';
@@ -358,6 +357,29 @@ export default function Profile() {
         await logOut();
     };      
 
+    const handleShareAchievements = async () => {
+        try {
+            const achievementsText = profileData.achievements
+                .filter(a => a.unlocked)
+                .map(a => `${a.icon ? `${a.icon} ` : ''}${a.name} (${a.difficulty}): ${a.description}`)
+                .join('\n');
+            const message = `Check out my achievements in Wild!\n\n${achievementsText}\n\nJoin me in this adventure!`;
+
+            const result = await Share.share({
+                message,
+                homepageUrl
+            });
+            if (result.action === Share.sharedAction) {
+                console.log('Achievements shared successfully');
+            } else if (result.action === Share.dismissedAction) {
+                console.log('Share dismissed');
+            }
+        } catch (error) {
+            console.error('Error sharing achievements:', error);
+            alert('Failed to share achievements. Please try again.');
+        }
+    };
+
     const renderAchievement = (achievement) => (
         <View 
             key={achievement.id} 
@@ -511,6 +533,17 @@ export default function Profile() {
                 onRequestClose={() => setShowStatsModal(false)}
             >
                 <View style={styles.modalContainer}>
+                <TouchableOpacity
+                        style={styles.retroShareButton}
+                        onPress={handleShareAchievements}
+                        activeOpacity={0.8}
+                >
+                    <View style={styles.retroShareIcon}>
+                        <Text style={styles.retroShareIconText}>📤</Text>
+                    </View>
+                    <Text style={styles.retroShareText}>SHARE</Text>
+                    <View style={styles.retroShareGlow} />
+                </TouchableOpacity>
                     <View style={styles.modalHeader}>
                         <Text style={styles.modalTitle}>All Stats</Text>
                         <TouchableOpacity
@@ -770,7 +803,15 @@ export default function Profile() {
 
             <View style={styles.actionsSection}>  
                 <TouchableOpacity style={styles.galleryButton} onPress={navigateToGallery}>
-                    <Text style={styles.galleryButtonText}>🖼️ MY WALL</Text>
+                <View style={[common_styles.categoryContent, {top: 2}]}> 
+                        <Image
+                            source={require('../assets/images/painting.png')}
+                            style={common_styles.iconImage}
+                            accessibilityLabel="Painting Icon"
+                            resizeMode="contain"
+                        />
+                    <Text style={styles.galleryButtonText}>MY WALL</Text>
+                </View>
                     <View style={styles.galleryButtonDistress} />
                 </TouchableOpacity>
                 <TouchableOpacity 
@@ -791,7 +832,8 @@ export default function Profile() {
                     )}
                 </TouchableOpacity>
                 <TouchableOpacity style={styles.logoutButtonBottom} onPress={handleLogout}>
-                    <Text style={styles.logoutButtonBottomText}>🚪 LOG OUT</Text>
+                    <Image source={require('../assets/images/door.png')} style={{height: 32, width: 32}} resizeMode='contain'/>
+                    <Text style={styles.logoutButtonBottomText}>LOG OUT</Text>
                 </TouchableOpacity>
                 <View style={[common_styles.tapeHorizontal, styles.bottomTape]} />
             </View>
@@ -1059,7 +1101,7 @@ const styles = StyleSheet.create({
         backgroundColor: colors.mediumBrown,
         paddingTop: 50,
     },
-    modalHeader: {
+    modalHeader: { 
         flexDirection: 'row',
         justifyContent: 'space-between',
         alignItems: 'center',
@@ -1179,8 +1221,12 @@ const styles = StyleSheet.create({
         borderColor: colors.tan,
         marginTop: 15,
         transform: [{ rotate: '0.5deg' }],
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center',
+        gap: 10,
         ...shadows.lightShadow,
-    },
+    },    
     logoutButtonBottomText: {
         ...typography.bodyMedium,
         color: colors.polaroidWhite,
@@ -1473,5 +1519,47 @@ const styles = StyleSheet.create({
         color: colors.polaroidWhite,
         fontSize: 12,
         fontWeight: 'bold',
+    },
+    retroShareButton: {
+        position: 'absolute',
+        top: 5,
+        left: 20,
+        flexDirection: 'row',
+        alignItems: 'center',
+        backgroundColor: colors.forestGreen,
+        paddingHorizontal: 12,
+        paddingVertical: 6,
+        borderWidth: 2,
+        borderColor: colors.oliveGreen,
+        borderRadius: 4,
+        zIndex: 10,
+        transform: [{ rotate: '-2deg' }],
+        ...shadows.lightShadow,
+    },
+    retroShareIcon: {
+        backgroundColor: colors.vintageOrange,
+        borderRadius: 12,
+        padding: 4,
+        marginRight: 8,
+    },
+    retroShareIconText: {
+        fontSize: 18,
+        color: colors.polaroidWhite,
+    },
+    retroShareText: {
+        ...typography.bodyMedium,
+        color: colors.polaroidWhite,
+        fontWeight: '700',
+        fontSize: 14,
+    },
+    retroShareGlow: {
+        position: 'absolute',
+        top: -4,
+        left: -4,
+        right: -4,
+        bottom: -4,
+        borderRadius: 8,
+        backgroundColor: colors.vintageOrange,
+        opacity: 0.3,
     },
 });

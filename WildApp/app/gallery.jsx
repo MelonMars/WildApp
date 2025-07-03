@@ -414,7 +414,13 @@ export default function GalleryPage() {
     };
 
     const renderNormalCaption = (item) => {
-        const isUsernameTooLong = item.username.length > 32;
+        let isUsernameTooLong = false;
+        try {
+            isUsernameTooLong = item.username.length > 32;
+        } catch (error) {
+            isUsernameTooLong = false;
+            console.log('Error checking username length:', error);
+        }
 
         return (
             <View style={[common_styles.captionArea, styles.postCaptionArea]}>
@@ -925,7 +931,11 @@ export default function GalleryPage() {
                         activeOpacity={0.8}
                     >
                         <View style={styles.retroShareIcon}>
-                            <Text style={styles.retroShareIconText}>📤</Text>
+                            <Image  
+                                source={require('../assets/images/pigeon.png')}
+                                style={{height: 32, width: 32}}
+                                resizeMode="contain"
+                            />
                         </View>
                         <Text style={styles.retroShareText}>SHARE</Text>
                         <View style={styles.retroShareGlow} />
@@ -1096,10 +1106,23 @@ export default function GalleryPage() {
                             Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
                         }}
                     >
-                        <Text style={[styles.filterToggleText, (showMyPostsOnly || selectedId) && styles.filterToggleTextActive]}>
-                            {selectedUsername ? `👤 @${selectedUsername.toUpperCase()}` : 
-                            showMyPostsOnly ? '📱 MY POSTS' : '🌍 ALL POSTS'}
-                        </Text>
+                        {selectedUsername ? (
+                            <Text style={[styles.filterToggleText, styles.filterToggleTextActive]}>
+                                👤 @{selectedUsername.toUpperCase()}
+                            </Text>
+                        ) : showMyPostsOnly ? (
+                            <Text style={[styles.filterToggleText, styles.filterToggleTextActive]}>
+                                📱 MY POSTS
+                            </Text>
+                        ) : (
+                            <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                                <Image
+                                    source={require('../assets/images/globe.png')}
+                                    style={{ width: 16, height: 16, marginRight: 4 }}
+                                />
+                                <Text style={styles.filterToggleText}>ALL POSTS</Text>
+                            </View>
+                        )}
                     </TouchableOpacity>
                 </View>
                 <View style={{ width: 70 }} />
@@ -1351,7 +1374,7 @@ const styles = StyleSheet.create({
     },
     retroShareButton: {
         position: 'absolute',
-        top: -25,
+        top: -10,
         left: 20,
         flexDirection: 'row',
         alignItems: 'center',

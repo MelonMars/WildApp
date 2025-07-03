@@ -160,7 +160,6 @@ export const common_styles = StyleSheet.create({
     flex: 1,
     backgroundColor: colors.mediumBrown,
   },
-  
   backgroundTexture: {
     position: 'absolute',
     top: 0,
@@ -169,12 +168,10 @@ export const common_styles = StyleSheet.create({
     bottom: 0,
     backgroundColor: colors.mediumBrown,
   },
-  
   contentContainer: {
     flex: 1,
     paddingHorizontal: 20,
   },
-  
   header: {
     paddingTop: 50,
     paddingHorizontal: 20,
@@ -183,34 +180,29 @@ export const common_styles = StyleSheet.create({
     borderBottomWidth: 3,
     borderBottomColor: colors.lightBrown,
   },
-  
   headerTitle: {
     ...typography.headerLarge,
     color: colors.tan,
     textAlign: 'center',
     fontFamily: typography.fontFamily,
   },
-  
   headerSubtitle: {
     ...typography.bodyMedium,
     color: colors.peach,
     textAlign: 'center',
     marginTop: 5,
   },
-  
   headerLine: {
     height: 3,
     backgroundColor: colors.lightBrown,
     marginTop: 15,
     marginHorizontal: 40,
   },
-  
   categoryLabel: {
     ...typography.label,
     color: colors.vintageOrange,
     textAlign: 'center',
   },
-  
   categoryBadge: {
     backgroundColor: colors.forestGreen,
     paddingHorizontal: 8,
@@ -218,17 +210,14 @@ export const common_styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.oliveGreen,
   },
-  
   categoryBadgeText: {
     ...typography.stamp,
     color: colors.polaroidWhite,
   },
-  
   polaroidContainer: {
     alignItems: 'center',
     marginVertical: 20,
   },
-  
   polaroidSmall: {
     ...components.polaroidFrame,
     width: width * 0.45,
@@ -236,60 +225,49 @@ export const common_styles = StyleSheet.create({
     paddingBottom: 20,
     transform: [{ rotate: '-1deg' }],
   },
-  
   polaroidMedium: {
     ...components.polaroidFrame,
     width: width * 0.7,
     transform: [{ rotate: '1deg' }],
   },
-  
   polaroidLarge: {
     ...components.polaroidFrame,
     width: width * 0.85,
     transform: [{ rotate: '-0.5deg' }],
   },
-  
   photoFrame: {
     ...components.photoPlaceholder,
     marginBottom: 10,
   },
-  
   photoSmall: {
     ...components.photoPlaceholder,
     height: 120,
   },
-  
   photoMedium: {
     ...components.photoPlaceholder,
     height: 180,
   },
-  
   photoLarge: {
     ...components.photoPlaceholder,
     height: 250,
   },
-  
   photoPlaceholderContent: {
     alignItems: 'center',
   },
-  
   photoPlaceholderText: {
     ...typography.bodyMedium,
     color: colors.darkGray,
     fontWeight: '800',
   },
-  
   photoPlaceholderSubtext: {
     ...typography.bodySmall,
     color: colors.mediumGray,
     marginTop: 5,
   },
-  
   captionArea: {
     paddingHorizontal: 5,
     minHeight: 40,
   },
-  
   challengeText: {
     ...typography.bodyMedium,
     color: colors.darkBrown,
@@ -297,80 +275,67 @@ export const common_styles = StyleSheet.create({
     fontWeight: '700',
     marginBottom: 8,
   },
-  
   captionText: {
     ...typography.bodySmall,
     color: colors.lightBrown,
     textAlign: 'center',
     fontStyle: 'italic',
   },
-  
   polaroidFooter: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'flex-end',
     marginTop: 10,
   },
-  
   usernameStamp: {
     ...typography.stamp,
     color: colors.lightBrown,
     transform: [{ rotate: '-1deg' }],
   },
-  
   dateStamp: {
     ...typography.stamp,
     color: colors.darkGray,
     transform: [{ rotate: '1deg' }],
   },
-  
   primaryButton: {
     ...components.primaryButton,
     ...shadows.lightShadow,
     transform: [{ rotate: '0.5deg' }],
   },
-  
   primaryButtonText: {
     ...typography.headerSmall,
     color: colors.polaroidWhite,
     textAlign: 'center',
   },
-  
   secondaryButton: {
     ...components.secondaryButton,
     transform: [{ rotate: '-0.5deg' }],
   },
-  
   secondaryButtonText: {
     ...typography.bodyMedium,
     color: colors.tan,
     textAlign: 'center',
     fontWeight: '700',
   },
-  
   dangerButton: {
     ...components.dangerButton,
     transform: [{ rotate: '1deg' }],
   },
-  
   dangerButtonText: {
     ...typography.bodyMedium,
     color: colors.polaroidWhite,
     textAlign: 'center',
     fontWeight: '800',
   },
-  
   ghostButton: {
     ...components.ghostButton,
     transform: [{ rotate: '-0.5deg' }],
   },
-  
   ghostButtonText: {
-    ...typography.bodyMedium,
+    ...typography.bodyLarge,
     color: colors.darkGray,
     textAlign: 'center',
   },
-  
   failureContainer: {
     backgroundColor: colors.dustyRed,
     borderColor: colors.vintageRed,
@@ -378,14 +343,12 @@ export const common_styles = StyleSheet.create({
     padding: 20,
     transform: [{ rotate: '-1deg' }],
   },
-  
   failureText: {
     ...typography.bodyMedium,
     color: colors.polaroidWhite,
     textAlign: 'center',
     fontWeight: '800',
   },
-  
   cowardStamp: {
     position: 'absolute',
     top: -8,
@@ -397,12 +360,10 @@ export const common_styles = StyleSheet.create({
     borderColor: colors.dustyRed,
     transform: [{ rotate: '15deg' }],
   },
-  
   cowardStampText: {
     ...typography.stamp,
     color: colors.polaroidWhite,
   },
-    
   tapeHorizontal: {
     position: 'absolute',
     width: 40,
@@ -413,7 +374,6 @@ export const common_styles = StyleSheet.create({
     opacity: 0.8,
     borderRadius: 2,
   },
-  
   tapeVertical: {
     position: 'absolute',
     width: 16,
@@ -424,52 +384,43 @@ export const common_styles = StyleSheet.create({
     opacity: 0.8,
     borderRadius: 2,
   },
-  
   tapeTopLeft: {
     top: -8,
     left: 20,
     transform: [{ rotate: '-5deg' }],
   },
-  
   tapeTopRight: {
     top: -8,
     right: 20,
     transform: [{ rotate: '8deg' }],
   },
-  
   tapeBottomLeft: {
     bottom: -8,
     left: 20,
     transform: [{ rotate: '5deg' }],
   },
-  
   tapeBottomRight: {
     bottom: -8,
     right: 20,
     transform: [{ rotate: '-8deg' }],
   },
-  
   galleryContainer: {
     flex: 1,
     paddingTop: 20,
   },
-  
   galleryContent: {
     paddingHorizontal: 15,
     paddingBottom: 20,
   },
-  
   galleryRow: {
     flexDirection: 'row',
     justifyContent: 'space-around',
     marginBottom: 20,
   },
-  
   galleryItem: {
     flex: 0.48,
     marginBottom: 15,
   },
-  
   modalOverlay: {
     position: 'absolute',
     top: 0,
@@ -487,7 +438,6 @@ export const common_styles = StyleSheet.create({
     maxWidth: 400,
     position: 'relative',
   },
-  
   closeButton: {
     position: 'absolute',
     top: -15,
@@ -502,24 +452,20 @@ export const common_styles = StyleSheet.create({
     borderWidth: 2,
     borderColor: colors.tan,
   },
-  
   closeButtonText: {
     ...typography.headerMedium,
     color: colors.tan,
   },
-  
   loadingContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
   },
-  
   loadingText: {
     ...typography.bodyMedium,
     color: colors.tan,
     marginTop: 10,
   },
-  
   textInput: {
     backgroundColor: colors.offWhite,
     borderWidth: 1,
@@ -529,39 +475,41 @@ export const common_styles = StyleSheet.create({
     ...typography.bodyMedium,
     color: colors.darkBrown,
   },
-  
   textInputFocused: {
     borderColor: colors.forestGreen,
     borderWidth: 2,
   },
-  
   textCenter: {
     textAlign: 'center',
   },
-  
   textLeft: {
     textAlign: 'left',
   },
-  
   textRight: {
     textAlign: 'right',
   },
-  
   rotateLeft: {
     transform: [{ rotate: '-1deg' }],
   },
-  
   rotateRight: {
     transform: [{ rotate: '1deg' }],
   },
-  
   rotateLeftStrong: {
     transform: [{ rotate: '-2deg' }],
   },
-  
   rotateRightStrong: {
     transform: [{ rotate: '2deg' }],
   },
+  iconImage: {
+      width: 42,
+      height: 42,
+  },
+  categoryContent: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'center',
+      top: -15
+  }, 
 });
 
 export { colors, typography, shadows, components };

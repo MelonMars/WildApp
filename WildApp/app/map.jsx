@@ -488,7 +488,16 @@ const MapPage = () => {
                             Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
                         }}
                     >
-                        <Text style={common_styles.ghostButtonText}>← 🏠 Home</Text>
+                      <View style={{flexDirection: 'row',
+                        alignItems: 'center',
+                        justifyContent: 'center',}}
+                      >
+                        <Image
+                            source={require('../assets/images/house.png')}
+                            style={{height: 24, width: 24, marginRight: 5}}
+                        />
+                        <Text style={common_styles.ghostButtonText}>Home</Text>
+                      </View>
                     </TouchableOpacity>)}
                 <Text style={styles.headerTitle}>🌲 Wild</Text>
             </View>
@@ -508,7 +517,11 @@ const MapPage = () => {
                     {loading ? (
                         <ActivityIndicator size="small" color={colors.warmCream} />
                     ) : (
-                        <Ionicons name="compass" size={20} color={colors.warmCream} />
+                        <Image
+                          source={require('../assets/images/compass.png')}
+                          style={{ height: 32, width: 32 }}
+                          resizeMode="contain"
+                        />
                     )}
                 </TouchableOpacity>
             </View>
