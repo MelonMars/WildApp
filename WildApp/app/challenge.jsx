@@ -231,7 +231,8 @@ const ChallengePage = () => {
                     category: category,
                 }, user);
                 
-                const url = Linking.createURL(`challenge/${inviteId}/Carter`);
+                const username = await PostService.getName(user) || 'anonymous'; 
+                const url = Linking.createURL(`challenge/${inviteId}/${username}`);
                 
                 await Share.share({
                     message: `Join me on this WildApp challenge!\n\n"${challenge}"\n\nCategory: ${category}\n\nOpen in app: ${url}`,

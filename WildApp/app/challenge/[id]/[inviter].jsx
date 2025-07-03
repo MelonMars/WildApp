@@ -247,7 +247,8 @@ const InvitePage = () => {
     const ShareModal = ({ visible, onClose, challenge, category, challengeId, onInviteFriend, friends = [] }) => {
         console.log("Got friends:", friends);
         const handleExternalShare = async () => {
-            const url = Linking.createURL(`challenge/${invitationId}/Carter`);
+            const username = await PostService.getName(user) || 'anonymous';
+            const url = Linking.createURL(`challenge/${invitationId}/${username}`);
             try {
                 await Share.share({
                     message: `Join me on this WildApp challenge!\n\n"${challenge}"\n\nCategory: ${category}\n\nOpen in app: ${url}`,

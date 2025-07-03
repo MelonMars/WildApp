@@ -104,7 +104,8 @@ const InvitationsPage = () => {
             setInvitations(prev => prev.filter(inv => inv.id !== selectedInvitation.id));
             setShowInvitationModal(false);
             
-            router.push(`/challenge/${selectedInvitation.id}/Carter`);
+            const username = await PostService.getName(user) || 'anonymous';
+            router.push(`/challenge/${selectedInvitation.id}/${username}`);
 
         } catch (error) {
             console.error('Error accepting invitation:', error);
