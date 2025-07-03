@@ -42,6 +42,29 @@ export default function Profile() {
     const [activeTab, setActiveTab] = useState('friends');
 
     const [isLoading, setIsLoading] = useState(true);
+    const [showStatsModal, setShowStatsModal] = useState(false);
+
+    const statsData = [
+        { label: '🔥 Streak', value: profileData.streak },
+        { label: '🎯 Total', value: profileData.totalChallenges },
+        { label: '🤝 Social', value: profileData.socialChallenges },
+        { label: '🧭 Adventure', value: profileData.adventureChallenges },
+        { label: '🎨 Creative', value: profileData.creativeChallenges },
+        { label: '📅 Daily', value: profileData.dailyChallenges },
+        { label: '🐔 Cowards', value: profileData.cowards },
+        { label: '❤️ Liked', value: profileData.likedPosts },
+        { label: '💬 Commented', value: profileData.commentedPosts },
+        { label: '📨 Comments Received', value: profileData.commentsReceived },
+        { label: '👍 Likes Received', value: profileData.likesReceived },
+        { label: '📅 Account Age', value: profileData.accountAge },
+    ];
+
+    const renderStatCard = (stat) => (
+        <View key={stat.label} style={styles.statCard}>
+            <Text style={styles.statNumber}>{stat.value}</Text>
+            <Text style={styles.statLabel}>{stat.label}</Text>
+        </View>
+    );
 
     if (loading) {
         return (
@@ -441,59 +464,26 @@ export default function Profile() {
                 </View>
             </View>
 
-            <View style={styles.statsSection}>
+            <TouchableOpacity 
+                style={styles.statsSection}
+                onPress={() => {
+                    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                    setShowStatsModal(true);
+                }}
+                activeOpacity={0.7}
+            >
                 <Text style={styles.sectionTitle}>Stats</Text>
                 <View style={styles.statsGrid}>
-                    <View style={styles.statCard}>
-                        <Text style={styles.statNumber}>{profileData.streak}</Text>
-                        <Text style={styles.statLabel}>🔥 Streak</Text>
-                    </View>
-                    <View style={styles.statCard}>
-                        <Text style={styles.statNumber}>{profileData.totalChallenges}</Text>
-                        <Text style={styles.statLabel}>🎯 Total</Text>
-                    </View>
-                    <View style={styles.statCard}>
-                        <Text style={styles.statNumber}>{profileData.socialChallenges}</Text>
-                        <Text style={styles.statLabel}>🤝 Social</Text>
-                    </View>
-                    <View style={styles.statCard}>
-                        <Text style={styles.statNumber}>{profileData.adventureChallenges}</Text>
-                        <Text style={styles.statLabel}>🧭 Adventure</Text>
-                    </View>
-                    <View style={styles.statCard}>
-                        <Text style={styles.statNumber}>{profileData.creativeChallenges}</Text>
-                        <Text style={styles.statLabel}>🎨 Creative</Text>
-                    </View>
-                    <View style={styles.statCard}>
-                        <Text style={styles.statNumber}>{profileData.dailyChallenges}</Text>
-                        <Text style={styles.statLabel}>📅 Daily</Text>
-                    </View>
-                    <View style={styles.statCard}>
-                        <Text style={styles.statNumber}>{profileData.cowards}</Text>
-                        <Text style={styles.statLabel}>🐔 Cowards</Text>
-                    </View>
-                    <View style={styles.statCard}>
-                        <Text style={styles.statNumber}>{profileData.likedPosts}</Text>
-                        <Text style={styles.statLabel}>❤️ Liked</Text>
-                    </View>
-                    <View style={styles.statCard}>
-                        <Text style={styles.statNumber}>{profileData.commentedPosts}</Text>
-                        <Text style={styles.statLabel}>💬 Commented</Text>
-                    </View>
-                    <View style={styles.statCard}>
-                        <Text style={styles.statNumber}>{profileData.commentsReceived}</Text>
-                        <Text style={styles.statLabel}>📨 Comments Received</Text>
-                    </View>
-                    <View style={styles.statCard}>
-                        <Text style={styles.statNumber}>{profileData.likesReceived}</Text>
-                        <Text style={styles.statLabel}>👍 Likes Received</Text>
-                    </View>
-                    <View style={styles.statCard}>
-                        <Text style={styles.statNumber}>{profileData.accountAge}</Text>
-                        <Text style={styles.statLabel}>📅 Account Age</Text>
-                    </View>
+                    {statsData.slice(0, 6).map(renderStatCard)}
                 </View>
-            </View>
+                {statsData.length > 6 && (
+                    <View style={styles.expandButton}>
+                        <Text style={styles.expandButtonText}>
+                            TAP TO VIEW ALL ({statsData.length})
+                        </Text>
+                    </View>
+                )}
+            </TouchableOpacity>
 
             <TouchableOpacity 
                 style={styles.achievementsSection}
@@ -515,6 +505,34 @@ export default function Profile() {
                     </View>
                 )}
             </TouchableOpacity>
+                <Modal
+                    visible={showStatsModal}
+                    animationType="slide"
+                    presentationStyle="pageSheet"
+                    onRequestClose={() => setShowStatsModal(false)}
+                >
+                    <View style={styles.modalContainer}>
+                        <View style={styles.modalHeader}>
+                            <Text style={styles.modalTitle}>All Stats</Text>
+                            <TouchableOpacity
+                                style={styles.closeButton}
+                                onPress={() => {
+                                    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                                    setShowStatsModal(false);
+                                }}
+                            >
+                                <Text style={styles.closeButtonText}>✕</Text>
+                            </TouchableOpacity>
+                        </View>
+                        <ScrollView
+                            style={styles.modalContent}
+                            showsVerticalScrollIndicator={false}
+                            contentContainerStyle={styles.modalAchievementsGrid}
+                        >
+                            {statsData.map(renderStatCard)}
+                        </ScrollView>
+                    </View>
+                </Modal>
                 <Modal
                     visible={showAchievementsModal}
                     animationType="slide"
