@@ -274,11 +274,18 @@ export default function Profile() {
                     console.error('Error loading profile picture from server:', error);
                 }
             }
+            const commentsReceived = await PostService.getUserCommentsReceived(user.id);
+            const likesReceived = await PostService.getUserLikes(user.id);
+            const createdAt = await PostService.getUserJoinDate(user);
+            const accountAge = Math.floor((Date.now() - createdAt.getTime()) / (1000 * 60 * 60 * 24));
             setProfileData({
                 level,
                 streak,
                 ...stats,
-                achievements: updatedAchievements
+                achievements: updatedAchievements,
+                commentsReceived,
+                likesReceived,
+                accountAge,
             });
 
         } catch (error) {
@@ -472,6 +479,18 @@ export default function Profile() {
                     <View style={styles.statCard}>
                         <Text style={styles.statNumber}>{profileData.commentedPosts}</Text>
                         <Text style={styles.statLabel}>💬 Commented</Text>
+                    </View>
+                    <View style={styles.statCard}>
+                        <Text style={styles.statNumber}>{profileData.commentsReceived}</Text>
+                        <Text style={styles.statLabel}>📨 Comments Received</Text>
+                    </View>
+                    <View style={styles.statCard}>
+                        <Text style={styles.statNumber}>{profileData.likesReceived}</Text>
+                        <Text style={styles.statLabel}>👍 Likes Received</Text>
+                    </View>
+                    <View style={styles.statCard}>
+                        <Text style={styles.statNumber}>{profileData.accountAge}</Text>
+                        <Text style={styles.statLabel}>📅 Account Age</Text>
                     </View>
                 </View>
             </View>

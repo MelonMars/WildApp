@@ -1305,6 +1305,30 @@ export class PostService {
       return [];
     }
   }
+
+  static async getUserJoinDate(user) {
+    try {
+      if (!user || !user.id) {
+        console.error('User or user.id is undefined');
+        return null;
+      }
+      const { data, error } = await supabase
+        .from('users')
+        .select('created_at')
+        .eq('id', user.id)
+        .single();
+
+      if (error) {
+        console.error('Error fetching user join date:', error);
+        return null;
+      }
+
+      return data.created_at ? new Date(data.created_at) : null;
+    } catch (error) {
+      console.error('Error fetching user join date:', error);
+      return null;
+    }
+  }
 }
 
 export class NewChallengeService {
