@@ -917,7 +917,11 @@ export default function GalleryPage() {
                     onPress={closeModal}
                     activeOpacity={1}
                 />
-                <Animated.View style={common_styles.modalContent}>
+                <ScrollView 
+                    style={common_styles.modalContent}
+                    showsVerticalScrollIndicator={false}
+                    bounces={false}
+                >
                     <TouchableOpacity
                         style={common_styles.closeButton}
                         onPress={closeModal}
@@ -1053,7 +1057,7 @@ export default function GalleryPage() {
                         <View style={[common_styles.tapeHorizontal, common_styles.tapeTopLeft]} />
                         <View style={[common_styles.tapeHorizontal, common_styles.tapeBottomRight]} />
                     </View>
-                </Animated.View>
+                </ScrollView>
             </Animated.View>
         );
     }; 
@@ -1431,6 +1435,7 @@ const styles = StyleSheet.create({
         position: 'relative',
         borderWidth: 2,
         borderColor: '#ddd',
+        height: 120,
     },
     modalMap: {
         flex: 1,
@@ -1490,6 +1495,7 @@ const styles = StyleSheet.create({
         bottom: 0,
         backgroundColor: 'rgba(0, 0, 0, 0.5)',
         zIndex: 1000,
+        overflow: 'visible',
     },
     commentModalContainer: {
         flex: 1,

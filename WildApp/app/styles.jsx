@@ -432,11 +432,12 @@ export const common_styles = StyleSheet.create({
     alignItems: 'center',
     zIndex: 1000,
   },
-  
   modalContent: {
     width: '85%',
     maxWidth: 400,
     position: 'relative',
+    maxHeight: height * 0.9,
+    overflow: 'visible',
   },
   closeButton: {
     position: 'absolute',
