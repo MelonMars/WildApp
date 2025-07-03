@@ -735,7 +735,7 @@
                 </form>
             </div>
             <div class="challenges-display">
-                <h2>🎯 Challenges</h2>
+                <h2 style="text-align: center;">🎯 Challenges</h2>
                 <div id="challengesContainer" class="submissions-grid">
                     <!-- Challenges will be loaded here -->
                 </div>
@@ -799,7 +799,7 @@
                     </form>
                 </div>
                 <div class="achievements-display">
-                    <h2>🏆 Achievements</h2>
+                    <h2 style="text-align: center;">🏆 Achievements</h2>
                     <div id="achievementsContainer" class="submissions-grid">
                         <!-- Achievements will be loaded here -->
                     </div>
@@ -892,6 +892,7 @@ document.getElementById('challengeForm').addEventListener('submit', async functi
         
         showNotification('🌟 Challenge created successfully!', 'success');
         this.reset();
+        loadChallenges();
         
     } catch (error) {
         console.error('Error creating challenge:', error);
@@ -1054,6 +1055,7 @@ document.getElementById('editModal').addEventListener('click', function(e) {
             if (supabase) {
                 loadData();
                 loadAchievements();
+                loadChallenges();
             } else {
                 showNotification('Failed to initialize Supabase client! 🐻', 'error');
             }
@@ -1227,7 +1229,31 @@ document.getElementById('editModal').addEventListener('click', function(e) {
         }
 
         function renderChallenges() {
-
+            const container = document.getElementById('challengesContainer');
+            if (currentChallenges.length === 0) {
+                container.innerHTML = '<p>No challenges created yet. Start by creating one!</p>';
+                return;
+            }
+            container.innerHTML = currentChallenges.map(challenge => `
+            <div class="submission-card">
+                <div class="submission-header">
+                    <div class="challenge-name">${escapeHtml(challenge.name)}</div>
+                    <div class="category-badge">${escapeHtml(challenge.category)}</div>
+                </div>
+                <div class="submission-content">
+                    <div class="user-info">
+                        <strong>🎯 Difficulty:</strong> ${escapeHtml(challenge.difficulty)}<br>
+                        <strong>📅 Created:</strong> ${formatDate(challenge.created_at)}<br>
+                        <strong>🌟 Points:</strong> ${challenge.points || 'N/A'}
+                    </div>
+                    ${challenge.instructions ? `
+                        <div class="caption">
+                            <strong>📖 Instructions:</strong> "${escapeHtml(challenge.instructions)}"
+                        </div>
+                    ` : ''}
+                </div>
+            </div>
+        `).join('');
         }
 
         function toggleMap(submissionId) {
