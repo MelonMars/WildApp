@@ -224,6 +224,8 @@ export default function Profile() {
                 creativeChallenges: 0,
                 dailyChallenges: 0,
                 cowards: 0,
+                likedPosts: 0,
+                commentedPosts: 0,
             };
 
             if (posts) {
@@ -238,6 +240,10 @@ export default function Profile() {
                 stats.cowards = parsedPosts.filter(c => c.category === 'COWARD').length;
             }
 
+            const likedPosts = await PostService.getUserLikedPosts(user);
+            const commentedPosts = await PostService.getUserCommentedPosts(user);
+            stats.likedPosts = likedPosts.length;
+            stats.commentedPosts = commentedPosts.length;
             const level = await PostService.getLevel(user);
 
             const userAchievements = await PostService.getAchievements(user);
@@ -455,9 +461,17 @@ export default function Profile() {
                         <Text style={styles.statNumber}>{profileData.dailyChallenges}</Text>
                         <Text style={styles.statLabel}>📅 Daily</Text>
                     </View>
-                    <View style={styles.cowardStatCard}>
+                    <View style={styles.statCard}>
                         <Text style={styles.statNumber}>{profileData.cowards}</Text>
                         <Text style={styles.statLabel}>🐔 Cowards</Text>
+                    </View>
+                    <View style={styles.statCard}>
+                        <Text style={styles.statNumber}>{profileData.likedPosts}</Text>
+                        <Text style={styles.statLabel}>❤️ Liked</Text>
+                    </View>
+                    <View style={styles.statCard}>
+                        <Text style={styles.statNumber}>{profileData.commentedPosts}</Text>
+                        <Text style={styles.statLabel}>💬 Commented</Text>
                     </View>
                 </View>
             </View>
@@ -878,18 +892,6 @@ const styles = StyleSheet.create({
         borderWidth: 2,
         borderColor: colors.tan,
         width: '30%',
-        alignItems: 'center',
-        marginBottom: 10,
-        transform: [{ rotate: '0.5deg' }],
-        ...shadows.lightShadow,
-    },
-    cowardStatCard: {
-        backgroundColor: colors.lightBrown,
-        padding: 15,
-        borderRadius: 8,
-        borderWidth: 2,
-        borderColor: colors.tan,
-        width: '100%',
         alignItems: 'center',
         marginBottom: 10,
         transform: [{ rotate: '0.5deg' }],

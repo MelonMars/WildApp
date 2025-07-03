@@ -211,7 +211,28 @@ export class PostService {
       }
   
       const result = data[0];
-      
+  
+      console.log('Like toggled:', result);
+      if (result.liked) {
+        console.log('User liked the post');
+        const { error: updateError } = await supabase
+          .from('users')
+          .update({
+            liked_posts: [...(user.liked_posts || []), postId]
+          })
+          .eq('id', user.id);
+        if (updateError) {
+          console.error('Error updating user liked posts:', updateError);
+        }
+      } else {
+        const { error: updateError } = await supabase
+          .from('users')
+          .update({
+            liked_posts: (user.liked_posts || []).filter(id => id !== postId)
+          })
+          .eq('id', user.id);
+      }
+
       return {
         success: true,
         liked: result.liked,
@@ -889,6 +910,15 @@ export class PostService {
         console.error('Error updating post comments:', updateError);
         throw updateError;
       }
+      const {error: updateUserError} = await supabase
+        .from('users')
+        .update({
+          commented_posts: [...new Set([...user.commented_posts || [], postId])]
+        })
+        .eq('id', user.id);
+      if (updateUserError) {
+        console.error('Error updating user commented posts:', updateUserError);
+      }
       return newComment;
     } catch (error) {
       console.error('Error adding comment:', error);
@@ -1121,6 +1151,84 @@ export class PostService {
     } catch (error) {
       console.error('Error removing invite:', error);
       throw error;
+    }
+  }
+
+  static async getUserLikedPosts(user) {
+    try {
+      if (!user || !user.id) {
+        console.error('User or user.id is undefined');
+        return [];
+      }
+      const { data, error } = await supabase
+        .from('users')
+        .select('liked_posts')
+        .eq('id', user.id)
+        .single();
+
+      if (error) {
+        console.error('Error fetching user liked posts:', error);
+        return [];
+      }
+
+      const likedPosts = data.liked_posts || [];
+      if (likedPosts.length === 0) {
+        return [];
+      }
+
+      const { data: postsData, error: postsError } = await supabase
+        .from('posts')
+        .select('*')
+        .in('id', likedPosts);
+
+      if (postsError) {
+        console.error('Error fetching liked posts details:', postsError);
+        return [];
+      }
+
+      return postsData || [];
+    } catch (error) {
+      console.error('Error fetching user liked posts:', error);
+      return [];
+    }
+  }
+
+  static async getUserCommentedPosts(user) {
+    try {
+      if (!user || !user.id) {
+        console.error('User or user.id is undefined');
+        return [];
+      }
+      const { data, error } = await supabase
+        .from('users')
+        .select('commented_posts')
+        .eq('id', user.id)
+        .single();
+
+      if (error) {
+        console.error('Error fetching user commented posts:', error);
+        return [];
+      }
+
+      const commentedPosts = data.commented_posts || [];
+      if (commentedPosts.length === 0) {
+        return [];
+      }
+
+      const { data: postsData, error: postsError } = await supabase
+        .from('posts')
+        .select('*')
+        .in('id', commentedPosts);
+
+      if (postsError) {
+        console.error('Error fetching commented posts details:', postsError);
+        return [];
+      }
+
+      return postsData || [];
+    } catch (error) {
+      console.error('Error fetching user commented posts:', error);
+      return [];
     }
   }
 }
