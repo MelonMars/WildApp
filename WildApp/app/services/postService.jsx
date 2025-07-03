@@ -958,18 +958,64 @@ export class PostService {
         throw updateError;
       }
       const commentedPosts = await this.getUserCommentedPosts(user);
+      console.log("Commented posts before update: ", commentedPosts);
+      const updatedCommentedPosts = [...new Set([...commentedPosts || [], postId])];
+      console.log("Updated comments: ", updatedCommentedPosts);
       const {error: updateUserError} = await supabase
         .from('users')
         .update({
-          commented_posts: [...new Set([...commentedPosts || [], postId])]
+          commented_posts: updatedCommentedPosts
         })
         .eq('id', user.id);
       if (updateUserError) {
-        console.error('Error updating user commented posts:', updateUserError);
+        console.error('Error updating user commented posts:', updateUserError.message, updateUserError.details);
       }
+
+      console.log("Got up to selecting post owner");
+      const postOwner = await supabase
+        .from('posts')
+        .select('owner')
+        .eq('id', postId)
+        .single();
+
+      if (postOwner.error) {
+        console.error('Error fetching post owner:', postOwner.error);
+        throw postOwner.error;
+      }
+      const ownerId = postOwner.data.owner;
+      console.log("Post owner ID: ", ownerId);
+      const { error: updateOwnerError } = await supabase
+        .from('users')
+        .update({
+          comments_received: (await this.getUserCommentsReceived(ownerId) || 0) + 1
+        })
+        .eq('id', ownerId);
+
       return newComment;
     } catch (error) {
       console.error('Error adding comment:', error);
+      throw error;
+    }
+  }
+
+  static async getUserCommentsReceived(userId) {
+    try {
+      if (!userId) {
+        throw new Error('User ID is required to fetch user comments received');
+      }
+      const { data, error } = await supabase
+        .from('users')
+        .select('comments_received')
+        .eq('id', userId)
+        .single();
+      if (error) {
+        console.error('Error fetching user comments received:', error);
+        throw error;
+      }
+      console.log('Fetched user comments received:', data);
+      return data.comments_received || 0;
+    } catch (error) {
+      console.error('Error fetching user comments received:', error);
       throw error;
     }
   }
@@ -1253,17 +1299,7 @@ export class PostService {
         return [];
       }
 
-      const { data: postsData, error: postsError } = await supabase
-        .from('posts')
-        .select('*')
-        .in('id', commentedPosts);
-
-      if (postsError) {
-        console.error('Error fetching commented posts details:', postsError);
-        return [];
-      }
-
-      return postsData || [];
+      return commentedPosts;
     } catch (error) {
       console.error('Error fetching user commented posts:', error);
       return [];

@@ -49,121 +49,130 @@ END;
 $$;
 
 -- AWARD ACHIEVEMENTS FROM POSTS
-create or replace function award_achievements()
-returns trigger
-language plpgsql
-as $$
-declare     
-    user_post_count integer;     
-    category_post_count integer;     
-    current_streak integer;
-    liked_posts_count integer;
-    commented_posts_count integer;
-    challenges_created_count integer;
-    achievement_record record;     
-    user_achievements uuid[]; 
-begin     
-    select achievements into user_achievements      
-    from users      
-    where id = new.owner;          
+CREATE OR REPLACE FUNCTION award_achievements()
+RETURNS TRIGGER
+LANGUAGE plpgsql
+AS $$
+DECLARE     
+    user_post_count INTEGER;     
+    category_post_count INTEGER;     
+    current_streak INTEGER;
+    liked_posts_count INTEGER;
+    commented_posts_count INTEGER;
+    challenges_created_count INTEGER;
+    achievement_record RECORD;     
+    user_achievements UUID[]; 
+BEGIN     
+    SELECT achievements INTO user_achievements      
+    FROM users      
+    WHERE id = NEW.owner;          
     
-    if user_achievements is null then         
-        user_achievements := array[]::uuid[];     
-    end if;          
+    IF user_achievements IS NULL THEN         
+        user_achievements := ARRAY[]::UUID[];     
+    END IF;          
     
-    select streak into current_streak      
-    from users      
-    where id = new.owner;          
+    SELECT streak INTO current_streak      
+    FROM users      
+    WHERE id = NEW.owner;          
     
-    select count(*) into user_post_count      
-    from posts      
-    where owner = new.owner;          
+    SELECT COUNT(*) INTO user_post_count      
+    FROM posts      
+    WHERE owner = NEW.owner;          
     
-    select count(*) into category_post_count      
-    from posts      
-    where owner = new.owner and category = new.category;
+    SELECT COUNT(*) INTO category_post_count      
+    FROM posts      
+    WHERE owner = NEW.owner AND category = NEW.category;
     
-    select coalesce(array_length(liked_posts, 1), 0) into liked_posts_count
-    from users
-    where id = new.owner;
+    SELECT COALESCE(
+        CASE 
+            WHEN liked_posts IS NULL THEN 0
+            ELSE array_length(liked_posts, 1)
+        END, 0) INTO liked_posts_count
+    FROM users
+    WHERE id = NEW.owner;
     
-    select coalesce(array_length(commented_posts, 1), 0) into commented_posts_count
-    from users
-    where id = new.owner;
+    SELECT COALESCE(
+        CASE 
+            WHEN commented_posts IS NULL THEN 0
+            ELSE array_length(commented_posts, 1)
+        END, 0) INTO commented_posts_count
+    FROM users
+    WHERE id = NEW.owner;
     
-    select coalesce(challenges_created, 0) into challenges_created_count
-    from users
-    where id = new.owner;
+    SELECT COALESCE(challenges_created, 0) INTO challenges_created_count
+    FROM users
+    WHERE id = NEW.owner;
     
-    for achievement_record in          
-        select id, kind, target, category          
-        from achievements_rows      
-    loop         
-        if achievement_record.id = any(user_achievements) then             
-            continue;         
-        end if;                  
+    FOR achievement_record IN          
+        SELECT id, kind, target, category           
+        FROM achievements      
+    LOOP         
+        IF achievement_record.id = ANY(user_achievements) THEN             
+            CONTINUE;         
+        END IF;                  
         
-        case achievement_record.kind             
-            when 'streak' then                 
-                if current_streak >= achievement_record.target then                     
-                    update users                      
-                    set achievements = array_append(achievements, achievement_record.id)                     
-                    where id = new.owner;                                          
-                    raise notice 'Achievement awarded: % to user %', achievement_record.id, new.owner;                 
-                end if;                              
+        CASE achievement_record.kind             
+            WHEN 'streak' THEN                 
+                IF current_streak >= achievement_record.target THEN                     
+                    UPDATE users                      
+                    SET achievements = array_append(achievements, achievement_record.id)                     
+                    WHERE id = NEW.owner;                                          
+                    RAISE NOTICE 'Achievement awarded: % to user %', achievement_record.id, NEW.owner;                 
+                END IF;                              
                 
-            when 'post_count' then                 
-                if achievement_record.category is not null then                     
-                    if new.category = achievement_record.category and                         
-                       category_post_count >= achievement_record.target then                         
-                        update users                          
-                        set achievements = array_append(achievements, achievement_record.id)                         
-                        where id = new.owner;                                                  
-                        raise notice 'Category achievement awarded: % to user %', achievement_record.id, new.owner;                     
-                    end if;                 
-                else                     
-                    if user_post_count >= achievement_record.target then                         
-                        update users                          
-                        set achievements = array_append(achievements, achievement_record.id)                         
-                        where id = new.owner;                                                  
-                        raise notice 'Post count achievement awarded: % to user %', achievement_record.id, new.owner;                     
-                    end if;                 
-                end if;
+            WHEN 'post_count' THEN                 
+                IF achievement_record.category IS NOT NULL THEN                     
+                    IF NEW.category = achievement_record.category AND                         
+                       category_post_count >= achievement_record.target THEN                         
+                        UPDATE users                          
+                        SET achievements = array_append(achievements, achievement_record.id)                         
+                        WHERE id = NEW.owner;                                                  
+                        RAISE NOTICE 'Category achievement awarded: % to user %', achievement_record.id, NEW.owner;                     
+                    END IF;                 
+                ELSE                     
+                    IF user_post_count >= achievement_record.target THEN                         
+                        UPDATE users                          
+                        SET achievements = array_append(achievements, achievement_record.id)                         
+                        WHERE id = NEW.owner;                                                  
+                        RAISE NOTICE 'Post count achievement awarded: % to user %', achievement_record.id, NEW.owner;                     
+                    END IF;                 
+                END IF;
                 
-            when 'liked_posts' then
-                if liked_posts_count >= achievement_record.target then
-                    update users
-                    set achievements = array_append(achievements, achievement_record.id)
-                    where id = new.owner;
+            WHEN 'liked_posts' THEN
+                IF liked_posts_count >= achievement_record.target THEN
+                    UPDATE users
+                    SET achievements = array_append(achievements, achievement_record.id)
+                    WHERE id = NEW.owner;
                     
-                    raise notice 'Liked posts achievement awarded: % to user %', achievement_record.id, new.owner;
-                end if;
+                    RAISE NOTICE 'Liked posts achievement awarded: % to user %', achievement_record.id, NEW.owner;
+                END IF;
                 
-            when 'commented_posts' then
-                if commented_posts_count >= achievement_record.target then
-                    update users
-                    set achievements = array_append(achievements, achievement_record.id)
-                    where id = new.owner;
+            WHEN 'commented_posts' THEN
+                IF commented_posts_count >= achievement_record.target THEN
+                    UPDATE users
+                    SET achievements = array_append(achievements, achievement_record.id)
+                    WHERE id = NEW.owner;
                     
-                    raise notice 'Commented posts achievement awarded: % to user %', achievement_record.id, new.owner;
-                end if;
+                    RAISE NOTICE 'Commented posts achievement awarded: % to user %', achievement_record.id, NEW.owner;
+                END IF;
                 
-            when 'challenges_created' then
-                if challenges_created_count >= achievement_record.target then
-                    update users
-                    set achievements = array_append(achievements, achievement_record.id)
-                    where id = new.owner;
+            WHEN 'challenges_created' THEN
+                IF challenges_created_count >= achievement_record.target THEN
+                    UPDATE users
+                    SET achievements = array_append(achievements, achievement_record.id)
+                    WHERE id = NEW.owner;
                     
-                    raise notice 'Challenges created achievement awarded: % to user %', achievement_record.id, new.owner;
-                end if;
+                    RAISE NOTICE 'Challenges created achievement awarded: % to user %', achievement_record.id, NEW.owner;
+                END IF;
                 
-            else
-                raise notice 'Unknown achievement kind: % for achievement %', achievement_record.kind, achievement_record.id;
-        end case;     
-    end loop;          
+            ELSE
+                RAISE NOTICE 'Unknown achievement kind: % for achievement %', achievement_record.kind, achievement_record.id;
+                
+        END CASE;     
+    END LOOP;          
     
-    return new; 
-end;
+    RETURN NEW; 
+END;
 $$;
 
 CREATE OR REPLACE FUNCTION award_achievements()
@@ -416,11 +425,21 @@ BEGIN
         user_achievements := ARRAY[]::UUID[];
     END IF;
     
-    SELECT COALESCE(array_length(NEW.liked_posts, 1), 0) INTO liked_posts_count;
-    SELECT COALESCE(array_length(NEW.commented_posts, 1), 0) INTO commented_posts_count;
+    SELECT COALESCE(
+        CASE 
+            WHEN NEW.liked_posts IS NULL THEN 0
+            ELSE array_length(NEW.liked_posts, 1)
+        END, 0) INTO liked_posts_count;
+    
+    SELECT COALESCE(
+        CASE 
+            WHEN NEW.commented_posts IS NULL THEN 0
+            ELSE array_length(NEW.commented_posts, 1)
+        END, 0) INTO commented_posts_count;
+    
     SELECT COALESCE(NEW.challenges_created, 0) INTO challenges_created_count;
     
-    SELECT EXTRACT(EPOCH FROM (CURRENT_DATE - NEW.created_at)) / 86400 INTO days_since_creation;
+    SELECT CURRENT_DATE - NEW.created_at INTO days_since_creation;
     
     FOR achievement_record IN
         SELECT id, kind, target, category
@@ -581,7 +600,13 @@ BEGIN
         user_achievements := ARRAY[]::UUID[];
     END IF;
     
-    SELECT COALESCE(SUM(jsonb_array_length(comments)), 0) INTO total_comments
+    SELECT COALESCE(SUM(
+        CASE 
+            WHEN comments IS NULL THEN 0
+            WHEN jsonb_typeof(comments) = 'array' THEN jsonb_array_length(comments)
+            ELSE 0
+        END
+    ), 0) INTO total_comments
     FROM posts
     WHERE owner = post_owner;
     
