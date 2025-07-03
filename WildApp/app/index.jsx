@@ -146,7 +146,7 @@ function HomeContent({ user }) {
         useCallback(() => {
             const fetchUsersPosts = async () => {
                 try {
-                    const posts = await PostService.getUsersPosts(user);
+                    const posts = await PostService.getUsersPosts(user.id);
                     if (posts) {
                         setUsersPosts(posts);
                         const completedChallenges = posts.filter(post => post.challenge);

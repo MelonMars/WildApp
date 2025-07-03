@@ -57,23 +57,35 @@ export default function GalleryPage() {
     const [showMyPostsOnly, setShowMyPostsOnly] = useState(false);
     const [myPosts, setMyPosts] = useState([]);  
     const [filteredPosts, setFilteredPosts] = useState([]);
-    const [selectedUsername, setSelectedUsername] = useState(null);
+    const [selectedId, setSelectedId] = useState(null);
 
     const [showCommentModal, setShowCommentModal] = useState(false);
     const [commentModalAnim] = useState(new Animated.Value(0));
     const [commentText, setCommentText] = useState('');
     const [commentInputRef, setCommentInputRef] = useState(null);
 
-    const { newPost, challenge, category, photo, caption, completedAt, timestamp, isNewPost, userOnly } = useLocalSearchParams();
+    const { newPost, challenge, category, photo, caption, completedAt, timestamp, isNewPost, userOnly, userId } = useLocalSearchParams();
     const { preloadedPosts, preloadedLastDoc, preloadedHasMore, preloadComplete, setPreloadedPosts } = useApp();
     const { user, loading: isAuthLoading } = useAuth();
     const [comments, setComments] = useState([]);
     const [likeAnimations, setLikeAnimations] = useState({});
-    const [openCommentsWithSelectedPost, setOpenCommentsWithSelectedPost] = useState(false);
+    const [selectedUsername, setSelectedUsername] = useState(null);
 
     useEffect(() => {
         setComments(selectedPost && Array.isArray(selectedPost.comments) ? selectedPost.comments : []);
     }, [selectedPost]);
+
+    useEffect(() => {
+        const fetchData = async () => {
+            if (userId) {
+                setSelectedId(userId);
+                fetchUsersPosts(userId);
+                const username = await PostService.getName(userId);
+                setSelectedUsername(username);
+            }
+        };
+        fetchData();
+    }, [userId]);
 
     const translateY = commentModalAnim.interpolate({
         inputRange: [0, 1],
@@ -113,7 +125,7 @@ export default function GalleryPage() {
     };
 
     const onRefresh = async () => {
-        if (showMyPostsOnly || selectedUsername) {
+        if (showMyPostsOnly || selectedId) {
             if (showMyPostsOnly) {
                 await loadMyPosts();
             }
@@ -156,24 +168,23 @@ export default function GalleryPage() {
     }, [showMyPostsOnly, posts, myPosts]);
 
     useEffect(() => {
-        if (selectedUsername) {
-            setFilteredPosts(posts.filter(post => post.username === selectedUsername));
+        if (selectedId) {
+            setFilteredPosts(posts.filter(post => post.owner === selectedId));
         } else if (showMyPostsOnly) {
             setFilteredPosts(myPosts);
         } else {
             setFilteredPosts(posts);
         }
-    }, [showMyPostsOnly, posts, myPosts, selectedUsername]);    
+    }, [showMyPostsOnly, posts, myPosts, selectedId]);    
 
-    const handleUsernameFilter = (username) => {
-        if (selectedUsername === username) {
-            setSelectedUsername(null);
-        } else {
-            setSelectedUsername(username);
-            setShowMyPostsOnly(false);
-        }
+    const handleUsernameFilter = (ownerId) => {
+        console.log("Got owner:", ownerId);
+        router.push({
+            pathname: '/publicprofile',
+            params: { userId: ownerId }
+        })
         closeModal();
-    };    
+    };
 
     const fetchMorePosts = async () => {
         if (loading || !hasMore || showMyPostsOnly) return;
@@ -193,29 +204,57 @@ export default function GalleryPage() {
     };
 
     const fetchUsersPosts = async (user) => {
-        const newPosts = await PostService.getPostsByUsername(user);
-        if (newPosts && newPosts.length > 0) {
-            setPosts(prevPosts => [...prevPosts, ...newPosts]);
-            setPreloadedPosts(newPosts);
-            setLastDoc(null);
-            setHasMore(false);
-        } else {
-            setPosts([]);
-            setPreloadedPosts([]);
-            setLastDoc(null);
-            setHasMore(false);
+        console.log("Fetching posts for user:", user);
+        
+        if (fetchUsersPosts.isLoading) {
+            console.log("Already loading user posts, skipping...");
+            return;
         }
-    }
+        
+        if (fetchUsersPosts.lastFetchTime && Date.now() - fetchUsersPosts.lastFetchTime < 3000) {
+            console.log("Too soon to fetch again, waiting...");
+            return;
+        }
+        
+        fetchUsersPosts.isLoading = true;
+        fetchUsersPosts.lastFetchTime = Date.now();
+    
+        try {
+            const newPosts = await PostService.getUsersPosts(user);
+            
+            if (newPosts && newPosts.length > 0) {
+                setPosts(newPosts);
+                setPreloadedPosts(newPosts);
+                setLastDoc(null);
+                setHasMore(false);
+                console.log(`Loaded ${newPosts.length} posts for user ${user}`);
+                console.log("Posts:", newPosts);
+            } else {
+                setPosts([]);
+                setPreloadedPosts([]);
+                setLastDoc(null);
+                setHasMore(false);
+                console.log(`No posts found for user ${user}`);
+            }
+        } catch (error) {
+            console.error("Error fetching user posts:", error);
+        } finally {
+            fetchUsersPosts.isLoading = false;
+        }
+    };
 
     const handleEndReached = () => {
-        if (selectedUsername) {
-            fetchUsersPosts(selectedUsername);
+        if (selectedId && posts.length === 0 && !fetchUsersPosts.isLoading) {
+            fetchUsersPosts(selectedId);
         }
-        fetchMorePosts();
+        else if (!selectedId && !showMyPostsOnly) {
+            fetchMorePosts();
+        }
     };
 
     const openModal = (post) => {
         Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+        console.log("Opening modal for post:", post);
         setSelectedPost(post);
         Animated.spring(modalAnim, {
             toValue: 1,
@@ -924,7 +963,7 @@ export default function GalleryPage() {
                             <View style={common_styles.polaroidFooter}>
                             <TouchableOpacity
                                 onPress={() => {
-                                    handleUsernameFilter(selectedPost.username);
+                                    handleUsernameFilter(selectedPost.owner);
                                     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
                                 }}>
                                 <Text style={common_styles.usernameStamp}>@{selectedPost.username}</Text>
@@ -1030,19 +1069,19 @@ export default function GalleryPage() {
                     <Text style={common_styles.headerTitle}>THE WALL</Text>
                     <Text style={common_styles.headerSubtitle}>PROOF OF COURAGE</Text>
                     <TouchableOpacity
-                        style={[styles.filterToggle, (showMyPostsOnly || selectedUsername) && styles.filterToggleActive]}
+                        style={[styles.filterToggle, (showMyPostsOnly || selectedId) && styles.filterToggleActive]}
                         onPress={() => {
                             setShowMyPostsOnly(!showMyPostsOnly);
-                            setSelectedUsername(null); 
+                            setSelectedId(null);
+                            setSelectedUsername(null);
                             Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
                         }}
                     >
-                        <Text style={[styles.filterToggleText, (showMyPostsOnly || selectedUsername) && styles.filterToggleTextActive]}>
+                        <Text style={[styles.filterToggleText, (showMyPostsOnly || selectedId) && styles.filterToggleTextActive]}>
                             {selectedUsername ? `👤 @${selectedUsername.toUpperCase()}` : 
                             showMyPostsOnly ? '📱 MY POSTS' : '🌍 ALL POSTS'}
                         </Text>
                     </TouchableOpacity>
-
                 </View>
                 <View style={{ width: 70 }} />
             </Animated.View>

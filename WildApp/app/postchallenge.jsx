@@ -71,7 +71,11 @@ const PostChallengePage = () => {
       const participantNames = participants.map(p => p.name || p.email.split('@')[0] || 'anonymous');
       setUsername(participantNames.join(', '));
     }
-    await PostService.removeInvite(invitationId, user.id);
+    try {
+      await PostService.removeInvite(invitationId, user.id);
+    } catch (error) {
+      console.log("Didn't remove invite, person likely wasn't invited");
+    }
   }, [participants]);
 
   useEffect(() => {
@@ -233,7 +237,6 @@ const PostChallengePage = () => {
         category,
         photo: photoUrl,
         caption: caption || `Just crushed: ${challenge}`,
-        username: username || 'anonymous',
         completedAt,
         timestamp: new Date().toISOString(),
         latitude: locationEnabled && coords ? coords.latitude : null,

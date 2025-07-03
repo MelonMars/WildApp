@@ -7,13 +7,11 @@ import * as Haptics from 'expo-haptics';
 import { PostService } from './services/postService';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useFocusEffect } from '@react-navigation/native';
-import { useAuth } from './contexts/AuthContext';
 import { LinearGradient } from 'expo-linear-gradient';
 import * as ImagePicker from 'expo-image-picker';
 
 export default function Profile() {
     const router = useRouter();
-    const { user, loading, logOut } = useAuth();
     const [profileData, setProfileData] = useState({
         level: 1,
         streak: 0,
@@ -27,21 +25,15 @@ export default function Profile() {
     const params = useLocalSearchParams();
     const [showAchievementsModal, setShowAchievementsModal] = useState(false);
     const [selectedDifficulty, setSelectedDifficulty] = useState('all');
-    const [isEditingName, setIsEditingName] = useState(false);
-    const [tempName, setTempName] = useState('');
-    const [username, setUsername] = useState(user?.name || user?.email.split('@')[0] || 'anonymous');
+    // const [username, setUsername] = useState(user?.name || user?.email.split('@')[0] || 'anonymous');
+    const [username, setUsername] = useState('anonymous');
     const [profilePicture, setProfilePicture] = useState(null);
     const [isUploadingImage, setIsUploadingImage] = useState(false);
 
-    const [showFriendsModal, setShowFriendsModal] = useState(false);
-    const [friendRequests, setFriendRequests] = useState([]);
-    const [friends, setFriends] = useState([]);
-    const [searchTerm, setSearchTerm] = useState('');
-    const [searchResults, setSearchResults] = useState([]);
-    const [activeTab, setActiveTab] = useState('friends');
-
     const [isLoading, setIsLoading] = useState(true);
     const [showStatsModal, setShowStatsModal] = useState(false);
+
+    const userId = params?.userId;
 
     const statsData = [
         { label: '🔥 Streak', value: profileData.streak },
@@ -64,124 +56,6 @@ export default function Profile() {
             <Text style={styles.statLabel}>{stat.label}</Text>
         </View>
     );
-
-    if (loading) {
-        return (
-            <View style={common_styles.container}>
-                <StatusBar barStyle="light-content" backgroundColor={colors.darkBrown} />
-                <LinearGradient
-                    colors={[colors.lightBrown, colors.mediumBrown, colors.darkBrown]}
-                    style={common_styles.backgroundTexture}
-                />
-                <View style={common_styles.loadingContainer}>
-                    <ActivityIndicator size="large" color={colors.vintageOrange} />
-                    <Text style={common_styles.loadingText}>Loading...</Text>
-                </View>
-            </View>
-        );
-    }
-
-    useEffect(() => {
-        if (!loading && !user) {
-          router.replace('/authentication');
-        }
-      }, [user, loading]);    
-
-    const loadFriendsData = async () => {
-        try {
-            const [requests, friendsList] = await Promise.all([
-                PostService.getPendingFriendRequests(user),
-                PostService.getFriends(user)
-            ]);
-            console.log('Friend requests:', requests);
-            setFriendRequests(requests);
-            console.log('Friends list:', friendsList);
-          setFriends(friendsList);
-        } catch (error) {
-          console.error('Error loading friends data:', error);
-        }
-    };
-
-    const searchUsers = async () => {
-        if (!searchTerm.trim()) {
-          setSearchResults([]);
-          return;
-        }
-        
-        try {
-          const results = await PostService.searchUsers(user, searchTerm.trim());
-          const resultsWithStatus = await Promise.all(
-            results.map(async (result) => {
-              const statusData = await PostService.getFriendshipStatus(user, result.id);
-              let friendshipStatus = 'none';
-              
-              if (statusData) {
-                if (statusData.status === 'accepted') {
-                  friendshipStatus = 'friends';
-                } else if (statusData.status === 'pending') {
-                  if (statusData.requester_id === user.id) {
-                    friendshipStatus = 'sent';
-                  } else {
-                    friendshipStatus = 'pending';
-                  }
-                }
-              }
-              
-              return { ...result, friendshipStatus };
-            })
-          );
-          console.log('Search results:', resultsWithStatus);
-          setSearchResults(resultsWithStatus);
-        } catch (error) {
-          console.error('Error searching users:', error);
-        }
-    };
-    
-
-    const sendFriendRequest = async (targetUserId) => {
-        console.log(`Sending friend request to user ID: ${targetUserId}`);
-        try {
-          const existingStatus = await PostService.getFriendshipStatus(user, targetUserId);
-          if (existingStatus) {
-            alert('Friend request already exists or you are already friends!');
-            return;
-          }
-          
-          setSearchResults(prevResults => 
-            prevResults.map(result => 
-              result.id === targetUserId 
-                ? { ...result, friendshipStatus: 'sent' }
-                : result
-            )
-          );
-          
-          await PostService.sendFriendRequest(user, targetUserId);
-          Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-        } catch (error) {
-          console.error('Error sending friend request:', error);
-          
-          setSearchResults(prevResults => 
-            prevResults.map(result => 
-              result.id === targetUserId 
-                ? { ...result, friendshipStatus: 'none' }
-                : result
-            )
-          );
-          
-          alert('Failed to send friend request');
-        }
-    };
-
-    const respondToRequest = async (requestId, response) => {
-        try {
-          await PostService.respondToFriendRequest(requestId, response);
-          Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-          loadFriendsData();
-        } catch (error) {
-          console.error('Error responding to friend request:', error);
-          alert('Failed to respond to friend request');
-        }
-    };      
       
     const getFilteredAchievements = () => {
         if (selectedDifficulty === 'all') {
@@ -218,7 +92,7 @@ export default function Profile() {
                     const uploadedImageUrl = await PostService.uploadProfilePicture(user, imageUri);
                     setProfilePicture(uploadedImageUrl);
                     
-                    await AsyncStorage.setItem(`profilePicture_${user.id}`, uploadedImageUrl);
+                    await AsyncStorage.setItem(`profilePicture_${userId}`, uploadedImageUrl);
                 } catch (error) {
                     console.error('Error uploading profile picture:', error);
                     alert('Failed to upload profile picture. Please try again.');
@@ -238,7 +112,7 @@ export default function Profile() {
             const storedStreak = params?.streak || 0;
             const streak = storedStreak ? parseInt(storedStreak, 10) : 0;
 
-            const posts = params.usersPosts;
+            const posts = await PostService.getUsersPosts(userId);
             let stats = {
                 totalChallenges: 0,
                 socialChallenges: 0,
@@ -251,7 +125,7 @@ export default function Profile() {
             };
 
             if (posts) {
-                const parsedPosts = JSON.parse(posts);
+                const parsedPosts = posts;
                 const completedChallenges = parsedPosts.filter(post => post.challenge);
                 
                 stats.totalChallenges = completedChallenges.length;
@@ -262,13 +136,13 @@ export default function Profile() {
                 stats.cowards = parsedPosts.filter(c => c.category === 'COWARD').length;
             }
 
-            const likedPosts = await PostService.getUserLikedPosts(user.id);
-            const commentedPosts = await PostService.getUserCommentedPosts(user.id);
+            const likedPosts = await PostService.getUserLikedPosts(userId);
+            const commentedPosts = await PostService.getUserCommentedPosts(userId);
             stats.likedPosts = likedPosts.length;
             stats.commentedPosts = commentedPosts.length;
-            const level = await PostService.getLevel(user.id);
+            const level = await PostService.getLevel(userId);
 
-            const userAchievements = await PostService.getAchievements(user.id);
+            const userAchievements = await PostService.getAchievements(userId);
             const allAchievements = await PostService.getAllAchievements();
             const updatedAchievements = userAchievements.map(ua => {
                 const achievement = allAchievements.find(a => a.id === ua.id);
@@ -282,23 +156,23 @@ export default function Profile() {
                 ...a,
                 unlocked: false
             })));
-            const savedProfilePicture = await AsyncStorage.getItem(`profilePicture_${user.id}`);
+            const savedProfilePicture = await AsyncStorage.getItem(`profilePicture_${userId}`);
             if (savedProfilePicture) {
                 setProfilePicture(savedProfilePicture);
             } else {
                 try {
-                    const serverProfilePicture = await PostService.getProfilePicture(user.id);
+                    const serverProfilePicture = await PostService.getProfilePicture(userId);
                     if (serverProfilePicture) {
                         setProfilePicture(serverProfilePicture);
-                        await AsyncStorage.setItem(`profilePicture_${user.id}`, serverProfilePicture);
+                        await AsyncStorage.setItem(`profilePicture_${userId}`, serverProfilePicture);
                     }
                 } catch (error) {
                     console.error('Error loading profile picture from server:', error);
                 }
             }
-            const commentsReceived = await PostService.getUserCommentsReceived(user.id);
-            const likesReceived = await PostService.getUserLikes(user.id);
-            const createdAt = await PostService.getUserJoinDate(user.id);
+            const commentsReceived = await PostService.getUserCommentsReceived(userId);
+            const likesReceived = await PostService.getUserLikes(userId);
+            const createdAt = await PostService.getUserJoinDate(userId);
             const accountAge = Math.floor((Date.now() - createdAt.getTime()) / (1000 * 60 * 60 * 24));
             setProfileData({
                 level,
@@ -307,7 +181,7 @@ export default function Profile() {
                 achievements: updatedAchievements,
                 commentsReceived,
                 likesReceived,
-                accountAge,
+                accountAge,  
             });
 
         } catch (error) {
@@ -327,7 +201,7 @@ export default function Profile() {
         Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
         router.push({
             pathname: '/gallery',
-            params: { userOnly: 'true' }
+            params: { userId: userId }
         });
     };
 
@@ -335,28 +209,6 @@ export default function Profile() {
         Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
         router.back();
     };
-
-    const getNextLevelProgress = () => {
-        const challengesInCurrentLevel = profileData.totalChallenges % 5;
-        return (challengesInCurrentLevel / 5) * 100;
-    };
-
-    const handleNameSave = async () => {
-        if (tempName.trim() && tempName !== username) {
-            try {
-                await PostService.updateUserName(user, tempName.trim());
-                setUsername(tempName.trim());
-            } catch (error) {
-                console.error('Error updating name:', error);
-            }
-        }
-        setIsEditingName(false);
-    };
-
-    const handleLogout = async () => {
-        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-        await logOut();
-    };      
 
     const renderAchievement = (achievement) => (
         <View 
@@ -404,8 +256,7 @@ export default function Profile() {
                 <View style={styles.profilePictureContainer}>
                     <TouchableOpacity 
                         style={styles.profilePictureContainer}
-                        onPress={selectProfilePicture}
-                        disabled={isUploadingImage}
+                        disabled={true}
                         activeOpacity={0.7}
                     >
                         {isUploadingImage ? (
@@ -426,38 +277,10 @@ export default function Profile() {
                             </View>
                         )}
                         <View style={styles.profilePictureTape} />
-                        <View style={styles.cameraOverlay}>
-                            <Text style={styles.cameraIcon}>📷</Text>
-                        </View>
                     </TouchableOpacity>
                     <View style={styles.profilePictureTape} />
                 </View>
-                
-                {isEditingName ? (
-                    <View style={styles.nameEditContainer}>
-                        <TextInput
-                            style={styles.nameInput}
-                            value={tempName}
-                            onChangeText={setTempName}
-                            onBlur={handleNameSave}
-                            onSubmitEditing={handleNameSave}
-                            autoFocus
-                            placeholder="Enter your name"
-                            placeholderTextColor={colors.peach}
-                            autoCapitalize="none"
-                            autoCorrect={false}
-                        />
-                    </View>
-                ) : (
-                    <TouchableOpacity onPress={() => {
-                        setTempName(username || '');
-                        setIsEditingName(true);
-                        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                    }}>
-                        <Text style={styles.userName}>{username || 'Wild Explorer'} ✏️</Text>
-                    </TouchableOpacity>
-                )}
-                
+                <Text style={styles.userName}>{username || 'Wild Explorer'}</Text>
                 <View style={styles.levelContainer}>
                     <Text style={styles.levelText}>Level {profileData.level}</Text>
                 </View>
@@ -593,205 +416,10 @@ export default function Profile() {
                     </View>
                 </View>
             </Modal>
-                <Modal
-                    visible={showFriendsModal}
-                    animationType="slide"
-                    presentationStyle="pageSheet"
-                    onRequestClose={() => setShowFriendsModal(false)}
-                    >
-                    <View style={styles.modalContainer}>
-                        <View style={styles.modalHeader}>
-                        <Text style={styles.modalTitle}>Friends</Text>
-                        <TouchableOpacity
-                            style={styles.closeButton}
-                            onPress={() => {
-                            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                            setShowFriendsModal(false);
-                            }}
-                        >
-                            <Text style={styles.closeButtonText}>✕</Text>
-                        </TouchableOpacity>
-                        </View>
-
-                        <View style={styles.tabContainer}>
-                        {['friends', 'requests', 'search'].map((tab) => (
-                            <TouchableOpacity
-                            key={tab}
-                            style={[styles.tab, activeTab === tab && styles.activeTab]}
-                            onPress={() => {
-                                setActiveTab(tab);
-                                if (tab === 'search') searchUsers();
-                            }}
-                            >
-                            <Text style={[styles.tabText, activeTab === tab && styles.activeTabText]}>
-                                {tab === 'friends' && `Friends (${friends.length})`}
-                                {tab === 'requests' && `Requests ${friendRequests.length > 0 ? `(${friendRequests.length})` : ''}`}
-                                {tab === 'search' && 'Add Friends'}
-                            </Text>
-                            </TouchableOpacity>
-                        ))}
-                        </View>
-
-                        <ScrollView style={styles.modalContent}>
-  {activeTab === 'search' && (
-    <View style={styles.searchContainer}>
-      <TextInput
-        style={styles.searchInput}
-        placeholder="Search by email or name..."
-        value={searchTerm}
-        onChangeText={setSearchTerm}
-        onSubmitEditing={searchUsers}
-        placeholderTextColor={colors.peach}
-        autoCapitalize="none"
-        autoCorrect={false}
-      />
-      <TouchableOpacity style={styles.searchButton} onPress={searchUsers}>
-        <Text style={styles.searchButtonText}>🔍</Text>
-      </TouchableOpacity>
-    </View>
-  )}
-
-  {activeTab === 'friends' && (
-    <View style={styles.friendsContainer}>
-      {friends.length === 0 ? (
-        <View style={styles.emptyState}>
-          <Text style={styles.emptyStateIcon}>👥</Text>
-          <Text style={styles.emptyStateText}>No friends yet</Text>
-          <Text style={styles.emptyStateSubtext}>Search for friends to get started!</Text>
-        </View>
-      ) : (
-        friends.map((friend) => (
-          <View key={friend.id} style={styles.userCard}>
-            <View style={styles.userAvatar}>
-              <Text style={styles.userAvatarText}>
-                {friend.name ? friend.friend.name.charAt(0).toUpperCase() : friend.friend.email.charAt(0).toUpperCase()}
-              </Text>
-            </View>
-            <View style={styles.userInfo}>
-              <Text style={styles.userName}>{friend.friend.name || friend.friend.email.split('@')[0]}</Text>
-              <Text style={styles.userEmail}>{friend.friend.email}</Text>
-            </View>
-            <View style={styles.friendBadge}>
-              <Text style={styles.friendBadgeText}>Friend</Text>
-            </View>
-          </View>
-        ))
-      )}
-    </View>
-  )}
-
-  {activeTab === 'requests' && (
-    <View style={styles.requestsContainer}>
-      {friendRequests.length === 0 ? (
-        <View style={styles.emptyState}>
-          <Text style={styles.emptyStateIcon}>📬</Text>
-          <Text style={styles.emptyStateText}>No friend requests</Text>
-          <Text style={styles.emptyStateSubtext}>You're all caught up!</Text>
-        </View>
-      ) : (
-        friendRequests.map((request) => (
-          <View key={request.id} style={styles.userCard}>
-            <View style={styles.userAvatar}>
-              <Text style={styles.userAvatarText}>
-                {request.requester.name ? request.requester.name.charAt(0).toUpperCase() : request.requester.email.charAt(0).toUpperCase()}
-              </Text>
-            </View>
-            <View style={styles.userInfo}>
-              <Text style={styles.userName}>{request.requester.name || request.requester.email.split('@')[0]}</Text>
-              <Text style={styles.userEmail}>{request.requester.email}</Text>
-            </View>
-            <View style={styles.requestActions}>
-              <TouchableOpacity
-                style={styles.acceptButton}
-                onPress={() => respondToRequest(request.id, 'accept')}
-              >
-                <Text style={styles.acceptButtonText}>✓</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={styles.declineButton}
-                onPress={() => respondToRequest(request.id, 'decline')}
-              >
-                <Text style={styles.declineButtonText}>✕</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-        ))
-      )}
-    </View>
-  )}
-
-  {activeTab === 'search' && searchResults.length > 0 && (
-    <View style={styles.searchResultsContainer}>
-      <Text style={styles.searchResultsTitle}>Search Results</Text>
-      {searchResults.map((result) => (
-        <View key={result.id} style={styles.userCard}>
-          <View style={styles.userAvatar}>
-            <Text style={styles.userAvatarText}>
-              {result.name ? result.name.charAt(0).toUpperCase() : result.email.charAt(0).toUpperCase()}
-            </Text>
-          </View>
-          <View style={styles.userInfo}>
-            <Text style={styles.userName}>{result.name || result.email.split('@')[0]}</Text>
-            <Text style={styles.userEmail}>{result.email}</Text>
-          </View>
-          <View style={styles.actionButton}>
-            {result.friendshipStatus === 'friends' ? (
-              <View style={styles.friendBadge}>
-                <Text style={styles.friendBadgeText}>Friend</Text>
-              </View>
-            ) : result.friendshipStatus === 'pending' || result.friendshipStatus === 'sent' ? (
-              <View style={styles.sentBadge}>
-                <Text style={styles.sentBadgeText}>Sent</Text>
-              </View>
-            ) : (
-              <TouchableOpacity
-                style={styles.addButton}
-                onPress={() => sendFriendRequest(result.id)}
-              >
-                <Text style={styles.addButtonText}>Add</Text>
-              </TouchableOpacity>
-            )}
-          </View>
-        </View>
-      ))}
-    </View>
-  )}
-
-  {activeTab === 'search' && searchTerm.trim() !== '' && searchResults.length === 0 && (
-    <View style={styles.emptyState}>
-      <Text style={styles.emptyStateIcon}>🔍</Text>
-      <Text style={styles.emptyStateText}>No users found</Text>
-      <Text style={styles.emptyStateSubtext}>Try searching with a different email or name</Text>
-    </View>
-  )}
-</ScrollView>
-                    </View>
-                    </Modal>
-
             <View style={styles.actionsSection}>  
                 <TouchableOpacity style={styles.galleryButton} onPress={navigateToGallery}>
-                    <Text style={styles.galleryButtonText}>🖼️ MY WALL</Text>
+                    <Text style={styles.galleryButtonText} numberOfLines={1} ellipsizeMode="clip">🖼️ USERS WALL</Text>
                     <View style={styles.galleryButtonDistress} />
-                </TouchableOpacity>
-                <TouchableOpacity 
-                    style={[styles.galleryButton, { marginTop: 15 }]} 
-                    onPress={() => {
-                        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                        loadFriendsData();
-                        setShowFriendsModal(true);
-                    }}
-                >
-                    <Text style={styles.galleryButtonText}>
-                        👥 FRIENDS {friendRequests.length > 0 && `(${friendRequests.length})`}
-                    </Text>
-                    {friendRequests.length > 0 && (
-                        <View style={styles.notificationBadge}>
-                        <Text style={styles.notificationText}>{friendRequests.length}</Text>
-                        </View>
-                    )}
-                </TouchableOpacity>
-                <TouchableOpacity style={styles.logoutButtonBottom} onPress={handleLogout}>
-                    <Text style={styles.logoutButtonBottomText}>🚪 LOG OUT</Text>
                 </TouchableOpacity>
                 <View style={[common_styles.tapeHorizontal, styles.bottomTape]} />
             </View>
@@ -1014,11 +642,12 @@ const styles = StyleSheet.create({
         ...shadows.lightShadow,
     },
     galleryButtonText: {
-        ...typography.headerMedium,
+        ...typography.headerSmall,
         color: colors.polaroidWhite,
         textAlign: 'center',
         fontWeight: '800',
         letterSpacing: 4,
+        overflow: 'hidden',
     },
     galleryButtonDistress: {
         position: 'absolute',
@@ -1170,23 +799,6 @@ const styles = StyleSheet.create({
         borderBottomColor: colors.vintageOrange,
         paddingVertical: 5,
         minWidth: 200,
-    },
-    logoutButtonBottom: {
-        backgroundColor: colors.vintageRed,
-        paddingVertical: 12,
-        paddingHorizontal: 30,
-        borderWidth: 2,
-        borderColor: colors.tan,
-        marginTop: 15,
-        transform: [{ rotate: '0.5deg' }],
-        ...shadows.lightShadow,
-    },
-    logoutButtonBottomText: {
-        ...typography.bodyMedium,
-        color: colors.polaroidWhite,
-        textAlign: 'center',
-        fontWeight: '700',
-        letterSpacing: 2,
     },
     profilePictureImage: {
         width: 100,

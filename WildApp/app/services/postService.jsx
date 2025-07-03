@@ -57,7 +57,8 @@ export class PostService {
           latitude,
           longitude,
           users_who_liked,
-          comments
+          comments,
+          owner
         `)
         .order('completed_at', { ascending: false })
         .limit(pageSize);
@@ -121,7 +122,7 @@ export class PostService {
     try {
       const currentTimestamp = new Date().toISOString();
       const payload = {
-        username: postData.username || 'anonymous',
+        username: user.name || 'anonymous',
         challenge: postData.challenge,
         category: postData.category,
         photo: postData.photo,
@@ -666,16 +667,16 @@ export class PostService {
     }
   }
 
-  static async getUsersPosts(user) {
+  static async getUsersPosts(userId) {
     try {
-      if (!user || !user.id) {
+      if (!userId) {
         console.error('User or user.id is undefined');
         return [];
       }
       const { data, error } = await supabase
         .from('posts')
         .select('*')
-        .eq('owner', user.id);
+        .eq('owner', userId);
 
       if (error) {
         console.error('Error fetching user posts:', error);
@@ -689,35 +690,35 @@ export class PostService {
     }
   }
 
-  static async getPostsByUsername (username) {
+  static async getPostsByUserId (userId) {
     try {
-      if (!username) {
-        console.error('Username is undefined');
+      if (!userId) {
+        console.error('User ID is undefined');
         return [];
       }
       const { data, error } = await supabase
         .from('posts')
         .select('*')
-        .eq('username', username);
+        .eq('owner', userId);
 
       if (error) {
-        console.error('Error fetching posts by username:', error);
+        console.error('Error fetching posts by user ID:', error);
         return [];
       }
 
       return data || [];
     } catch (error) {
-      console.error('Error fetching posts by username:', error);
+      console.error('Error fetching posts by User ID:', error);
       return [];
     }
   }
 
-  static async getAchievements(user) {
+  static async getAchievements(userId) {
     try {
       const { data, error } = await supabase
         .from('users')
         .select('achievements')
-        .eq('id', user.id)
+        .eq('id', userId)
         .single();
 
       if (error) {
@@ -807,12 +808,12 @@ export class PostService {
     }
   }
 
-  static async getLevel(user) {
+  static async getLevel(userId) {
     try {
       const { data, error } = await supabase
         .from('users')
         .select('level')
-        .eq('id', user.id)
+        .eq('id', userId)
         .single();
 
       if (error) {
@@ -827,12 +828,12 @@ export class PostService {
     }
   }
 
-  static async getProfilePicture(user) {
+  static async getProfilePicture(userId) {
     try {
       const { data, error } = await supabase
         .from('users')
         .select('profile_picture')
-        .eq('id', user.id)
+        .eq('id', userId)
         .single();
 
       if (error) {
@@ -895,12 +896,12 @@ export class PostService {
     }
   }
 
-  static async getName(user) {
+  static async getName(userId) {
     try {
       const { data, error } = await supabase
         .from('users')
         .select('name')
-        .eq('id', user.id)
+        .eq('id', userId)
         .single();
 
       if (error) {
@@ -917,7 +918,7 @@ export class PostService {
 
   static async addComment(postId, commentData, user) {
     console.log('Adding comment: ', commentData, 'to post:', postId, 'by user:', user?.id);
-    const username = await this.getName(user) || 'anonymous';
+    const username = await this.getName(user.id) || 'anonymous';
     const profilePicture = await this.getProfilePicture(user) || null;
     try {
       if (!user || !user.id) {
@@ -1253,16 +1254,12 @@ export class PostService {
     }
   }
 
-  static async getUserLikedPosts(user) {
+  static async getUserLikedPosts(userId) {
     try {
-      if (!user || !user.id) {
-        console.error('User or user.id is undefined');
-        return [];
-      }
       const { data, error } = await supabase
         .from('users')
         .select('liked_posts')
-        .eq('id', user.id)
+        .eq('id', userId)
         .single();
 
       if (error) {
@@ -1282,16 +1279,12 @@ export class PostService {
     }
   }
 
-  static async getUserCommentedPosts(user) {
+  static async getUserCommentedPosts(userId) {
     try {
-      if (!user || !user.id) {
-        console.error('User or user.id is undefined');
-        return [];
-      }
       const { data, error } = await supabase
         .from('users')
         .select('commented_posts')
-        .eq('id', user.id)
+        .eq('id', userId)
         .single();
 
       if (error) {
@@ -1311,16 +1304,12 @@ export class PostService {
     }
   }
 
-  static async getUserJoinDate(user) {
+  static async getUserJoinDate(userId) {
     try {
-      if (!user || !user.id) {
-        console.error('User or user.id is undefined');
-        return null;
-      }
       const { data, error } = await supabase
         .from('users')
         .select('created_at')
-        .eq('id', user.id)
+        .eq('id', userId)
         .single();
 
       if (error) {
@@ -1379,7 +1368,7 @@ export class NewChallengeService {
       if (!validCategories.includes(challengeData.category)) {
         throw new Error(`Invalid category. Must be one of: ${validCategories.join(', ')}`);
       }
-      const username = await PostService.getName(user)
+      const username = await PostService.getName(user.id)
 
       const { data, error } = await supabase
         .from('newchallengepost')
