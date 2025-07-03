@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Confirm Your Email</title>
+    <link href="https://fonts.googleapis.com/css2?family=Courier+Prime:wght@400;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --darkBrown: #2C1810;
+            --mediumBrown: #3D2914;
+            --lightBrown: #8B4513;
+            --tan: #D2B48C;
+            --cream: #F5F5DC;
+            --beige: #F0E68C;
+            --forestGreen: #228B22;
+            --oliveGreen: #6B8E23;
+            --polaroidWhite: #FEFEFE;
+            --deepShadow: #1A1A1A;
+            --softShadow: rgba(0,0,0,0.3);
+            --peach: #FFDAB9;
+            --darkGray: #666666;
+            --mediumGray: #CCCCCC;
+        }
+
+        body, html {
+            margin: 0;
+            padding: 0;
+            font-family: 'Courier Prime', 'Courier New', monospace;
+            background-color: var(--mediumBrown);
+            -webkit-text-size-adjust: 100%;
+            -ms-text-size-adjust: 100%;
+            width: 100% !important;
+        }
+
+        table {
+            border-collapse: collapse;
+            mso-table-lspace: 0pt;
+            mso-table-rspace: 0pt;
+        }
+
+        td {
+            padding: 0;
+        }
+
+        img {
+            border: 0;
+            outline: none;
+            text-decoration: none;
+            -ms-interpolation-mode: bicubic;
+        }
+
+        a {
+            text-decoration: none;
+        }
+
+        .polaroid-frame {
+            background-color: var(--polaroidWhite);
+            padding: 15px;
+            padding-bottom: 25px;
+            border: 1px solid var(--mediumGray);
+            box-shadow: 3px 6px 8px var(--softShadow);
+            max-width: 500px;
+            margin: 40px auto;
+            position: relative;
+            transform: rotate(-1deg);
+            -webkit-transform: rotate(-1deg);
+            -moz-transform: rotate(-1deg);
+            -o-transform: rotate(-1deg);
+            -ms-transform: rotate(-1deg);
+            box-sizing: border-box;
+        }
+
+        .tape-top-left, .tape-top-right {
+            position: absolute;
+            height: 16px;
+            width: 40px;
+            background-color: rgba(255,255,255,0.7);
+            border: 1px solid rgba(0,0,0,0.1);
+            border-radius: 2px;
+            opacity: 0.8;
+            z-index: 1;
+        }
+        .tape-top-left {
+            top: -8px;
+            left: 20px;
+            transform: rotate(-5deg);
+            -webkit-transform: rotate(-5deg);
+            -moz-transform: rotate(-5deg);
+            -o-transform: rotate(-5deg);
+            -ms-transform: rotate(-5deg);
+        }
+        .tape-top-right {
+            top: -8px;
+            right: 20px;
+            transform: rotate(8deg);
+            -webkit-transform: rotate(8deg);
+            -moz-transform: rotate(8deg);
+            -o-transform: rotate(8deg);
+            -ms-transform: rotate(8deg);
+        }
+
+        .header-large {
+            font-size: 32px;
+            font-weight: 900;
+            letter-spacing: 3px;
+            color: var(--tan);
+            text-align: center;
+            line-height: 1.2;
+            margin-bottom: 20px;
+        }
+
+        .body-medium {
+            font-size: 14px;
+            font-weight: 500;
+            line-height: 20px;
+            color: var(--darkBrown);
+            text-align: center;
+            margin-bottom: 25px;
+        }
+
+        .stamp {
+            font-size: 10px;
+            font-weight: 800;
+            letter-spacing: 2px;
+            color: var(--lightBrown);
+            text-transform: uppercase;
+            text-align: right;
+            padding-top: 10px;
+            transform: rotate(-1deg);
+            -webkit-transform: rotate(-1deg);
+            -moz-transform: rotate(-1deg);
+            -o-transform: rotate(-1deg);
+            -ms-transform: rotate(-1deg);
+        }
+
+        .primary-button {
+            display: inline-block;
+            background-color: var(--forestGreen);
+            padding: 16px 32px;
+            border: 3px solid var(--oliveGreen);
+            box-shadow: 2px 3px 4px var(--softShadow); 
+            transform: rotate(0.5deg); 
+            -webkit-transform: rotate(0.5deg);
+            -moz-transform: rotate(0.5deg);
+            -o-transform: rotate(0.5deg);
+            -ms-transform: rotate(0.5deg);
+            color: var(--polaroidWhite);
+            font-size: 18px;
+            font-weight: 700;
+            letter-spacing: 1px;
+            text-align: center;
+            text-decoration: none;
+            line-height: 1; 
+            white-space: nowrap;
+            border-radius: 4px; 
+        }
+
+        .button-container {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+
+        @media only screen and (max-width: 600px) {
+            .polaroid-frame {
+                margin: 20px auto;
+                padding: 10px;
+                padding-bottom: 20px;
+                width: 90% !important;
+            }
+            .header-large {
+                font-size: 24px;
+                letter-spacing: 2px;
+            }
+            .body-medium {
+                font-size: 13px;
+                line-height: 18px;
+            }
+            .primary-button {
+                padding: 12px 24px;
+                font-size: 16px;
+            }
+            .stamp {
+                font-size: 9px;
+                letter-spacing: 1px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <table width="100%" border="0" cellspacing="0" cellpadding="0" style="background-color: var(--mediumBrown);">
+        <tr>
+            <td align="center" style="padding: 20px;">
+                <table class="polaroid-frame" border="0" cellspacing="0" cellpadding="0">
+                    <tr>
+                        <td style="position: relative;">
+                            <div class="tape-top-left" style="position: absolute; top: -8px; left: 20px; height: 16px; width: 40px; background-color: rgba(255,255,255,0.7); border: 1px solid rgba(0,0,0,0.1); border-radius: 2px; opacity: 0.8; z-index: 1; transform: rotate(-5deg); -webkit-transform: rotate(-5deg); -moz-transform: rotate(-5deg); -o-transform: rotate(-5deg); -ms-transform: rotate(-5deg);"></div>
+                            <div class="tape-top-right" style="position: absolute; top: -8px; right: 20px; height: 16px; width: 40px; background-color: rgba(255,255,255,0.7); border: 1px solid rgba(0,0,0,0.1); border-radius: 2px; opacity: 0.8; z-index: 1; transform: rotate(8deg); -webkit-transform: rotate(8deg); -moz-transform: rotate(8deg); -o-transform: rotate(8deg); -ms-transform: rotate(8deg);"></div>
+
+                            <table width="100%" border="0" cellspacing="0" cellpadding="0">
+                                <tr>
+                                    <td align="center" style="padding: 20px 10px 10px 10px;">
+                                        <div class="header-large">WILD</div>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td align="center" style="padding: 0 20px 0 20px;">
+                                        <div class="body-medium">
+                                            Welcome! Please confirm your email address by clicking the button below. This helps us ensure your account security.
+                                        </div>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td align="center" style="padding: 10px 20px 20px 20px;">
+                                        <div class="button-container">
+                                            <a href="{{ .ConfirmationURL }}" class="primary-button">
+                                                Confirm Email
+                                            </a>
+                                        </div>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td align="right" style="padding: 0 15px 5px 15px;">
+                                        <div class="stamp">
+                                            TIME TO LIVE
+                                        </div>
+                                    </td>
+                                </tr>
+                            </table>
+                        </td>
+                    </tr>
+                </table>
+            </td>
+        </tr>
+    </table>
+</body>
+</html>
