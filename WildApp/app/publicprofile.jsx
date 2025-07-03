@@ -1,13 +1,11 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, ActivityIndicator, StatusBar, ScrollView, Image, Modal, TextInput } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { useApp } from './contexts/AppContext';
 import { common_styles, colors, typography, shadows } from './styles'; 
 import * as Haptics from 'expo-haptics';
 import { PostService } from './services/postService';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useFocusEffect } from '@react-navigation/native';
-import { LinearGradient } from 'expo-linear-gradient';
 import * as ImagePicker from 'expo-image-picker';
 
 export default function Profile() {
@@ -49,6 +47,13 @@ export default function Profile() {
         { label: '👍 Likes Received', value: profileData.likesReceived },
         { label: '📅 Account Age', value: profileData.accountAge },
     ];
+
+    useEffect(() => {
+        const loadUsername = async () => {
+            setUsername(await PostService.getName(userId));
+        };
+        loadUsername();
+    }, [userId]);
 
     const renderStatCard = (stat) => (
         <View key={stat.label} style={styles.statCard}>
