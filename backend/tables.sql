@@ -44,19 +44,6 @@ create table public.achievements (
   constraint achievements_pkey primary key (id)
 ) TABLESPACE pg_default;
 
-create table public.achievements_rows (
-  id uuid not null,
-  title text not null,
-  description text null,
-  icon text null,
-  category text null,
-  difficulty text null,
-  created_at timestamp with time zone null,
-  kind text not null,
-  target integer not null,
-  constraint achievements_rows_pkey primary key (id)
-) TABLESPACE pg_default;
-
 create table public.challenges (
   id serial not null,
   name text not null,

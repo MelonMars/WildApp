@@ -402,6 +402,7 @@ DECLARE
     liked_posts_count INTEGER;
     commented_posts_count INTEGER;
     challenges_created_count INTEGER;
+    days_since_creation INTEGER;
     achievement_record RECORD;
     user_achievements UUID[];
 BEGIN
@@ -416,6 +417,8 @@ BEGIN
     SELECT COALESCE(array_length(NEW.liked_posts, 1), 0) INTO liked_posts_count;
     SELECT COALESCE(array_length(NEW.commented_posts, 1), 0) INTO commented_posts_count;
     SELECT COALESCE(NEW.challenges_created, 0) INTO challenges_created_count;
+    
+    SELECT EXTRACT(EPOCH FROM (CURRENT_DATE - NEW.created_at)) / 86400 INTO days_since_creation;
     
     FOR achievement_record IN
         SELECT id, kind, target, category
@@ -449,6 +452,14 @@ BEGIN
                     WHERE id = NEW.id;
                     
                     RAISE NOTICE 'Challenges created achievement awarded: % to user %', achievement_record.id, NEW.id;
+                END IF;
+            WHEN 'milestone' THEN
+                IF days_since_creation >= achievement_record.target THEN
+                    UPDATE users
+                    SET achievements = array_append(achievements, achievement_record.id)
+                    WHERE id = NEW.id;
+                    
+                    RAISE NOTICE 'Milestone achievement awarded: % to user %', achievement_record.id, NEW.id;
                 END IF;
             ELSE
                 RAISE NOTICE 'Unknown achievement kind: %', achievement_record.kind;
@@ -498,4 +509,98 @@ begin
 
   return new;
 end;
+$$;
+
+-- CHECK LIKES ACHIEVEMENTS
+CREATE OR REPLACE FUNCTION check_likes_achievements()
+RETURNS TRIGGER
+LANGUAGE plpgsql
+AS $$
+DECLARE
+    achievement_record RECORD;
+    user_achievements UUID[];
+    post_owner UUID;
+    total_likes INTEGER; 
+BEGIN
+    SELECT owner INTO post_owner FROM posts WHERE id = NEW.id;
+    
+    SELECT achievements INTO user_achievements 
+    FROM users 
+    WHERE id = post_owner;
+    
+    IF user_achievements IS NULL THEN
+        user_achievements := ARRAY[]::UUID[];
+    END IF;
+    
+    SELECT COALESCE(SUM(likes), 0) INTO total_likes
+    FROM posts
+    WHERE owner = post_owner;
+    
+    FOR achievement_record IN
+        SELECT id, target
+        FROM achievements
+        WHERE kind = 'total_likes'
+    LOOP
+        IF achievement_record.id = ANY(user_achievements) THEN
+            CONTINUE;
+        END IF;
+        
+        IF total_likes >= achievement_record.target THEN
+            UPDATE users
+            SET achievements = array_append(achievements, achievement_record.id)
+            WHERE id = post_owner;
+            
+            RAISE NOTICE 'Total likes achievement awarded: % to user %', achievement_record.id, post_owner;
+        END IF;
+    END LOOP;
+    
+    RETURN NEW;
+END;
+$$;
+
+-- CHECK COMMENTS ACHIEVEMENTS
+CREATE OR REPLACE FUNCTION check_comments_achievements()
+RETURNS TRIGGER
+LANGUAGE plpgsql
+AS $$
+DECLARE
+    achievement_record RECORD;
+    user_achievements UUID[];
+    post_owner UUID;
+    total_comments INTEGER;
+BEGIN
+    SELECT owner INTO post_owner FROM posts WHERE id = NEW.id;
+    
+    SELECT achievements INTO user_achievements 
+    FROM users 
+    WHERE id = post_owner;
+    
+    IF user_achievements IS NULL THEN
+        user_achievements := ARRAY[]::UUID[];
+    END IF;
+    
+    SELECT COALESCE(SUM(jsonb_array_length(comments)), 0) INTO total_comments
+    FROM posts
+    WHERE owner = post_owner;
+    
+    FOR achievement_record IN
+        SELECT id, target
+        FROM achievements
+        WHERE kind = 'total_comments'
+    LOOP
+        IF achievement_record.id = ANY(user_achievements) THEN
+            CONTINUE;
+        END IF;
+        
+        IF total_comments >= achievement_record.target THEN
+            UPDATE users
+            SET achievements = array_append(achievements, achievement_record.id)
+            WHERE id = post_owner;
+            
+            RAISE NOTICE 'Total comments achievement awarded: % to user %', achievement_record.id, post_owner;
+        END IF;
+    END LOOP;
+    
+    RETURN NEW;
+END;
 $$;

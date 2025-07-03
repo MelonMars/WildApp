@@ -14,3 +14,9 @@ create trigger user_achievements_trigger
 after
 update on users for EACH row
 execute FUNCTION check_user_achievements ();
+
+CREATE TRIGGER check_likes_achievements_trigger 
+AFTER UPDATE ON posts 
+FOR EACH ROW 
+WHEN (OLD.likes IS DISTINCT FROM NEW.likes)
+EXECUTE FUNCTION check_likes_achievements();
