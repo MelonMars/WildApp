@@ -1272,11 +1272,12 @@ export class NewChallengeService {
       if (!validCategories.includes(challengeData.category)) {
         throw new Error(`Invalid category. Must be one of: ${validCategories.join(', ')}`);
       }
+      const username = await PostService.getName(user)
 
       const { data, error } = await supabase
         .from('newchallengepost')
         .insert([{
-          username: challengeData.username || 'anonymous',
+          username: username || 'anonymous',
           challenge_name: challengeData.challenge,
           category: challengeData.category,
           proof_photo: challengeData.photo,
@@ -1293,7 +1294,7 @@ export class NewChallengeService {
           local: challengeData.local || false,
           owner: user ? user.id : null
         }])
-        .select()
+        .select() 
         .single();
 
       if (error) {

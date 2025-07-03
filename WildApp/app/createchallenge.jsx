@@ -488,30 +488,6 @@ const CreateChallengePage = () => {
                     if (typeof Keyboard !== 'undefined') Keyboard.dismiss();
                  }}
                 />
-                
-                <TextInput
-                  style={[
-                    common_styles.textInput,
-                    {
-                      textAlign: 'center',
-                      marginBottom: 15,
-                      fontSize: 12,
-                    }
-                  ]}
-                  placeholder="Your name (optional)"
-                  placeholderTextColor={colors.darkGray}
-                  value={username}
-                  onChangeText={text => {
-                    setUsername(text);
-                    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                  }}
-                  maxLength={30}
-                  returnKeyType="done"
-                  onSubmitEditing={() => {
-                    if (typeof Keyboard !== 'undefined') Keyboard.dismiss();
-                  }}
-                />
-
                 <View style={common_styles.polaroidFooter}>
                   <Text style={common_styles.usernameStamp}>
                     {selectedCategory ? categories.find(c => c.id === selectedCategory)?.name : 'CATEGORY'}

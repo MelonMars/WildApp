@@ -734,6 +734,12 @@
                     <button type="submit" class="btn-create">🌟 Create Challenge</button>
                 </form>
             </div>
+            <div class="challenges-display">
+                <h2>🎯 Challenges</h2>
+                <div id="challengesContainer" class="submissions-grid">
+                    <!-- Challenges will be loaded here -->
+                </div>
+            </div>
         </div>
         <div id="achievements-tab" class="tab-content">
                 <div class="create-form">
@@ -772,11 +778,12 @@
                                 <label for="achievementKind">Achievement Type</label>
                                 <select id="achievementKind" required>
                                     <option value="">Select type</option>
-                                    <option value="count">Count (e.g., complete X challenges)</option>
+                                    <option value="post_count">Count (e.g., complete X challenges of type, type can be null)</option>
                                     <option value="streak">Streak (e.g., X days in a row)</option>
-                                    <option value="points">Points (e.g., earn X points)</option>
-                                    <option value="category">Category (e.g., complete X fitness challenges)</option>
+                                    <option value="liked_posts">Like Count</option>
                                     <option value="milestone">Milestone (e.g., join date anniversary)</option>
+                                    <option value="commented_posts">Comment Count</option>
+                                    <option value="challenges_created">Challenges Created</option>
                                 </select>
                             </div>
                             <div class="form-group">
@@ -791,7 +798,13 @@
                         <button type="submit" class="btn-create">🏆 Create Achievement</button>
                     </form>
                 </div>
-            </div>
+                <div class="achievements-display">
+                    <h2>🏆 Achievements</h2>
+                    <div id="achievementsContainer" class="submissions-grid">
+                        <!-- Achievements will be loaded here -->
+                    </div>
+                </div>
+        </div>
         </div> 
         <div id="editModal" class="edit-modal">
             <div class="edit-modal-content">
@@ -830,29 +843,22 @@
 
     <div id="notification" class="notification"></div>
 <script>
-// Add these variables at the top of your script section
 let currentEditingSubmission = null;
 
-// Add these new functions to your script section
 function switchTab(tabName) {
-    // Hide all tab contents
     document.querySelectorAll('.tab-content').forEach(content => {
         content.classList.remove('active');
     });
     
-    // Remove active class from all buttons
     document.querySelectorAll('.tab-btn').forEach(btn => {
         btn.classList.remove('active');
     });
     
-    // Show selected tab content
     document.getElementById(tabName + '-tab').classList.add('active');
     
-    // Add active class to clicked button
     event.target.classList.add('active');
 }
 
-// Challenge creation form handler
 document.getElementById('challengeForm').addEventListener('submit', async function(e) {
     e.preventDefault();
     
@@ -896,7 +902,6 @@ document.getElementById('challengeForm').addEventListener('submit', async functi
     }
 });
 
-// Achievement creation form handler
 document.getElementById('achievementForm').addEventListener('submit', async function(e) {
     e.preventDefault();
     
@@ -929,6 +934,7 @@ document.getElementById('achievementForm').addEventListener('submit', async func
         
         showNotification('🏆 Achievement created successfully!', 'success');
         this.reset();
+        loadAchievements(); 
         
     } catch (error) {
         console.error('Error creating achievement:', error);
@@ -957,7 +963,6 @@ function closeEditModal() {
     currentEditingSubmission = null;
 }
 
-// Edit form handler
 document.getElementById('editForm').addEventListener('submit', async function(e) {
     e.preventDefault();
     
@@ -981,7 +986,7 @@ document.getElementById('editForm').addEventListener('submit', async function(e)
         
         showNotification('✏️ Submission updated successfully!', 'success');
         closeEditModal();
-        loadData(); // Refresh the submissions
+        loadData();
         
     } catch (error) {
         console.error('Error updating submission:', error);
@@ -992,7 +997,6 @@ document.getElementById('editForm').addEventListener('submit', async function(e)
     }
 });
 
-// Close modal when clicking outside
 document.getElementById('editModal').addEventListener('click', function(e) {
     if (e.target === this) {
         closeEditModal();
@@ -1002,18 +1006,26 @@ document.getElementById('editModal').addEventListener('click', function(e) {
 
     <script>
         const supabaseUrl = 'https://xnjgkayzqcsgwfpzznrf.supabase.co';
-        const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhuamdrYXl6cWNzZ3dmcHp6bnJmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTAxMjEyMTUsImV4cCI6MjA2NTY5NzIxNX0.pgJsFRTIhlYfZ1k7yOAB89NiQAp1-z2tQXh2zZEXvzQ';
-        
+        let supabaseKey = '';
         let supabase = null;
         let currentSubmissions = [];
+        let currentAchievements = [];
+        let currentChallenges = [];
         let mapInstances = {};
 
         function initializeSupabase() {
-            if (typeof window.supabase !== 'undefined' && window.supabase.createClient) {
+            fetch('keys.json')
+            .then(res => res.json())
+            .then(keys => {
+                const supabaseKey = keys.admin;
+                if (!supabaseKey) {
+                console.error('Supabase key not found');
+                return;
+                }
                 supabase = window.supabase.createClient(supabaseUrl, supabaseKey);
-                return true;
-            }
-            return false;
+            })
+            .catch(err => console.error('Error loading keys:', err));
+            return supabase !== null;
         }
 
         function waitForSupabase() {
@@ -1041,6 +1053,7 @@ document.getElementById('editModal').addEventListener('click', function(e) {
             await waitForSupabase();
             if (supabase) {
                 loadData();
+                loadAchievements();
             } else {
                 showNotification('Failed to initialize Supabase client! 🐻', 'error');
             }
@@ -1155,6 +1168,66 @@ document.getElementById('editModal').addEventListener('click', function(e) {
                     </div>
                 </div>
             `).join('');
+        }
+
+        async function loadAchievements() {
+            try {
+                const {data, error} = await supabase
+                    .from('achievements')
+                    .select('*')
+                    .order('created_at', { ascending: false });
+                if (error) throw error;
+                currentAchievements = data || [];
+                renderAchievements();
+            } catch (error) {
+                console.error('Error loading achievements:', error);
+                showNotification('Failed to load achievements! 🐻', 'error');
+            }
+        }
+
+        function renderAchievements() {
+            const container = document.getElementById('achievementsContainer');
+            if (currentAchievements.length === 0) {
+                container.innerHTML = '<p>No achievements created yet. Start by creating one!</p>';
+                return;
+            }
+            container.innerHTML = currentAchievements.map(achievement => `
+                <div class="submission-card">
+                    <div class="submission-header">
+                        <div class="challenge-name">${escapeHtml(achievement.title)}</div>
+                        <div class="category-badge">${escapeHtml(achievement.category)}</div>
+                    </div>
+                    <div class="submission-content">
+                        <div class="user-info">
+                            <strong>🏆 Icon:</strong> ${escapeHtml(achievement.icon)}<br>
+                            <strong>📅 Created:</strong> ${formatDate(achievement.created_at)}<br>
+                            <strong>🎯 Target:</strong> ${achievement.target}
+                        </div>
+                        <div class="caption">
+                            "${escapeHtml(achievement.description)}"
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        async function loadChallenges() {
+            try {
+                const { data, error } = await supabase
+                    .from('challenges')
+                    .select('*')
+                    .order('created_at', { ascending: false });
+                if (error) throw error;
+                currentChallenges = data || [];
+                renderChallenges();
+            } catch (error) {
+                console.error('Error loading challenges:', error);
+                showNotification('Failed to load challenges! 🐻', 'error');
+            }
+        }
+
+        function renderChallenges() {
+
         }
 
         function toggleMap(submissionId) {
@@ -1291,7 +1364,10 @@ document.getElementById('editModal').addEventListener('click', function(e) {
                     completed_at: submission.completed_at,
                     timestamp: new Date().toISOString(),
                     likes: 0,
-                    comments: 0
+                    comments: 0,
+                    latitude: submission.latitude || null,
+                    longitude: submission.longitude || null,
+                    owner: submission.owner,
                 };
 
                 const { error: postError } = await supabase
@@ -1319,6 +1395,24 @@ document.getElementById('editModal').addEventListener('click', function(e) {
                     console.warn('Failed to create challenge:', challengeError);
                 }
 
+                if (submission.owner) {
+                    let challengesCreated = 0
+                    await supabase
+                        .from('users')
+                        .select('challenges_created')
+                        .eq('id', submission.owner)
+                        .single()
+                        .then(({ data }) => {
+                            challengesCreated = data.challenges_created || 0;
+                        });
+
+                    await supabase
+                        .from('users')
+                        .update({
+                            challenges_created: challengesCreated + 1
+                        })
+                        .eq('id', submission.owner);
+                }
             } catch (error) {
                 console.error('Error processing approved submission:', error);
             }
