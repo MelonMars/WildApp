@@ -213,7 +213,8 @@ export class PostService {
       }
   
       const result = data[0];
-  
+      const postOwner = result.owner_post
+
       console.log('Like toggled:', result);
       if (result.liked) {
         console.log('User liked the post');
@@ -228,6 +229,15 @@ export class PostService {
         if (updateError) {
           console.error('Error updating user liked posts:', updateError);
         }
+        const {error: updateOwnerError} = await supabase
+          .from('users')
+          .update({
+            likes_received: (await this.getUserLikes(postOwner) || 0) + 1
+          })
+          .eq('id', postOwner);
+        if (updateOwnerError) {
+          console.error('Error updating post owner likes:', updateOwnerError);
+        }
       } else {
         const likedPosts = await this.getUserLikedPosts(user);
         const { error: updateError } = await supabase
@@ -236,6 +246,18 @@ export class PostService {
             liked_posts: (likedPosts || []).filter(id => id !== postId)
           })
           .eq('id', user.id);
+        if (updateError) {
+          console.error('Error updating user liked posts:', updateError);
+        }
+        const {error: updateOwnerError} = await supabase
+          .from('users')
+          .update({
+            likes_received: (await this.getUserLikes(postOwner) || 1) - 1
+          })
+          .eq('id', postOwner);
+        if (updateOwnerError) {
+          console.error('Error updating post owner likes:', updateOwnerError);
+        }
       }
 
       return {
@@ -253,6 +275,26 @@ export class PostService {
     }
   }
 
+  static async getUserLikes(userId) {
+    try {
+      if (!userId) {
+        throw new Error('User ID is required to fetch user likes');
+      }
+      const { data, error } = await supabase
+        .from('users')
+        .select('likes_received')
+        .eq('id', userId)
+        .single();
+      if (error) {
+        console.error('Error fetching user likes:', error);
+        throw error;
+      }
+      return data.likes || 0;
+    } catch (error) {
+      console.error('Error fetching user likes:', error);
+      throw error;
+    }
+  }
   static async getUserInfo(userId) {
     try {
       if (!userId) {

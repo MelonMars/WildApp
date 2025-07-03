@@ -1,17 +1,19 @@
 -- LIKE OR UNLIKE POSTS
 create or replace function toggle_post_like(post_id integer, user_id uuid)
-returns TABLE(liked boolean, new_likes_count integer, users_who_liked uuid[])
+returns TABLE(liked boolean, new_likes_count integer, users_who_liked uuid[], owner_post uuid)
 language plpgsql
 as $$
 DECLARE
-  current_likes   integer;
-  user_already_liked boolean;
-  updated_users   uuid[];
+  current_likes        integer;
+  user_already_liked   boolean;
+  updated_users        uuid[];
+  post_owner      uuid;
 BEGIN
   SELECT 
     likes,
-    user_id = ANY(posts.users_who_liked)
-  INTO current_likes, user_already_liked
+    user_id = ANY(posts.users_who_liked),
+    owner
+  INTO current_likes, user_already_liked, post_owner
   FROM posts
   WHERE id = post_id;
 
@@ -29,7 +31,7 @@ BEGIN
     RETURNING posts.users_who_liked, posts.likes INTO updated_users, new_likes_count;
 
     RETURN QUERY 
-      SELECT false, new_likes_count, updated_users;
+      SELECT false, new_likes_count, updated_users, post_owner;
 
   ELSE
     UPDATE posts
@@ -41,7 +43,7 @@ BEGIN
     RETURNING posts.users_who_liked, posts.likes INTO updated_users, new_likes_count;
 
     RETURN QUERY
-      SELECT true, new_likes_count, updated_users;
+      SELECT true, new_likes_count, updated_users, post_owner;
   END IF;
 END;
 $$;
