@@ -505,95 +505,95 @@ export default function Profile() {
                     </View>
                 )}
             </TouchableOpacity>
-                <Modal
-                    visible={showStatsModal}
-                    animationType="slide"
-                    presentationStyle="pageSheet"
-                    onRequestClose={() => setShowStatsModal(false)}
-                >
-                    <View style={styles.modalContainer}>
-                        <View style={styles.modalHeader}>
-                            <Text style={styles.modalTitle}>All Stats</Text>
-                            <TouchableOpacity
-                                style={styles.closeButton}
-                                onPress={() => {
-                                    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                                    setShowStatsModal(false);
-                                }}
-                            >
-                                <Text style={styles.closeButtonText}>✕</Text>
-                            </TouchableOpacity>
-                        </View>
-                        <ScrollView
-                            style={styles.modalContent}
-                            showsVerticalScrollIndicator={false}
-                            contentContainerStyle={styles.modalAchievementsGrid}
+            <Modal
+                visible={showStatsModal}
+                animationType="slide"
+                presentationStyle="pageSheet"
+                onRequestClose={() => setShowStatsModal(false)}
+            >
+                <View style={styles.modalContainer}>
+                    <View style={styles.modalHeader}>
+                        <Text style={styles.modalTitle}>All Stats</Text>
+                        <TouchableOpacity
+                            style={styles.closeButton}
+                            onPress={() => {
+                                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                                setShowStatsModal(false);
+                            }}
                         >
-                            {statsData.map(renderStatCard)}
-                        </ScrollView>
+                            <Text style={styles.closeButtonText}>✕</Text>
+                        </TouchableOpacity>
                     </View>
-                </Modal>
-                <Modal
-                    visible={showAchievementsModal}
-                    animationType="slide"
-                    presentationStyle="pageSheet"
-                    onRequestClose={() => setShowAchievementsModal(false)}
-                >
-                    <View style={styles.modalContainer}>
-                        <View style={styles.modalHeader}>
-                            <Text style={styles.modalTitle}>Achievements</Text>
-                            <TouchableOpacity
-                                style={styles.closeButton}
-                                onPress={() => {
-                                    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                                    setShowAchievementsModal(false);
-                                }}
-                            >
-                                <Text style={styles.closeButtonText}>✕</Text>
-                            </TouchableOpacity>
-                        </View>
-
-                        <View style={styles.filterContainer}>
-                            <Text style={styles.filterLabel}>Filter by Difficulty:</Text>
-                            <View style={styles.filterButtons}>
-                                {['all', 'easy', 'medium', 'hard', 'expert'].map((difficulty) => (
-                                    <TouchableOpacity
-                                        key={difficulty}
-                                        style={[
-                                            styles.filterButton,
-                                            selectedDifficulty === difficulty && styles.filterButtonActive
-                                        ]}
-                                        onPress={() => {
-                                            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                                            setSelectedDifficulty(difficulty);
-                                        }}
-                                    >
-                                        <Text style={[
-                                            styles.filterButtonText,
-                                            selectedDifficulty === difficulty && styles.filterButtonTextActive
-                                        ]}>
-                                            {difficulty.charAt(0).toUpperCase() + difficulty.slice(1)}
-                                        </Text>
-                                    </TouchableOpacity>
-                                ))}
-                            </View>
-                        </View>
-
-                        <ScrollView 
-                            style={styles.modalContent}
-                            showsVerticalScrollIndicator={false}
-                            contentContainerStyle={styles.modalAchievementsGrid}
+                    <ScrollView
+                        style={styles.modalContent}
+                        showsVerticalScrollIndicator={false}
+                        contentContainerStyle={styles.modalAchievementsGrid}
+                    >
+                        {statsData.map(renderStatCard)}
+                    </ScrollView>
+                </View>
+            </Modal>
+            <Modal
+                visible={showAchievementsModal}
+                animationType="slide"
+                presentationStyle="pageSheet"
+                onRequestClose={() => setShowAchievementsModal(false)}
+            >
+                <View style={styles.modalContainer}>
+                    <View style={styles.modalHeader}>
+                        <Text style={styles.modalTitle}>Achievements</Text>
+                        <TouchableOpacity
+                            style={styles.closeButton}
+                            onPress={() => {
+                                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                                setShowAchievementsModal(false);
+                            }}
                         >
-                            {getFilteredAchievements().map(renderAchievement)}
-                        </ScrollView>
+                            <Text style={styles.closeButtonText}>✕</Text>
+                        </TouchableOpacity>
+                    </View>
 
-                        <View style={styles.modalFooter}>
-                            <Text style={styles.resultsCount}>
-                                Showing {getFilteredAchievements().length} of {profileData.achievements.length} achievements
-                            </Text>
+                    <View style={styles.filterContainer}>
+                        <Text style={styles.filterLabel}>Filter by Difficulty:</Text>
+                        <View style={styles.filterButtons}>
+                            {['all', 'easy', 'medium', 'hard', 'expert'].map((difficulty) => (
+                                <TouchableOpacity
+                                    key={difficulty}
+                                    style={[
+                                        styles.filterButton,
+                                        selectedDifficulty === difficulty && styles.filterButtonActive
+                                    ]}
+                                    onPress={() => {
+                                        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                                        setSelectedDifficulty(difficulty);
+                                    }}
+                                >
+                                    <Text style={[
+                                        styles.filterButtonText,
+                                        selectedDifficulty === difficulty && styles.filterButtonTextActive
+                                    ]}>
+                                        {difficulty.charAt(0).toUpperCase() + difficulty.slice(1)}
+                                    </Text>
+                                </TouchableOpacity>
+                            ))}
                         </View>
                     </View>
-                </Modal>
+
+                    <ScrollView 
+                        style={styles.modalContent}
+                        showsVerticalScrollIndicator={false}
+                        contentContainerStyle={styles.modalAchievementsGrid}
+                    >
+                        {getFilteredAchievements().map(renderAchievement)}
+                    </ScrollView>
+
+                    <View style={styles.modalFooter}>
+                        <Text style={styles.resultsCount}>
+                            Showing {getFilteredAchievements().length} of {profileData.achievements.length} achievements
+                        </Text>
+                    </View>
+                </View>
+            </Modal>
                 <Modal
                     visible={showFriendsModal}
                     animationType="slide"

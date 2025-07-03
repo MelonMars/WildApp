@@ -18,6 +18,7 @@ import {
   TextInput, 
   KeyboardAvoidingView,
   RefreshControl,
+  Modal,
 } from 'react-native';
 
 import { LinearGradient } from 'expo-linear-gradient';
@@ -66,6 +67,17 @@ export default function GalleryPage() {
     const { newPost, challenge, category, photo, caption, completedAt, timestamp, isNewPost, userOnly } = useLocalSearchParams();
     const { preloadedPosts, preloadedLastDoc, preloadedHasMore, preloadComplete, setPreloadedPosts } = useApp();
     const { user, loading: isAuthLoading } = useAuth();
+    const [comments, setComments] = useState([]);
+
+    useEffect(() => {
+        setComments(selectedPost && Array.isArray(selectedPost.comments) ? selectedPost.comments : []);
+    }, [selectedPost]);
+
+    const translateY = commentModalAnim.interpolate({
+        inputRange: [0, 1],
+        outputRange: [height, 0],
+        extrapolate: 'clamp',
+    });
 
     useEffect(() => {
         Animated.timing(fadeAnim, {
@@ -505,119 +517,6 @@ export default function GalleryPage() {
         }
     };    
 
-    const renderCommentModal = () => {
-        if (!showCommentModal || !selectedPost) return null;
-    
-        const translateY = commentModalAnim.interpolate({
-            inputRange: [0, 1],
-            outputRange: [height, 0],
-            extrapolate: 'clamp',
-        });
-        
-        const comments = Array.isArray(selectedPost.comments) ? selectedPost.comments : [];
-        
-        return (
-            <Animated.View 
-                style={[
-                    styles.commentModalOverlay,
-                    {
-                        opacity: commentModalAnim,
-                        transform: [{ translateY }]
-                    }
-                ]}
-            >
-                <TouchableOpacity 
-                    style={StyleSheet.absoluteFill}
-                    onPress={closeCommentModal}
-                    activeOpacity={1}
-                />
-                
-                <KeyboardAvoidingView 
-                    behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-                    style={styles.commentModalContainer}
-                >
-                    <View style={styles.commentModalContent}>
-                        <View style={styles.modalHandle} />
-                        
-                        <View style={styles.commentModalHeader}>
-                            <Text style={styles.commentModalTitle}>Comments</Text>
-                            <TouchableOpacity
-                                style={styles.commentCloseButton}
-                                onPress={closeCommentModal}
-                            >
-                                <Text style={styles.commentCloseButtonText}>×</Text>
-                            </TouchableOpacity>
-                        </View>
-                                                
-                        <ScrollView 
-                            style={styles.commentsList}
-                            showsVerticalScrollIndicator={false}
-                        >
-                            {comments.slice().reverse().map((comment, index) => (
-                                <View key={comment.id || index} style={styles.commentItem}>
-                                    <View style={styles.commentAvatar}>
-                                        {comment.profile_picture ? (
-                                            <Image
-                                                source={{ uri: comment.profile_picture }}
-                                                style={styles.commentAvatarImage}
-                                            />
-                                        ) : (
-                                            <Text style={styles.commentAvatarText}>
-                                                {comment.username.charAt(0).toUpperCase()}
-                                            </Text>
-                                        )}
-                                    </View>
-                                    <View style={styles.commentContent}>
-                                        <View style={styles.commentHeader}>
-                                            <Text style={styles.commentUsername}>@{comment.username}</Text>
-                                            <Text style={styles.commentTimestamp}>{comment.timestamp}</Text>
-                                        </View>
-                                        <Text style={styles.commentText}>{comment.text}</Text>
-                                    </View>
-                                </View>
-                            ))}
-                            
-                            {comments.length === 0 && (
-                                <View style={styles.noCommentsContainer}>
-                                    <Text style={styles.noCommentsText}>No comments yet</Text>
-                                    <Text style={styles.noCommentsSubText}>Be the first to comment!</Text>
-                                </View>
-                            )}
-                        </ScrollView>
-                        <View style={styles.commentInputContainer}>
-                            <TextInput
-                                ref={setCommentInputRef}
-                                style={styles.commentInput}
-                                placeholder="Add a comment..."
-                                placeholderTextColor={colors.dustyRed}
-                                value={commentText}
-                                onChangeText={setCommentText}
-                                multiline
-                                maxLength={200}
-                                autoCapitalize="none"
-                            />
-                            <TouchableOpacity
-                                style={[
-                                    styles.commentSubmitButton,
-                                    commentText.trim() ? styles.commentSubmitButtonActive : {}
-                                ]}
-                                onPress={handleSubmitComment}
-                                disabled={!commentText.trim()}
-                            >
-                                <Text style={[
-                                    styles.commentSubmitButtonText,
-                                    commentText.trim() ? styles.commentSubmitButtonTextActive : {}
-                                ]}>
-                                    POST
-                                </Text>
-                            </TouchableOpacity>
-                        </View>
-                    </View>
-                </KeyboardAvoidingView>
-            </Animated.View>
-        );
-    };
-    
     const renderPost = ({ item, index }) => {
         const inputRange = [-1, 0, (index + 1) * 200, (index + 2) * 200];
         const scale = scrollY.interpolate({
@@ -1135,7 +1034,112 @@ export default function GalleryPage() {
             </Animated.View>
             <View style={styles.bottomAccent} />
             {renderModal()}
-            {renderCommentModal()}
+            <Modal
+                visible={showCommentModal}
+                animationType="slide"
+                presentationStyle="overFullScreen"
+                onRequestClose={() => setShowCommentModal(false)}
+                transparent={true} 
+            >
+                <Animated.View
+                    style={[
+                        styles.commentModalOverlay,
+                        {
+                            opacity: commentModalAnim,
+                            transform: [{ translateY }]
+                        }
+                    ]}
+                >
+                    <TouchableOpacity
+                        style={StyleSheet.absoluteFill}
+                        onPress={closeCommentModal}
+                        activeOpacity={1}
+                    />
+
+                    <KeyboardAvoidingView
+                        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+                        style={styles.commentModalContainer}
+                    >
+                        <View style={styles.commentModalContent}>
+                            <View style={styles.modalHandle} />
+
+                            <View style={styles.commentModalHeader}>
+                                <Text style={styles.commentModalTitle}>Comments</Text>
+                                <TouchableOpacity
+                                    style={styles.commentCloseButton}
+                                    onPress={closeCommentModal}
+                                >
+                                    <Text style={styles.commentCloseButtonText}>×</Text>
+                                </TouchableOpacity>
+                            </View>
+
+                            <ScrollView
+                                style={styles.commentsList}
+                                showsVerticalScrollIndicator={false}
+                            >
+                                {comments.slice().reverse().map((comment, index) => (
+                                    <View key={comment.id || index} style={styles.commentItem}>
+                                        <View style={styles.commentAvatar}>
+                                            {comment.profile_picture ? (
+                                                <Image
+                                                    source={{ uri: comment.profile_picture }}
+                                                    style={styles.commentAvatarImage}
+                                                />
+                                            ) : (
+                                                <Text style={styles.commentAvatarText}>
+                                                    {comment.username.charAt(0).toUpperCase()}
+                                                </Text>
+                                            )}
+                                        </View>
+                                        <View style={styles.commentContent}>
+                                            <View style={styles.commentHeader}>
+                                                <Text style={styles.commentUsername}>@{comment.username}</Text>
+                                                <Text style={styles.commentTimestamp}>{comment.timestamp}</Text>
+                                            </View>
+                                            <Text style={styles.commentText}>{comment.text}</Text>
+                                        </View>
+                                    </View>
+                                ))}
+
+                                {comments.length === 0 && (
+                                    <View style={styles.noCommentsContainer}>
+                                        <Text style={styles.noCommentsText}>No comments yet</Text>
+                                        <Text style={styles.noCommentsSubText}>Be the first to comment!</Text>
+                                    </View>
+                                )}
+                            </ScrollView>
+                            <View style={styles.commentInputContainer}>
+                                <TextInput
+                                    ref={setCommentInputRef}
+                                    style={styles.commentInput}
+                                    placeholder="Add a comment..."
+                                    placeholderTextColor={colors.dustyRed}
+                                    value={commentText}
+                                    onChangeText={setCommentText}
+                                    multiline
+                                    maxLength={200}
+                                    autoCapitalize="none"
+                                />
+                                <TouchableOpacity
+                                    style={[
+                                        styles.commentSubmitButton,
+                                        commentText.trim() ? styles.commentSubmitButtonActive : {}
+                                    ]}
+                                    onPress={handleSubmitComment}
+                                    disabled={!commentText.trim()}
+                                >
+                                    <Text style={[
+                                        styles.commentSubmitButtonText,
+                                        commentText.trim() ? styles.commentSubmitButtonTextActive : {}
+                                    ]}>
+                                        POST
+                                    </Text>
+                                </TouchableOpacity>
+                            </View>
+                        </View>
+                    </KeyboardAvoidingView>
+                </Animated.View>
+            </Modal>
         </View>
     );
 }
