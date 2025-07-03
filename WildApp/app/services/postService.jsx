@@ -201,7 +201,7 @@ export class PostService {
       }
   
       console.log('Toggling like for post:', postId, 'by user:', user.id);
-      const earlyLikedPosts = await this.getUserLikedPosts(user);
+      const earlyLikedPosts = await this.getUserLikedPosts(user.id);
       console.log("Early liked posts: ", earlyLikedPosts);
       const { data, error } = await supabase
         .rpc('toggle_post_like', {
@@ -220,7 +220,7 @@ export class PostService {
       console.log('Like toggled:', result);
       if (result.liked) {
         console.log('User liked the post');
-        const likedPosts = await this.getUserLikedPosts(user);
+        const likedPosts = await this.getUserLikedPosts(user.id);
         console.log("Got liked posts: ", likedPosts);
         const { error: updateError } = await supabase
           .from('users')
@@ -241,7 +241,7 @@ export class PostService {
           console.error('Error updating post owner likes:', updateOwnerError);
         }
       } else {
-        const likedPosts = await this.getUserLikedPosts(user);
+        const likedPosts = await this.getUserLikedPosts(user.id);
         const { error: updateError } = await supabase
           .from('users')
           .update({

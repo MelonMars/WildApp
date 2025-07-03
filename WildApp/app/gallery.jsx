@@ -414,6 +414,8 @@ export default function GalleryPage() {
     };
 
     const renderNormalCaption = (item) => {
+        const isUsernameTooLong = item.username.length > 32;
+
         return (
             <View style={[common_styles.captionArea, styles.postCaptionArea]}>
                 <Text style={common_styles.challengeText} numberOfLines={2}>
@@ -423,8 +425,25 @@ export default function GalleryPage() {
                     "{item.caption}"
                 </Text>
                 <View style={common_styles.polaroidFooter}>
-                    <Text style={common_styles.usernameStamp}>@{item.username}</Text>
-                    <Text style={common_styles.dateStamp}>{formatTimeAgo(item.completed_at)}</Text>
+                    <Text style={[common_styles.usernameStamp, {
+                            flex: 1,
+                            marginLeft: -10,
+                            marginRight: 10,
+                        }]}
+                        numberOfLines={1}
+                        ellipsizeMode='tail'
+                        adjustsFontSizeToFit={true}
+                        minimumFontScale={0.7}>
+                            @{item.username}
+                    </Text>
+                    {!isUsernameTooLong && (
+                    <Text style={[common_styles.dateStamp, {
+                        overflow: 'hidden',
+                        flexShrink: 1,
+                        marginRight: -10,
+                    }]}
+                        numberOfLines={2}>{formatTimeAgo(item.completed_at)}</Text>
+                    )}
                 </View>
             </View>
         );
