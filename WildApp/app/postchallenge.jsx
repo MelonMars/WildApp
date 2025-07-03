@@ -254,20 +254,20 @@ const PostChallengePage = () => {
         console.error('Failed to save post to local storage:', error);
       }
 
-      const originalAchievements = await PostService.getAchievements(user);
-      const originalLevel = await PostService.getLevel(user);
+      const originalAchievements = await PostService.getAchievements(user.id);
+      const originalLevel = await PostService.getLevel(user.id);
       const newPost = await PostService.createPost(post, user);
       
       const { streakInfo } = newPost;
       const newStreak = streakInfo.newStreak || streakInfo.streakIncreased;
 
-      const newAchievements = await PostService.getAchievements(user);
+      const newAchievements = await PostService.getAchievements(user.id);
       const newAchievementsList = newAchievements.filter(ach =>
         !originalAchievements.some(orig => orig.id === ach.id)
-      );
+      ); 
       console.log('New achievements unlocked:', newAchievementsList);
       console.log('Post created successfully:', newPost);
-      const newLevel = await PostService.getLevel(user);
+      const newLevel = await PostService.getLevel(user.id);
       const levelChanged = newLevel !== originalLevel;
       console.log("New level: ", newLevel, "Level changed:", levelChanged);
       setIsPostLoading(false);

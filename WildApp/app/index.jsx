@@ -87,7 +87,7 @@ function HomeContent({ user }) {
 
     const getStreak = async () => {
         try {
-            const streak = await PostService.getStreak(user);
+            const streak = await PostService.getStreak(user.id);
             if (streak !== null) {
                 setStreak(streak);
             } else {

@@ -121,8 +121,9 @@ export class PostService {
   static async createPost(postData, user = null) {
     try {
       const currentTimestamp = new Date().toISOString();
+      const username = (await this.getName(user?.id)) || 'anonymous';
       const payload = {
-        username: user.name || 'anonymous',
+        username: username,
         challenge: postData.challenge,
         category: postData.category,
         photo: postData.photo,
@@ -130,7 +131,7 @@ export class PostService {
         completed_at: postData.completedAt || currentTimestamp,
         timestamp: postData.timestamp || currentTimestamp,
         likes: 0,
-        comments: 0,
+        comments: 0,  
         latitude: postData.latitude || null,
         longitude: postData.longitude || null,
         owner: user?.id || null,
@@ -152,7 +153,7 @@ export class PostService {
         .eq('id', user.id);
       if (updateError) throw updateError;
 
-      const oldStreak = await this.getStreak(user);
+      const oldStreak = await this.getStreak(user.id);
       const lastUpdated = await this.getStreakLastUpdated(user);
       const today = new Date().toISOString().slice(0, 10);
       const yesterday = new Date(Date.now() - 86400000).toISOString().slice(0, 10);
@@ -170,7 +171,7 @@ export class PostService {
       await this.updateStreak(user, currentStreak);
       await this.updateStreakLastUpdated(user, today);
 
-      const levelData = await this.getLevel(user);
+      const levelData = await this.getLevel(user.id);
 
       return {
         ...data,
@@ -626,12 +627,12 @@ export class PostService {
     }
   }
 
-  static async getStreak(user) {
+  static async getStreak(userId) {
     try {
       const { data, error } = await supabase
         .from('users')
         .select("streak")
-        .eq('id', user.id)
+        .eq('id', userId)
         .single();
 
       if (error) {

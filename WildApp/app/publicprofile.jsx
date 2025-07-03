@@ -114,8 +114,7 @@ export default function Profile() {
     const loadProfileData = async () => {
         setIsLoading(true);
         try {
-            const storedStreak = params?.streak || 0;
-            const streak = storedStreak ? parseInt(storedStreak, 10) : 0;
+            const streak = await PostService.getStreak(userId);
 
             const posts = await PostService.getUsersPosts(userId);
             let stats = {
