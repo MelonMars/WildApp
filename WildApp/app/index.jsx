@@ -12,6 +12,13 @@ import { LinearGradient } from 'expo-linear-gradient';
 
 export default function Home() {
     const { user, loading } = useAuth();
+    const router = useRouter(); 
+
+    useEffect(() => {
+        if (!user && !loading) {
+          router.replace('/authentication');
+        }
+    }, [user, loading, router]);
 
     if (loading) {
         return (
@@ -28,13 +35,6 @@ export default function Home() {
             </View>
         );
     }
-
-    useEffect(() => {
-        const router = useRouter();
-        if (!user && !loading) {
-          router.replace('/authentication');
-        }
-    }, [user, loading]); 
 
     return <HomeContent user={user} />;
 }
