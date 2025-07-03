@@ -199,6 +199,8 @@ export class PostService {
       }
   
       console.log('Toggling like for post:', postId, 'by user:', user.id);
+      const earlyLikedPosts = await this.getUserLikedPosts(user);
+      console.log("Early liked posts: ", earlyLikedPosts);
       const { data, error } = await supabase
         .rpc('toggle_post_like', {
           post_id: postId,
@@ -215,20 +217,23 @@ export class PostService {
       console.log('Like toggled:', result);
       if (result.liked) {
         console.log('User liked the post');
+        const likedPosts = await this.getUserLikedPosts(user);
+        console.log("Got liked posts: ", likedPosts);
         const { error: updateError } = await supabase
           .from('users')
           .update({
-            liked_posts: [...(user.liked_posts || []), postId]
+            liked_posts: [...(likedPosts || []), postId]
           })
           .eq('id', user.id);
         if (updateError) {
           console.error('Error updating user liked posts:', updateError);
         }
       } else {
+        const likedPosts = await this.getUserLikedPosts(user);
         const { error: updateError } = await supabase
           .from('users')
           .update({
-            liked_posts: (user.liked_posts || []).filter(id => id !== postId)
+            liked_posts: (likedPosts || []).filter(id => id !== postId)
           })
           .eq('id', user.id);
       }
@@ -684,7 +689,7 @@ export class PostService {
       }
 
       const { data: achievementData, error: achievementError } = await supabase
-        .from('achievements')
+        .from('achievements_rows')
         .select('*')
         .in('id', achievementIds);
 
@@ -703,7 +708,7 @@ export class PostService {
   static async getAllAchievements() {
     try {
       const { data, error } = await supabase
-        .from('achievements')
+        .from('achievements_rows')
         .select('*');
 
       if (error) {
@@ -910,10 +915,11 @@ export class PostService {
         console.error('Error updating post comments:', updateError);
         throw updateError;
       }
+      const commentedPosts = await this.getUserCommentedPosts(user);
       const {error: updateUserError} = await supabase
         .from('users')
         .update({
-          commented_posts: [...new Set([...user.commented_posts || [], postId])]
+          commented_posts: [...new Set([...commentedPosts || [], postId])]
         })
         .eq('id', user.id);
       if (updateUserError) {
@@ -1171,22 +1177,12 @@ export class PostService {
         return [];
       }
 
-      const likedPosts = data.liked_posts || [];
-      if (likedPosts.length === 0) {
+      if (!data || !Array.isArray(data.liked_posts)) {
+        console.warn('Liked posts data is invalid or empty:', data);
         return [];
       }
 
-      const { data: postsData, error: postsError } = await supabase
-        .from('posts')
-        .select('*')
-        .in('id', likedPosts);
-
-      if (postsError) {
-        console.error('Error fetching liked posts details:', postsError);
-        return [];
-      }
-
-      return postsData || [];
+      return data.liked_posts;
     } catch (error) {
       console.error('Error fetching user liked posts:', error);
       return [];
