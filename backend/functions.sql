@@ -163,10 +163,11 @@ begin
     return new; 
 end;
 $$;
-create or replace function award_achievements()
-returns trigger
-language plpgsql
-as $$
+
+CREATE OR REPLACE FUNCTION award_achievements()
+RETURNS TRIGGER
+LANGUAGE plpgsql
+AS $$
 DECLARE     
     user_post_count INTEGER;     
     category_post_count INTEGER;     
@@ -211,7 +212,7 @@ BEGIN
     
     FOR achievement_record IN          
         SELECT id, kind, target, category          
-        FROM achievements_rows      
+        FROM achievements      
     LOOP         
         IF achievement_record.id = ANY(user_achievements) THEN             
             CONTINUE;         
@@ -282,10 +283,10 @@ END;
 $$;
 
 -- CHECK USER ACHIEVEMENTS NOT FROM POSTS
-create or replace function check_all_achievements_for_user(user_uid uuid)
-returns void
-language plpgsql
-as $$
+CREATE OR REPLACE FUNCTION check_all_achievements_for_user(user_uid UUID)
+RETURNS VOID
+LANGUAGE plpgsql
+AS $$
 DECLARE
     user_post_count INTEGER;
     category_post_count INTEGER;
@@ -312,7 +313,7 @@ BEGIN
     
     FOR achievement_record IN 
         SELECT id, kind, target, category 
-        FROM achievements_rows 
+        FROM achievements 
     LOOP
         IF achievement_record.id = ANY(user_achievements) THEN
             CONTINUE;
@@ -393,10 +394,10 @@ END;
 $$;
 
 -- CHECK USER ACHIEVEMENTS
-create or replace function check_user_achievements()
-returns trigger
-language plpgsql
-as $$
+CREATE OR REPLACE FUNCTION check_user_achievements()
+RETURNS TRIGGER
+LANGUAGE plpgsql
+AS $$
 DECLARE
     liked_posts_count INTEGER;
     commented_posts_count INTEGER;
@@ -418,7 +419,7 @@ BEGIN
     
     FOR achievement_record IN
         SELECT id, kind, target, category
-        FROM achievements_rows
+        FROM achievements
     LOOP
         IF achievement_record.id = ANY(user_achievements) THEN
             CONTINUE;

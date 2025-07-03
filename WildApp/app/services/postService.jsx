@@ -689,7 +689,7 @@ export class PostService {
       }
 
       const { data: achievementData, error: achievementError } = await supabase
-        .from('achievements_rows')
+        .from('achievements')
         .select('*')
         .in('id', achievementIds);
 
@@ -708,7 +708,7 @@ export class PostService {
   static async getAllAchievements() {
     try {
       const { data, error } = await supabase
-        .from('achievements_rows')
+        .from('achievements')
         .select('*');
 
       if (error) {
