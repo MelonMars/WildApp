@@ -68,6 +68,8 @@ export default function GalleryPage() {
     const { preloadedPosts, preloadedLastDoc, preloadedHasMore, preloadComplete, setPreloadedPosts } = useApp();
     const { user, loading: isAuthLoading } = useAuth();
     const [comments, setComments] = useState([]);
+    const [likeAnimations, setLikeAnimations] = useState({});
+    const [openCommentsWithSelectedPost, setOpenCommentsWithSelectedPost] = useState(false);
 
     useEffect(() => {
         setComments(selectedPost && Array.isArray(selectedPost.comments) ? selectedPost.comments : []);
@@ -397,15 +399,25 @@ export default function GalleryPage() {
             ? item.comments.length 
             : (item.commentCount || item.comments || 0);
         
+        const likeAnim = likeAnimations[item.id];
+        const animatedScale = likeAnim ? likeAnim.interpolate({
+            inputRange: [0, 1],
+            outputRange: [1, 1.3],
+            extrapolate: 'clamp',
+        }) : 1;
+        
         return (
             <View style={common_styles.polaroidFooter}>
                 <TouchableOpacity 
                     onPress={() => handleLike(item).catch(e => console.error('HandleLike error', e))}
                     activeOpacity={0.7}
                 >
-                    <Text style={common_styles.likesCount}>
+                    <Animated.Text style={[
+                        common_styles.likesCount,
+                        { transform: [{ scale: animatedScale }] }
+                    ]}>
                         {item.likes ? `${item.likes} ${heart_emoji}` : `0 ${heart_emoji}`}
-                    </Text>
+                    </Animated.Text>
                 </TouchableOpacity>
                 <TouchableOpacity 
                     onPress={() => handleComment(item)}
@@ -419,10 +431,34 @@ export default function GalleryPage() {
         );
     };
     
+    const animateLike = (postId) => {
+        const newAnim = new Animated.Value(0);
+        setLikeAnimations(prev => ({ ...prev, [postId]: newAnim }));
+        
+        Animated.sequence([
+            Animated.timing(newAnim, {
+                toValue: 1,
+                duration: 150,
+                useNativeDriver: true,
+            }),
+            Animated.timing(newAnim, {
+                toValue: 0,
+                duration: 150,
+                useNativeDriver: true,
+            })
+        ]).start(() => {
+            setLikeAnimations(prev => {
+                const newAnimations = { ...prev };
+                delete newAnimations[postId];
+                return newAnimations;
+            });
+        });
+    };
 
     const handleLike = async (item) => {
         Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
         console.log('Like post:', item.id);
+        animateLike(item.id); 
         const res = await PostService.togglePostLike(item.id, user);
         if (res.success) {
           setPosts(posts => posts.map(p =>
@@ -435,6 +471,13 @@ export default function GalleryPage() {
                 ? { ...p, likes: res.newLikesCount, users_who_liked: res.usersWhoLiked }
                 : p
             ));
+            if (selectedPost && selectedPost.id === item.id) {
+                setSelectedPost(prev => ({
+                    ...prev,
+                    likes: res.newLikesCount,
+                    users_who_liked: res.usersWhoLiked
+                }));
+            }
         }
     };      
     
@@ -936,13 +979,16 @@ export default function GalleryPage() {
                             </>
                         )}
                         
+                        <View onStartShouldSetResponder={() => true}>
+                            {!isCowardPost && renderLikesAndComments(selectedPost)} 
+                        </View>
                         <View style={[common_styles.tapeHorizontal, common_styles.tapeTopLeft]} />
                         <View style={[common_styles.tapeHorizontal, common_styles.tapeBottomRight]} />
                     </View>
                 </Animated.View>
             </Animated.View>
         );
-    };
+    }; 
 
     const renderFooter = () => {
         if (!loading) return null;
