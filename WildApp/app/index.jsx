@@ -335,77 +335,52 @@ function HomeContent({ user }) {
     return (
         <View style={common_styles.container}>
             <View style={common_styles.backgroundTexture} />
-            <View style={styles.titleContainer}>
-                <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', marginLeft: 64 }}>
-                    <Text style={styles.title}>Wild</Text>
-                    {usersPosts && (<TouchableOpacity
-                        onPress={navigateToProfile}
-                        style={{ marginLeft: 16, padding: 8 }}
-                        accessibilityLabel="Profile"
-                    >
-                        <Text style={{ fontSize: 28 }}>👤</Text>
-                    </TouchableOpacity>)}
-                    {friendRequests > 0 && (
-                        <View style={{
-                            position: 'absolute',
-                            top: -5,
-                            right: -5,
-                            backgroundColor: 'red',
-                            borderRadius: 10,
-                            width: 20,
-                            height: 20,
-                            justifyContent: 'center',
-                            alignItems: 'center',
-                        }}>
-                            <Text style={{
-                                color: 'white',
-                                fontSize: 12,
-                                fontWeight: 'bold',
-                            }}>
-                                {friendRequests}
-                            </Text>
+                <View style={styles.titleContainer}>
+                    <View style={styles.headerRow}>
+                        <Text style={styles.title}>     Wild</Text>
+                        <View style={styles.iconContainer}>
+                            {usersPosts && (
+                                <TouchableOpacity
+                                    onPress={navigateToProfile}
+                                    style={styles.iconButton}
+                                    accessibilityLabel="Profile"
+                                >
+                                    <Text style={styles.iconText}>👤</Text>
+                                    {friendRequests > 0 && (
+                                        <View style={styles.notificationBadge}>
+                                            <Text style={styles.badgeText}>
+                                                {friendRequests}
+                                            </Text>
+                                        </View>
+                                    )}
+                                </TouchableOpacity>
+                            )}
+                            <TouchableOpacity
+                                onPress={navigateToInvite}
+                                style={styles.iconButton}
+                                accessibilityLabel="Invite Friends"
+                            >
+                                <Text style={styles.iconText}>📩</Text>
+                                {challengeInvites > 0 && (
+                                    <View style={styles.notificationBadge}>
+                                        <Text style={styles.badgeText}>
+                                            {challengeInvites}
+                                        </Text>
+                                    </View>
+                                )}
+                            </TouchableOpacity>
                         </View>
-                    )}
-                    <TouchableOpacity
-                        onPress={navigateToInvite}
-                        style={{ marginLeft: 16, padding: 8 }}
-                        accessibilityLabel="Invite Friends"
-                    >
-                        <Text style={{ fontSize: 28 }}>📩</Text>
-                    </TouchableOpacity>
-                    {challengeInvites > 0 && (
-                        <View style={{
-                            position: 'absolute',
-                            top: -5,
-                            right: -5,
-                            backgroundColor: 'red',
-                            borderRadius: 10,
-                            width: 20,
-                            height: 20,
-                            justifyContent: 'center',
-                            alignItems: 'center',
-                        }}>
-                            <Text style={{
-                                color: 'white',
-                                fontSize: 12,
-                                fontWeight: 'bold',
-                            }}>
-                                {challengeInvites}
-                            </Text>
+                    </View>
+                    <View style={styles.titleAccent} />
+                    <Text style={styles.subtitle}>Time to live.</Text>
+                    
+                    {isPreloading && (
+                        <View style={styles.preloadingContainer}>
+                            <ActivityIndicator size="small" color={colors.lightBrown} />
+                            <Text style={styles.preloadingText}>Loading gallery...</Text>
                         </View>
                     )}
                 </View>
-                <View style={styles.titleAccent} />
-                <Text style={styles.subtitle}>Time to live.</Text>
-                
-                {isPreloading && (
-                    <View style={styles.preloadingContainer}>
-                        <ActivityIndicator size="small" color={colors.lightBrown} />
-                        <Text style={styles.preloadingText}>Loading gallery...</Text>
-                    </View>
-                )}
-            </View>
-
             <View style={styles.todaysChallengeRow}>
                 <TouchableOpacity style={styles.todaysChallengeButton} onPress={handleTodaysChallenge}>
                     {!loadingTodaysChallenge ? (
@@ -457,7 +432,6 @@ function HomeContent({ user }) {
                     )}
                 </TouchableOpacity>
             </View>
-
             <View style={styles.bottomButtonContainer}>
                 <TouchableOpacity 
                     style={[
@@ -500,10 +474,10 @@ function HomeContent({ user }) {
 const styles = StyleSheet.create({
     titleContainer: {
         alignItems: 'center',
-        paddingTop: 80,
-        paddingBottom: 40,
-        paddingHorizontal: 30,
-    },
+        paddingTop: 60,
+        paddingBottom: 20,
+        paddingHorizontal: 20,
+    },    
     title: {
         ...typography.headerLarge,
         fontSize: 48,
@@ -608,7 +582,7 @@ const styles = StyleSheet.create({
     
     galleryButton: {
         backgroundColor: colors.lightBrown,
-        paddingVertical: 18,
+        paddingVertical: 9,
         paddingHorizontal: 50,
         borderWidth: 3,
         borderColor: colors.tan,
@@ -689,5 +663,63 @@ const styles = StyleSheet.create({
         color: colors.vintageOrange,
         letterSpacing: 1,
         flexShrink: 0,
-    }
+    },
+    headerRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        width: '100%',
+        marginBottom: 8,
+    },
+    iconContainer: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 8,
+    },
+    iconButton: {
+        padding: 4,
+        position: 'relative',
+    },
+    iconText: {
+        fontSize: 24,
+    },    
+    notificationBadge: {
+        position: 'absolute',
+        top: -2,
+        right: -2,
+        backgroundColor: 'red',
+        borderRadius: 10,
+        width: 18,
+        height: 18,
+        justifyContent: 'center',
+        alignItems: 'center',
+    },
+    badgeText: {
+        color: 'white',
+        fontSize: 10,
+        fontWeight: 'bold',
+    },    
+    middleButtonsContainer: {
+        justifyContent: 'center',
+        paddingHorizontal: 30,
+        paddingVertical: 20,
+        gap: 15,
+    },    
+    categoryButton: {
+        ...common_styles.primaryButton,
+        backgroundColor: colors.forestGreen,
+        paddingVertical: 18,
+        paddingHorizontal: 20,
+        borderWidth: 3,
+        borderColor: colors.oliveGreen,
+        position: 'relative',
+        transform: [{ rotate: '0.5deg' }],
+        width: '100%',
+        height: 55,
+    },    
+    categoryButtonMiddle: {
+        transform: [{ rotate: '-1deg' }],
+        backgroundColor: colors.oliveGreen,
+        borderColor: colors.mossGreen,
+    },
 });
