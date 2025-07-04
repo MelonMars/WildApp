@@ -41,6 +41,10 @@ export default function Profile() {
 
     const [isLoading, setIsLoading] = useState(true);
     const [showStatsModal, setShowStatsModal] = useState(false);
+    const [showLeaderboardModal, setShowLeaderboardModal] = useState(false)
+    const [leaderboardsByType, setLeaderboardsByType] = useState({});
+    const [leaderboardLoading, setLeaderboardLoading] = useState(false);
+    const [selectedLeaderboardType, setSelectedLeaderboardType] = useState('achievements');
 
     const statsData = [
         { label: '🔥 Streak', value: profileData.streak },
@@ -316,9 +320,59 @@ export default function Profile() {
         }
     };
 
+    const loadLeaderboardData = async () => {
+        setLeaderboardLoading(true);
+        try {
+            const leaderboardTypes = [
+                { type: 'achievements', category: null },
+                { type: 'streaks', category: null },
+                { type: 'challenges_overall', category: null },
+                { type: 'challenges_social', category: 'social' },
+                { type: 'challenges_creative', category: 'creative' },
+                { type: 'challenges_adventure', category: 'adventure' }
+            ];
+    
+            const allData = {};
+            
+            for (const { type, category } of leaderboardTypes) {
+                try {
+                    const data = await PostService.getLeaderboardData(type, category, 20);
+                    allData[type] = data;
+                } catch (error) {
+                    console.error(`Error loading ${type} leaderboard:`, error);
+                    allData[type] = [];
+                }
+            }
+    
+            setLeaderboardsByType(allData);
+        } catch (error) {
+            console.error('Error loading leaderboard data:', error);
+            alert('Failed to load leaderboard data. Please try again later.');
+        } finally {
+            setLeaderboardLoading(false);
+        }
+    };
+
+    const getCurrentLeaderboardData = () => {
+        return leaderboardsByType[selectedLeaderboardType] || [];
+    };
+
+    const getLeaderboardTypeInfo = (type) => {
+        const typeMap = {
+            achievements: { name: 'Achievements', icon: '🏆', color: '#FFD700' },
+            streaks: { name: 'Streaks', icon: '🔥', color: '#FF6B35' },
+            challenges_overall: { name: 'Overall', icon: '⭐', color: '#4ECDC4' },
+            challenges_social: { name: 'Social', icon: '👥', color: '#45B7D1' },
+            challenges_creative: { name: 'Creative', icon: '🎨', color: '#96CEB4' },
+            challenges_adventure: { name: 'Adventure', icon: '🏔️', color: '#FFEAA7' }
+        };
+        return typeMap[type] || { name: type, icon: '📊', color: '#BDC3C7' };
+    };    
+
     useFocusEffect(
         useCallback(() => {
             loadProfileData();
+            loadLeaderboardData();
         }, [])
     );
 
@@ -626,7 +680,7 @@ export default function Profile() {
                     </View>
                 </View>
             </Modal>
-                <Modal
+            <Modal
                     visible={showFriendsModal}
                     animationType="slide"
                     presentationStyle="pageSheet"
@@ -666,141 +720,276 @@ export default function Profile() {
                         </View>
 
                         <ScrollView style={styles.modalContent}>
-  {activeTab === 'search' && (
-    <View style={styles.searchContainer}>
-      <TextInput
-        style={styles.searchInput}
-        placeholder="Search by email or name..."
-        value={searchTerm}
-        onChangeText={setSearchTerm}
-        onSubmitEditing={searchUsers}
-        placeholderTextColor={colors.peach}
-        autoCapitalize="none"
-        autoCorrect={false}
-      />
-      <TouchableOpacity style={styles.searchButton} onPress={searchUsers}>
-        <Text style={styles.searchButtonText}>🔍</Text>
-      </TouchableOpacity>
-    </View>
-  )}
+                            {activeTab === 'search' && (
+                                <View style={styles.searchContainer}>
+                                <TextInput
+                                    style={styles.searchInput}
+                                    placeholder="Search by email or name..."
+                                    value={searchTerm}
+                                    onChangeText={setSearchTerm}
+                                    onSubmitEditing={searchUsers}
+                                    placeholderTextColor={colors.peach}
+                                    autoCapitalize="none"
+                                    autoCorrect={false}
+                                />
+                                <TouchableOpacity style={styles.searchButton} onPress={searchUsers}>
+                                    <Text style={styles.searchButtonText}>🔍</Text>
+                                </TouchableOpacity>
+                                </View>
+                            )}
 
-  {activeTab === 'friends' && (
-    <View style={styles.friendsContainer}>
-      {friends.length === 0 ? (
-        <View style={styles.emptyState}>
-          <Text style={styles.emptyStateIcon}>👥</Text>
-          <Text style={styles.emptyStateText}>No friends yet</Text>
-          <Text style={styles.emptyStateSubtext}>Search for friends to get started!</Text>
-        </View>
-      ) : (
-        friends.map((friend) => (
-          <View key={friend.id} style={styles.userCard}>
-            <View style={styles.userAvatar}>
-              <Text style={styles.userAvatarText}>
-                {friend.name ? friend.friend.name.charAt(0).toUpperCase() : friend.friend.email.charAt(0).toUpperCase()}
-              </Text>
-            </View>
-            <View style={styles.userInfo}>
-              <Text style={styles.userName}>{friend.friend.name || friend.friend.email.split('@')[0]}</Text>
-              <Text style={styles.userEmail}>{friend.friend.email}</Text>
-            </View>
-            <View style={styles.friendBadge}>
-              <Text style={styles.friendBadgeText}>Friend</Text>
-            </View>
-          </View>
-        ))
-      )}
-    </View>
-  )}
+                            {activeTab === 'friends' && (
+                                <View style={styles.friendsContainer}>
+                                {friends.length === 0 ? (
+                                    <View style={styles.emptyState}>
+                                    <Text style={styles.emptyStateIcon}>👥</Text>
+                                    <Text style={styles.emptyStateText}>No friends yet</Text>
+                                    <Text style={styles.emptyStateSubtext}>Search for friends to get started!</Text>
+                                    </View>
+                                ) : (
+                                    friends.map((friend) => (
+                                    <View key={friend.id} style={styles.userCard}>
+                                        <View style={styles.userAvatar}>
+                                        <Text style={styles.userAvatarText}>
+                                            {friend.name ? friend.friend.name.charAt(0).toUpperCase() : friend.friend.email.charAt(0).toUpperCase()}
+                                        </Text>
+                                        </View>
+                                        <View style={styles.userInfo}>
+                                        <Text style={styles.userName}>{friend.friend.name || friend.friend.email.split('@')[0]}</Text>
+                                        <Text style={styles.userEmail}>{friend.friend.email}</Text>
+                                        </View>
+                                        <View style={styles.friendBadge}>
+                                        <Text style={styles.friendBadgeText}>Friend</Text>
+                                        </View>
+                                    </View>
+                                    ))
+                                )}
+                                </View>
+                            )}
 
-  {activeTab === 'requests' && (
-    <View style={styles.requestsContainer}>
-      {friendRequests.length === 0 ? (
-        <View style={styles.emptyState}>
-          <Text style={styles.emptyStateIcon}>📬</Text>
-          <Text style={styles.emptyStateText}>No friend requests</Text>
-          <Text style={styles.emptyStateSubtext}>You're all caught up!</Text>
-        </View>
-      ) : (
-        friendRequests.map((request) => (
-          <View key={request.id} style={styles.userCard}>
-            <View style={styles.userAvatar}>
-              <Text style={styles.userAvatarText}>
-                {request.requester.name ? request.requester.name.charAt(0).toUpperCase() : request.requester.email.charAt(0).toUpperCase()}
-              </Text>
-            </View>
-            <View style={styles.userInfo}>
-              <Text style={styles.userName}>{request.requester.name || request.requester.email.split('@')[0]}</Text>
-              <Text style={styles.userEmail}>{request.requester.email}</Text>
-            </View>
-            <View style={styles.requestActions}>
-              <TouchableOpacity
-                style={styles.acceptButton}
-                onPress={() => respondToRequest(request.id, 'accept')}
-              >
-                <Text style={styles.acceptButtonText}>✓</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={styles.declineButton}
-                onPress={() => respondToRequest(request.id, 'decline')}
-              >
-                <Text style={styles.declineButtonText}>✕</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-        ))
-      )}
-    </View>
-  )}
+                            {activeTab === 'requests' && (
+                                <View style={styles.requestsContainer}>
+                                {friendRequests.length === 0 ? (
+                                    <View style={styles.emptyState}>
+                                    <Text style={styles.emptyStateIcon}>📬</Text>
+                                    <Text style={styles.emptyStateText}>No friend requests</Text>
+                                    <Text style={styles.emptyStateSubtext}>You're all caught up!</Text>
+                                    </View>
+                                ) : (
+                                    friendRequests.map((request) => (
+                                    <View key={request.id} style={styles.userCard}>
+                                        <View style={styles.userAvatar}>
+                                        <Text style={styles.userAvatarText}>
+                                            {request.requester.name ? request.requester.name.charAt(0).toUpperCase() : request.requester.email.charAt(0).toUpperCase()}
+                                        </Text>
+                                        </View>
+                                        <View style={styles.userInfo}>
+                                        <Text style={styles.userName}>{request.requester.name || request.requester.email.split('@')[0]}</Text>
+                                        <Text style={styles.userEmail}>{request.requester.email}</Text>
+                                        </View>
+                                        <View style={styles.requestActions}>
+                                        <TouchableOpacity
+                                            style={styles.acceptButton}
+                                            onPress={() => respondToRequest(request.id, 'accept')}
+                                        >
+                                            <Text style={styles.acceptButtonText}>✓</Text>
+                                        </TouchableOpacity>
+                                        <TouchableOpacity
+                                            style={styles.declineButton}
+                                            onPress={() => respondToRequest(request.id, 'decline')}
+                                        >
+                                            <Text style={styles.declineButtonText}>✕</Text>
+                                        </TouchableOpacity>
+                                        </View>
+                                    </View>
+                                    ))
+                                )}
+                                </View>
+                            )}
 
-  {activeTab === 'search' && searchResults.length > 0 && (
-    <View style={styles.searchResultsContainer}>
-      <Text style={styles.searchResultsTitle}>Search Results</Text>
-      {searchResults.map((result) => (
-        <View key={result.id} style={styles.userCard}>
-          <View style={styles.userAvatar}>
-            <Text style={styles.userAvatarText}>
-              {result.name ? result.name.charAt(0).toUpperCase() : result.email.charAt(0).toUpperCase()}
-            </Text>
-          </View>
-          <View style={styles.userInfo}>
-            <Text style={styles.userName}>{result.name || result.email.split('@')[0]}</Text>
-            <Text style={styles.userEmail}>{result.email}</Text>
-          </View>
-          <View style={styles.actionButton}>
-            {result.friendshipStatus === 'friends' ? (
-              <View style={styles.friendBadge}>
-                <Text style={styles.friendBadgeText}>Friend</Text>
-              </View>
-            ) : result.friendshipStatus === 'pending' || result.friendshipStatus === 'sent' ? (
-              <View style={styles.sentBadge}>
-                <Text style={styles.sentBadgeText}>Sent</Text>
-              </View>
-            ) : (
-              <TouchableOpacity
-                style={styles.addButton}
-                onPress={() => sendFriendRequest(result.id)}
-              >
-                <Text style={styles.addButtonText}>Add</Text>
-              </TouchableOpacity>
-            )}
-          </View>
-        </View>
-      ))}
-    </View>
-  )}
+                            {activeTab === 'search' && searchResults.length > 0 && (
+                                <View style={styles.searchResultsContainer}>
+                                <Text style={styles.searchResultsTitle}>Search Results</Text>
+                                {searchResults.map((result) => (
+                                    <View key={result.id} style={styles.userCard}>
+                                    <View style={styles.userAvatar}>
+                                        <Text style={styles.userAvatarText}>
+                                        {result.name ? result.name.charAt(0).toUpperCase() : result.email.charAt(0).toUpperCase()}
+                                        </Text>
+                                    </View>
+                                    <View style={styles.userInfo}>
+                                        <Text style={styles.userName}>{result.name || result.email.split('@')[0]}</Text>
+                                        <Text style={styles.userEmail}>{result.email}</Text>
+                                    </View>
+                                    <View style={styles.actionButton}>
+                                        {result.friendshipStatus === 'friends' ? (
+                                        <View style={styles.friendBadge}>
+                                            <Text style={styles.friendBadgeText}>Friend</Text>
+                                        </View>
+                                        ) : result.friendshipStatus === 'pending' || result.friendshipStatus === 'sent' ? (
+                                        <View style={styles.sentBadge}>
+                                            <Text style={styles.sentBadgeText}>Sent</Text>
+                                        </View>
+                                        ) : (
+                                        <TouchableOpacity
+                                            style={styles.addButton}
+                                            onPress={() => sendFriendRequest(result.id)}
+                                        >
+                                            <Text style={styles.addButtonText}>Add</Text>
+                                        </TouchableOpacity>
+                                        )}
+                                    </View>
+                                    </View>
+                                ))}
+                                </View>
+                            )}
 
-  {activeTab === 'search' && searchTerm.trim() !== '' && searchResults.length === 0 && (
-    <View style={styles.emptyState}>
-      <Text style={styles.emptyStateIcon}>🔍</Text>
-      <Text style={styles.emptyStateText}>No users found</Text>
-      <Text style={styles.emptyStateSubtext}>Try searching with a different email or name</Text>
-    </View>
-  )}
-</ScrollView>
+                            {activeTab === 'search' && searchTerm.trim() !== '' && searchResults.length === 0 && (
+                                <View style={styles.emptyState}>
+                                <Text style={styles.emptyStateIcon}>🔍</Text>
+                                <Text style={styles.emptyStateText}>No users found</Text>
+                                <Text style={styles.emptyStateSubtext}>Try searching with a different email or name</Text>
+                                </View>
+                            )}
+                            </ScrollView>
                     </View>
-                    </Modal>
+            </Modal>
+            <Modal
+                visible={showLeaderboardModal}
+                animationType='slide'
+                presentationStyle='pageSheet'
+                onRequestClose={() => setShowLeaderboardModal(false)}
+            >
+                <View style={styles.modalContainer}>
+                    <View style={styles.modalHeader}>
+                        <Text style={styles.modalTitle}>Leaderboard</Text>
+                        <TouchableOpacity
+                            style={styles.closeButton}
+                            onPress={() => {
+                                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                                setShowLeaderboardModal(false);
+                            }}
+                        >
+                            <Text style={styles.closeButtonText}>✕</Text>
+                        </TouchableOpacity>
+                    </View>
 
+                    <View style={styles.filterContainer}>
+                        <Text style={styles.filterLabel}>Filter by Type:</Text>
+                        <ScrollView 
+                            horizontal 
+                            showsHorizontalScrollIndicator={false}
+                            contentContainerStyle={styles.typeToggleScrollContent}
+                            style={styles.filterButtons}
+                        >
+                            {Object.keys(leaderboardsByType).map((type) => {
+                                const typeInfo = getLeaderboardTypeInfo(type);
+                                const isSelected = selectedLeaderboardType === type;
+                                
+                                return (
+                                    <TouchableOpacity
+                                        key={type}
+                                        style={[
+                                            styles.filterButton,
+                                            isSelected && styles.filterButtonActive,
+                                            {
+                                                marginRight: 5,
+                                            }
+                                        ]}
+                                        onPress={() => {
+                                            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                                            setSelectedLeaderboardType(type);
+                                        }}
+                                    >
+                                        <Text style={[
+                                            styles.filterButtonText,
+                                            isSelected && styles.filterButtonTextActive
+                                        ]}>
+                                            {typeInfo.icon} {typeInfo.name}
+                                        </Text>
+                                    </TouchableOpacity>
+                                );
+                            })}
+                        </ScrollView>
+                    </View>
+
+                    <ScrollView
+                        style={styles.modalContent}
+                        showsVerticalScrollIndicator={false}
+                        contentContainerStyle={styles.modalLeaderboardGrid}
+                    >
+                        {loading ? (
+                            <View style={styles.loadingState}>
+                                <Text style={styles.loadingText}>Loading leaderboard...</Text>
+                            </View>
+                        ) : getCurrentLeaderboardData().length === 0 ? (
+                            <View style={styles.emptyState}>
+                                <Text style={styles.emptyStateIcon}>📊</Text>
+                                <Text style={styles.emptyStateText}>No leaderboard data available</Text>
+                                <Text style={styles.emptyStateSubtext}>Check back later!</Text>
+                            </View>
+                        ) : (
+                            getCurrentLeaderboardData().map((entry, index) => {
+                                const typeInfo = getLeaderboardTypeInfo(selectedLeaderboardType);
+                                const isTopThree = index < 3;
+                                const rankEmoji = index === 0 ? '🥇' : index === 1 ? '🥈' : index === 2 ? '🥉' : '';
+                                
+                                return (
+                                    <View 
+                                        key={entry.id} 
+                                        style={[
+                                            styles.leaderboardEntry,
+                                            isTopThree && styles.leaderboardEntryTopThree,
+                                            { shadowColor: typeInfo.color }
+                                        ]}
+                                    >
+                                        <View style={styles.leaderboardRankContainer}>
+                                            <Text style={[
+                                                styles.leaderboardRank,
+                                                isTopThree && styles.leaderboardRankTopThree
+                                            ]}>
+                                                {rankEmoji || `#${entry.rank || index + 1}`}
+                                            </Text>
+                                        </View>
+                                        
+                                        <View style={styles.leaderboardUserInfo}>
+                                            <Text style={[
+                                                styles.leaderboardUserName,
+                                                isTopThree && styles.leaderboardUserNameTopThree
+                                            ]}>
+                                                {entry.username}
+                                            </Text>
+                                            <View style={styles.leaderboardScoreContainer}>
+                                                <Text style={styles.leaderboardScoreLabel}>
+                                                    {selectedLeaderboardType === 'achievements' ? 'Points' : 
+                                                    selectedLeaderboardType === 'streaks' ? 'Days' : 'Score'}
+                                                </Text>
+                                                <Text style={[
+                                                    styles.leaderboardUserScore,
+                                                    isTopThree && styles.leaderboardUserScoreTopThree,
+                                                    { color: typeInfo.color }
+                                                ]}>
+                                                    {entry.score}
+                                                </Text>
+                                            </View>
+                                        </View>
+                                        
+                                        <View style={styles.leaderboardBadge}>
+                                            <Text style={styles.leaderboardBadgeIcon}>{typeInfo.icon}</Text>
+                                        </View>
+                                    </View>
+                                );
+                            })
+                        )}
+                    </ScrollView>
+
+                    <View style={styles.modalFooter}>
+                        <Text style={styles.resultsCount}>
+                            Showing {getCurrentLeaderboardData().length} players in {getLeaderboardTypeInfo(selectedLeaderboardType).name}
+                        </Text>
+                    </View>
+                </View>
+            </Modal>
             <View style={styles.actionsSection}>  
                 <TouchableOpacity style={styles.galleryButton} onPress={navigateToGallery}>
                 <View style={[common_styles.categoryContent, {top: 2}]}> 
@@ -830,6 +1019,14 @@ export default function Profile() {
                         <Text style={styles.notificationText}>{friendRequests.length}</Text>
                         </View>
                     )}
+                </TouchableOpacity>
+                <TouchableOpacity
+                    style={[styles.galleryButton, {marginTop: 15}]}
+                    onPress={() => {
+                        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                        setShowLeaderboardModal(true);
+                    }}>
+                        <Text style={styles.galleryButtonText} numberOfLines={1} adjustsFontSizeToFit>📊 LEADERBOARD</Text>
                 </TouchableOpacity>
                 <TouchableOpacity style={styles.logoutButtonBottom} onPress={handleLogout}>
                     <Image source={require('../assets/images/door.png')} style={{height: 32, width: 32}} resizeMode='contain'/>
@@ -1561,5 +1758,147 @@ const styles = StyleSheet.create({
         borderRadius: 8,
         backgroundColor: colors.vintageOrange,
         opacity: 0.3,
+    },
+    typeToggleContainer: {
+        paddingHorizontal: 20,
+        paddingVertical: 15,
+        borderBottomWidth: 1,
+        borderBottomColor: '#E8E8E8',
+        backgroundColor: '#F8F9FA',
+    },
+    typeToggleScrollContent: {
+        paddingHorizontal: 5,
+    },
+    typeToggleButton: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        paddingHorizontal: 16,
+        paddingVertical: 10,
+        marginHorizontal: 5,
+        borderRadius: 20,
+        borderWidth: 2,
+        borderColor: '#E8E8E8',
+        backgroundColor: '#FFFFFF',
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.1,
+        shadowRadius: 4,
+        elevation: 3,
+    },
+    typeToggleButtonActive: {
+        backgroundColor: '#F0F8FF',
+        shadowOpacity: 0.2,
+        shadowRadius: 6,
+        elevation: 5,
+    },
+    typeToggleIcon: {
+        fontSize: 18,
+        marginRight: 8,
+    },
+    typeToggleText: {
+        fontSize: 14,
+        fontWeight: '600',
+        color: '#666',
+    },
+    typeToggleTextActive: {
+        color: '#333',
+        fontWeight: '700',
+    },
+    leaderboardEntry: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        backgroundColor: '#FFFFFF',
+        borderRadius: 16,
+        padding: 16,
+        marginVertical: 6,
+        marginHorizontal: 16,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.1,
+        shadowRadius: 8,
+        elevation: 4,
+        borderLeftWidth: 4,
+        borderLeftColor: '#E8E8E8',
+    },
+    leaderboardEntryTopThree: {
+        backgroundColor: '#FFFEF7',
+        shadowOpacity: 0.15,
+        shadowRadius: 12,
+        elevation: 6,
+        borderLeftWidth: 6,
+    },
+    leaderboardRankContainer: {
+        width: 50,
+        alignItems: 'center',
+        justifyContent: 'center',
+    },
+    leaderboardRank: {
+        fontSize: 18,
+        fontWeight: '700',
+        color: '#666',
+    },
+    leaderboardRankTopThree: {
+        fontSize: 24,
+        color: '#333',
+    },
+    leaderboardUserInfo: {
+        flex: 1,
+        marginLeft: 12,
+    },
+    leaderboardUserName: {
+        fontSize: 16,
+        fontWeight: '600',
+        color: '#333',
+        marginBottom: 4,
+    },
+    leaderboardUserNameTopThree: {
+        fontSize: 17,
+        fontWeight: '700',
+        color: '#222',
+    },
+    leaderboardScoreContainer: {
+        flexDirection: 'row',
+        alignItems: 'center',
+    },
+    leaderboardScoreLabel: {
+        fontSize: 12,
+        color: '#888',
+        marginRight: 8,
+    },
+    leaderboardUserScore: {
+        fontSize: 16,
+        fontWeight: '700',
+        color: '#4ECDC4',
+    },
+    leaderboardUserScoreTopThree: {
+        fontSize: 18,
+        fontWeight: '800',
+    },
+    leaderboardBadge: {
+        width: 40,
+        height: 40,
+        borderRadius: 20,
+        backgroundColor: '#F8F9FA',
+        alignItems: 'center',
+        justifyContent: 'center',
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 1 },
+        shadowOpacity: 0.1,
+        shadowRadius: 2,
+        elevation: 2,
+    },
+    leaderboardBadgeIcon: {
+        fontSize: 18,
+    },
+    loadingState: {
+        flex: 1,
+        alignItems: 'center',
+        justifyContent: 'center',
+        paddingVertical: 40,
+    },
+    loadingText: {
+        fontSize: 16,
+        color: '#666',
+        fontWeight: '500',
     },
 });

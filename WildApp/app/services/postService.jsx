@@ -1014,7 +1014,6 @@ export class PostService {
         console.error('Error fetching user comments received:', error);
         throw error;
       }
-      console.log('Fetched user comments received:', data);
       return data.comments_received || 0;
     } catch (error) {
       console.error('Error fetching user comments received:', error);
@@ -1324,6 +1323,70 @@ export class PostService {
       return null;
     }
   }
+
+  static async getLeaderboardData(leaderboardType, category = null, limit = 50) {
+    try {
+      let query = supabase
+        .from('leaderboards')
+        .select(`
+          id,
+          leaderboard_type,
+          category,
+          user_id,
+          username,
+          score,
+          rank_position,
+          updated_at,
+          users!leaderboards_user_id_fkey (
+            profile_picture,
+            level,
+            streak
+          )
+        `)
+        .eq('leaderboard_type', leaderboardType)
+        .order('rank_position', { ascending: true });
+  
+      if (category) {
+        query = query.eq('category', category);
+      } else {
+        query = query.is('category', null);
+      }
+  
+      if (limit) {
+        query = query.limit(limit);
+      }
+  
+      const { data, error } = await query;
+  
+      if (error) {
+        console.error('Error fetching leaderboard data:', error);
+        throw error;
+      }
+  
+      if (!data || !Array.isArray(data)) {
+        console.warn('Leaderboard data is invalid or empty:', data);
+        return [];
+      }
+  
+      return data.map(entry => ({
+        id: entry.id,
+        rank: entry.rank_position,
+        userId: entry.user_id,
+        username: entry.username,
+        score: entry.score,
+        profilePicture: entry.users?.profile_picture || null,
+        level: entry.users?.level || 0,
+        streak: entry.users?.streak || 0,
+        updatedAt: entry.updated_at,
+        leaderboardType: entry.leaderboard_type,
+        category: entry.category
+      }));
+  
+    } catch (error) {
+      console.error('Error fetching leaderboard data:', error);
+      throw error;
+    }
+  }  
 }
 
 export class NewChallengeService {

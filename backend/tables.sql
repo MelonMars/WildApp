@@ -173,3 +173,28 @@ create table public.users (
   constraint users_pkey primary key (id),
   constraint users_email_key unique (email)
 ) TABLESPACE pg_default;
+
+create table public.leaderboards (
+  id uuid not null default gen_random_uuid(),
+  leaderboard_type text not null,
+  category text null,
+  user_id uuid not null,
+  username text not null,
+  score integer not null,
+  rank_position integer not null,
+  updated_at timestamp with time zone not null default now(),
+  constraint leaderboards_pkey primary key (id),
+  constraint leaderboards_user_id_fkey foreign key (user_id) references users (id) on delete cascade,
+  constraint leaderboards_type_check check (    
+    leaderboard_type = any (
+      array[
+        'achievements'::text,
+        'challenges_overall'::text,
+        'challenges_social'::text,
+        'challenges_creative'::text,     
+        'challenges_adventure'::text,
+        'streaks'::text
+      ]
+    )
+  )
+) tablespace pg_default;

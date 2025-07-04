@@ -631,3 +631,223 @@ BEGIN
     RETURN NEW;
 END;
 $$;
+
+CREATE OR REPLACE FUNCTION update_leaderboard_rankings()
+RETURNS TRIGGER
+LANGUAGE plpgsql
+AS $$
+DECLARE
+    affected_user_id UUID;
+    user_name TEXT;
+    achievements_count INTEGER;
+    total_posts INTEGER;
+    social_posts INTEGER;
+    creative_posts INTEGER;
+    adventure_posts INTEGER;
+    current_streak INTEGER;
+    leaderboard_record RECORD;
+BEGIN
+    IF TG_TABLE_NAME = 'posts' THEN
+        affected_user_id := COALESCE(NEW.owner, OLD.owner);
+    ELSIF TG_TABLE_NAME = 'users' THEN
+        affected_user_id := COALESCE(NEW.id, OLD.id);
+    ELSE
+        RETURN COALESCE(NEW, OLD);
+    END IF;
+    
+    SELECT 
+        name,
+        COALESCE(array_length(achievements, 1), 0),
+        streak
+    INTO user_name, achievements_count, current_streak
+    FROM users 
+    WHERE id = affected_user_id;
+    
+    IF NOT FOUND THEN
+        RETURN COALESCE(NEW, OLD);
+    END IF;
+    
+    SELECT 
+        COUNT(*) as total,
+        COUNT(*) FILTER (WHERE category = 'social') as social,
+        COUNT(*) FILTER (WHERE category = 'creative') as creative,
+        COUNT(*) FILTER (WHERE category = 'adventure') as adventure
+    INTO total_posts, social_posts, creative_posts, adventure_posts
+    FROM posts 
+    WHERE owner = affected_user_id;
+    
+    DELETE FROM leaderboards
+    WHERE leaderboard_type = 'achievements' 
+      AND category IS NULL 
+      AND user_id = affected_user_id;
+    
+    INSERT INTO leaderboards (leaderboard_type, category, user_id, username, score, rank_position)
+    VALUES ('achievements', NULL, affected_user_id, user_name, achievements_count, 1);
+    
+    DELETE FROM leaderboards 
+    WHERE leaderboard_type = 'challenges_overall' 
+      AND category IS NULL 
+      AND user_id = affected_user_id;
+    
+    INSERT INTO leaderboards (leaderboard_type, category, user_id, username, score, rank_position)
+    VALUES ('challenges_overall', NULL, affected_user_id, user_name, total_posts, 1);
+    
+    DELETE FROM leaderboards 
+    WHERE leaderboard_type = 'challenges_social' 
+      AND category = 'social' 
+      AND user_id = affected_user_id;
+    
+    INSERT INTO leaderboards (leaderboard_type, category, user_id, username, score, rank_position)
+    VALUES ('challenges_social', 'social', affected_user_id, user_name, social_posts, 1);
+    
+    DELETE FROM leaderboards 
+    WHERE leaderboard_type = 'challenges_creative' 
+      AND category = 'creative' 
+      AND user_id = affected_user_id;
+    
+    INSERT INTO leaderboards (leaderboard_type, category, user_id, username, score, rank_position)
+    VALUES ('challenges_creative', 'creative', affected_user_id, user_name, creative_posts, 1);
+    
+    DELETE FROM leaderboards 
+    WHERE leaderboard_type = 'challenges_adventure' 
+      AND category = 'adventure' 
+      AND user_id = affected_user_id;
+    
+    INSERT INTO leaderboards (leaderboard_type, category, user_id, username, score, rank_position)
+    VALUES ('challenges_adventure', 'adventure', affected_user_id, user_name, adventure_posts, 1);
+    
+    DELETE FROM leaderboards 
+    WHERE leaderboard_type = 'streaks' 
+      AND category IS NULL 
+      AND user_id = affected_user_id;
+    
+    INSERT INTO leaderboards (leaderboard_type, category, user_id, username, score, rank_position)
+    VALUES ('streaks', NULL, affected_user_id, user_name, current_streak, 1);
+    
+    WITH ranked_achievements AS (
+        SELECT 
+            id,
+            ROW_NUMBER() OVER (ORDER BY score DESC, updated_at ASC) as new_rank
+        FROM leaderboards 
+        WHERE leaderboard_type = 'achievements' AND category IS NULL
+        ORDER BY score DESC, updated_at ASC
+        LIMIT 10
+    )
+    UPDATE leaderboards 
+    SET rank_position = ranked_achievements.new_rank
+    FROM ranked_achievements
+    WHERE leaderboards.id = ranked_achievements.id;
+    
+    DELETE FROM leaderboards 
+    WHERE leaderboard_type = 'achievements' 
+      AND category IS NULL 
+      AND rank_position > 10;
+    
+    WITH ranked_challenges AS (
+        SELECT 
+            id,
+            ROW_NUMBER() OVER (ORDER BY score DESC, updated_at ASC) as new_rank
+        FROM leaderboards 
+        WHERE leaderboard_type = 'challenges_overall' AND category IS NULL
+        ORDER BY score DESC, updated_at ASC
+        LIMIT 10
+    )
+    UPDATE leaderboards 
+    SET rank_position = ranked_challenges.new_rank
+    FROM ranked_challenges
+    WHERE leaderboards.id = ranked_challenges.id;
+    
+    DELETE FROM leaderboards 
+    WHERE leaderboard_type = 'challenges_overall' 
+      AND category IS NULL 
+      AND rank_position > 10;
+    
+    WITH ranked_social AS (
+        SELECT 
+            id,
+            ROW_NUMBER() OVER (ORDER BY score DESC, updated_at ASC) as new_rank
+        FROM leaderboards 
+        WHERE leaderboard_type = 'challenges_social' AND category = 'social'
+        ORDER BY score DESC, updated_at ASC
+        LIMIT 10
+    )
+    UPDATE leaderboards 
+    SET rank_position = ranked_social.new_rank
+    FROM ranked_social
+    WHERE leaderboards.id = ranked_social.id;
+    
+    DELETE FROM leaderboards 
+    WHERE leaderboard_type = 'challenges_social' 
+      AND category = 'social' 
+      AND rank_position > 10;
+    
+    WITH ranked_creative AS (
+        SELECT 
+            id,
+            ROW_NUMBER() OVER (ORDER BY score DESC, updated_at ASC) as new_rank
+        FROM leaderboards 
+        WHERE leaderboard_type = 'challenges_creative' AND category = 'creative'
+        ORDER BY score DESC, updated_at ASC
+        LIMIT 10
+    )
+    UPDATE leaderboards 
+    SET rank_position = ranked_creative.new_rank
+    FROM ranked_creative
+    WHERE leaderboards.id = ranked_creative.id;
+    
+    DELETE FROM leaderboards 
+    WHERE leaderboard_type = 'challenges_creative' 
+      AND category = 'creative' 
+      AND rank_position > 10;
+    
+    WITH ranked_adventure AS (
+        SELECT 
+            id,
+            ROW_NUMBER() OVER (ORDER BY score DESC, updated_at ASC) as new_rank
+        FROM leaderboards 
+        WHERE leaderboard_type = 'challenges_adventure' AND category = 'adventure'
+        ORDER BY score DESC, updated_at ASC
+        LIMIT 10
+    )
+    UPDATE leaderboards 
+    SET rank_position = ranked_adventure.new_rank
+    FROM ranked_adventure
+    WHERE leaderboards.id = ranked_adventure.id;
+    
+    DELETE FROM leaderboards 
+    WHERE leaderboard_type = 'challenges_adventure' 
+      AND category = 'adventure' 
+      AND rank_position > 10;
+    
+    WITH ranked_streaks AS (
+        SELECT 
+            id,
+            ROW_NUMBER() OVER (ORDER BY score DESC, updated_at ASC) as new_rank
+        FROM leaderboards 
+        WHERE leaderboard_type = 'streaks' AND category IS NULL
+        ORDER BY score DESC, updated_at ASC
+        LIMIT 10
+    )
+    UPDATE leaderboards 
+    SET rank_position = ranked_streaks.new_rank
+    FROM ranked_streaks
+    WHERE leaderboards.id = ranked_streaks.id;
+    
+    DELETE FROM leaderboards 
+    WHERE leaderboard_type = 'streaks' 
+      AND category IS NULL 
+      AND rank_position > 10;
+    
+    RETURN COALESCE(NEW, OLD);
+END;
+$$;
+
+CREATE OR REPLACE TRIGGER trigger_update_leaderboard_posts
+    AFTER INSERT OR UPDATE OR DELETE ON posts
+    FOR EACH ROW
+    EXECUTE FUNCTION update_leaderboard_rankings();
+
+CREATE OR REPLACE TRIGGER trigger_update_leaderboard_users
+    AFTER UPDATE ON users
+    FOR EACH ROW
+    EXECUTE FUNCTION update_leaderboard_rankings();
