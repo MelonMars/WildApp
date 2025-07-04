@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, startTransition } from 'react';
 import {
   View,
   Text,
@@ -70,6 +70,8 @@ export default function GalleryPage() {
     const [comments, setComments] = useState([]);
     const [likeAnimations, setLikeAnimations] = useState({});
     const [selectedUsername, setSelectedUsername] = useState(null);
+
+    const [actionButtonPost, setActionButtonPost] = useState(null);
 
     useEffect(() => {
         const fetchCreatedPosts = async () => {
@@ -648,6 +650,55 @@ export default function GalleryPage() {
         }
     };    
 
+    const openPostActionSheet = (item) => {
+        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+        setActionButtonPost(item);
+        const options = [
+            'Share',
+            'Open',
+            'Like',
+            'Delete',
+            'Cancel'
+        ]
+        if (user?.id !== item.owner) {
+            options.splice(3, 1);
+        }
+        const cancelButtonIndex = options.length - 1;
+        ActionSheetIOS.showActionSheetWithOptions(
+            {
+                options,
+                cancelButtonIndex,
+                destructiveButtonIndex: options.indexOf('Delete'),
+            },
+            (buttonIndex) => {
+                const selectedOption = options[buttonIndex];
+    
+                switch (selectedOption) {
+                    case 'Share':
+                        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                        Share.share({
+                            title: 'Check out this post!',
+                            message: `"${item.caption}" - @${item.username} 📸 Challenge: "${item.challenge}"`,
+                            url: item.photo || undefined,
+                        });
+                        break;
+                    case 'Open':
+                        openModal(item);
+                        break;
+                    case 'Like':
+                        handleLike(item);
+                        break;
+                    case 'Delete':
+                        PostService.deletePost(item.id, user);
+                        break;
+                    default:
+                        break;
+                }
+            }
+        );    
+    }   
+
+
     const renderPost = ({ item, index }) => {
         const inputRange = [-1, 0, (index + 1) * 200, (index + 2) * 200];
         const scale = scrollY.interpolate({
@@ -718,6 +769,10 @@ export default function GalleryPage() {
                     ]}
                     activeOpacity={0.9}
                     onPress={() => openModal(item)}
+                    onLongPress={() => {
+                        console.log('Post long pressed:', item.id);
+                        openPostActionSheet(item);
+                    }}
                 >
                     {isCowardPost ?
                         renderCowardPost(item, animatedTransforms, isNewPost) :
@@ -983,9 +1038,9 @@ export default function GalleryPage() {
                                         { text: 'Delete', style: 'destructive', onPress: async () => {
                                             try {
                                                 await PostService.deletePost(selectedPost.id, user);
-                                                setPosts(posts => posts.filter(p => p.id !== selectedPost.id));
-                                                setPreloadedPosts(preloadedPosts => preloadedPosts.filter(p => p.id !== selectedPost.id));
-                                                setSelectedPost(null);
+                                                setPosts(prevPosts => prevPosts.filter(post => post.id !== selectedPost.id));
+                                                setPreloadedPosts(prevPosts => prevPosts.filter(post => post.id !== selectedPost.id));
+                                                setMyPosts(prevPosts => prevPosts.filter(post => post.id !== selectedPost.id));
                                                 closeModal();
                                             } catch (error) {
                                                 console.error('Failed to delete post:', error);

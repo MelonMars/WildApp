@@ -1454,22 +1454,7 @@ export class PostService {
     try {
       if (!user || !user.id) {
         throw new Error('User must be authenticated to delete posts');
-      }
-
-      const { data: post, error: fetchError } = await supabase
-        .from('posts')
-        .select('*')
-        .eq('id', postId)
-        .single();
-
-      if (fetchError) {
-        console.error('Error fetching post:', fetchError);
-        throw fetchError;
-      }
-
-      if (post.owner !== user.id) {
-        throw new Error('You can only delete your own posts');
-      }
+      } 
 
       const { error: deleteError } = await supabase
         .from('posts')
@@ -1487,7 +1472,7 @@ export class PostService {
       throw error;
     }
   }
-
+ 
   static async getCreatedPosts(userId, limit = 20) {
     try {
       const { data, error } = await supabase
