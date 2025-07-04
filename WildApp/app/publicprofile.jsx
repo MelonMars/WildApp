@@ -7,7 +7,7 @@ import { PostService } from './services/postService';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useFocusEffect } from '@react-navigation/native';
 import * as ImagePicker from 'expo-image-picker';
-import { useAuth } from './context/AuthContext';
+import { useAuth } from './contexts/AuthContext';
 
 export default function Profile() {
     const router = useRouter();
