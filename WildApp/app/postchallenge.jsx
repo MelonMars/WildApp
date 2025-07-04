@@ -124,9 +124,10 @@ const PostChallengePage = () => {
         accuracy: Location.Accuracy.Balanced,
       });
       
+      const noise = () => (Math.random() - 0.5) * 0.001;
       setCurrentLocation({
-        latitude: location.coords.latitude,
-        longitude: location.coords.longitude,
+        latitude: parseFloat((location.coords.latitude + noise()).toFixed(2)),
+        longitude: parseFloat((location.coords.longitude + noise()).toFixed(2)),
       });
       
       console.log('Location obtained:', location.coords);

@@ -57,9 +57,10 @@ const CreateChallengePage = () => {
       
       if (status === 'granted') {
         const location = await Location.getCurrentPositionAsync({});
+        const noise = () => (Math.random() - 0.5) * 0.001;
         setUserLocation({
-          latitude: location.coords.latitude,
-          longitude: location.coords.longitude
+          latitude: parseFloat((location.coords.latitude + noise()).toFixed(2)),
+          longitude: parseFloat((location.coords.longitude + noise()).toFixed(2)),
         });
         return true;
       }
