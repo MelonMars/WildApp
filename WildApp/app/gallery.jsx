@@ -64,13 +64,34 @@ export default function GalleryPage() {
     const [commentText, setCommentText] = useState('');
     const [commentInputRef, setCommentInputRef] = useState(null);
 
-    const { newPost, challenge, category, photo, caption, completedAt, timestamp, isNewPost, userOnly, userId } = useLocalSearchParams();
+    const { newPost, challenge, category, photo, caption, completedAt, timestamp, isNewPost, userOnly, userId, fromCreate } = useLocalSearchParams();
     const { preloadedPosts, preloadedLastDoc, preloadedHasMore, preloadComplete, setPreloadedPosts } = useApp();
     const { user, loading: isAuthLoading } = useAuth();
     const [comments, setComments] = useState([]);
     const [likeAnimations, setLikeAnimations] = useState({});
     const [selectedUsername, setSelectedUsername] = useState(null);
 
+    useEffect(() => {
+        const fetchCreatedPosts = async () => {
+            if (user && user.id) {
+                try {
+                    const createdPosts = await PostService.getCreatedPosts(user.id);
+                    setMyPosts(createdPosts);
+                    setFilteredPosts(createdPosts);
+                } catch (error) {
+                    console.error('Failed to fetch created posts:', error);
+                }
+            }
+        }
+        if (fromCreate) {
+            setPreloadedPosts([]);
+        }
+        if (fromCreate || (user && user.id)) {
+            setShowMyPostsOnly(false);
+            setSelectedId(null);
+        }
+        fetchCreatedPosts();
+    }, [fromCreate, user]);
     useEffect(() => {
         setComments(selectedPost && Array.isArray(selectedPost.comments) ? selectedPost.comments : []);
     }, [selectedPost]);
@@ -125,6 +146,8 @@ export default function GalleryPage() {
     };
 
     const onRefresh = async () => {
+        if (fromCreate) return;
+
         if (showMyPostsOnly || selectedId) {
             if (showMyPostsOnly) {
                 await loadMyPosts();
@@ -244,6 +267,7 @@ export default function GalleryPage() {
     };
 
     const handleEndReached = () => {
+        if (fromCreate) return;
         if (selectedId && posts.length === 0 && !fetchUsersPosts.isLoading) {
             fetchUsersPosts(selectedId);
         }
@@ -1096,6 +1120,8 @@ export default function GalleryPage() {
 
     const renderFooter = () => {
         if (!loading) return null;
+        if (fromCreate) return null;
+
         return (
             <View style={common_styles.loadingContainer}>
                 <ActivityIndicator size="small" color={colors.vintageOrange} />
@@ -1121,7 +1147,7 @@ export default function GalleryPage() {
                 style={common_styles.backgroundTexture}
             />
             <Animated.View style={[common_styles.header, { opacity: fadeAnim, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }]}>
-                <TouchableOpacity
+                {!fromCreate && (<TouchableOpacity
                     style={[common_styles.ghostButton, styles.backButton]}
                     onPress={() => {
                         router.navigate('/');
@@ -1129,7 +1155,16 @@ export default function GalleryPage() {
                     }}
                 >
                     <Text style={common_styles.ghostButtonText}>← HOME</Text>
-                </TouchableOpacity>
+                </TouchableOpacity>)}
+                {fromCreate && (<TouchableOpacity
+                    style={[common_styles.ghostButton, styles.backButton]}
+                    onPress={() => {
+                        router.back();
+                        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                    }}
+                >
+                    <Text style={common_styles.ghostButtonText}>← BACK</Text>
+                </TouchableOpacity>)}
                 <View style={{ flex: 1, alignItems: 'center' }}>
                     <Text style={common_styles.headerTitle}>THE WALL</Text>
                     <Text style={common_styles.headerSubtitle}>PROOF OF COURAGE</Text>

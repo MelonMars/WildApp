@@ -1487,6 +1487,27 @@ export class PostService {
       throw error;
     }
   }
+
+  static async getCreatedPosts(userId, limit = 20) {
+    try {
+      const { data, error } = await supabase
+        .from('newchallengepost')
+        .select('*')
+        .eq('owner', userId)
+        .order('created_at', { ascending: false })
+        .limit(limit);
+
+      if (error) {
+        console.error('Error fetching created posts:', error);
+        return [];
+      }
+
+      return data || [];
+    } catch (error) {
+      console.error('Error fetching created posts:', error);
+      return [];
+    }
+  } 
 }
  
 export class NewChallengeService {

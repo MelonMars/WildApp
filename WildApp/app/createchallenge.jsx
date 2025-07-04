@@ -239,6 +239,16 @@ const CreateChallengePage = () => {
 
   const isFormValid = challengeName.trim() && selectedCategory && photo;
 
+  const navigateToGallery = () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    router.push({
+      pathname: '/gallery',
+      params: {
+        fromCreate: true,
+      }
+    });
+  }
+
   return (
     <KeyboardAvoidingView 
       style={common_styles.container}
@@ -524,6 +534,11 @@ const CreateChallengePage = () => {
           <Text style={[styles.helpButton, {'marginBottom': 20, 'marginTop': 10, 'color': colors.offWhite}]}>
             💡 Share your personal achievements and inspire others to try new things!
           </Text>
+          <TouchableOpacity style={common_styles.secondaryButton} onPress={navigateToGallery}>
+            <Text style={[common_styles.secondaryButtonText, {color: colors.offWhite}]}>
+              View your challenges in the gallery
+            </Text> 
+          </TouchableOpacity>
         </Animated.View>
       </ScrollView>
     </KeyboardAvoidingView>
