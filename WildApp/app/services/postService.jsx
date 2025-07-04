@@ -1449,6 +1449,44 @@ export class PostService {
       return false;
     }
   }
+
+  static async deletePost(postId, user) {
+    try {
+      if (!user || !user.id) {
+        throw new Error('User must be authenticated to delete posts');
+      }
+
+      const { data: post, error: fetchError } = await supabase
+        .from('posts')
+        .select('*')
+        .eq('id', postId)
+        .single();
+
+      if (fetchError) {
+        console.error('Error fetching post:', fetchError);
+        throw fetchError;
+      }
+
+      if (post.owner !== user.id) {
+        throw new Error('You can only delete your own posts');
+      }
+
+      const { error: deleteError } = await supabase
+        .from('posts')
+        .delete()
+        .eq('id', postId);
+
+      if (deleteError) {
+        console.error('Error deleting post:', deleteError);
+        throw deleteError;
+      }
+
+      return true;
+    } catch (error) {
+      console.error('Error deleting post:', error);
+      throw error;
+    }
+  }
 }
  
 export class NewChallengeService {

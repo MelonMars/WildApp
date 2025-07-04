@@ -730,6 +730,7 @@ export default function GalleryPage() {
             outputRange: [0.8, 1],
             extrapolate: 'clamp',
         });
+        const canDelete = user?.id === selectedPost.owner;
 
         const handleShare = async () => {
             Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
@@ -945,6 +946,37 @@ export default function GalleryPage() {
                         <View style={styles.retroShareGlow} />
                     </TouchableOpacity>
                     
+                    {canDelete && (
+                        <TouchableOpacity
+                            style={styles.deleteButton}
+                            onPress={async () => {
+                                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                                const confirmed = Alert.alert(
+                                    'Delete Post',
+                                    'Are you sure you want to delete this post?',
+                                    [
+                                        { text: 'Cancel', style: 'cancel' },
+                                        { text: 'Delete', style: 'destructive', onPress: async () => {
+                                            try {
+                                                await PostService.deletePost(selectedPost.id, user);
+                                                setPosts(posts => posts.filter(p => p.id !== selectedPost.id));
+                                                setPreloadedPosts(preloadedPosts => preloadedPosts.filter(p => p.id !== selectedPost.id));
+                                                setSelectedPost(null);
+                                                closeModal();
+                                            } catch (error) {
+                                                console.error('Failed to delete post:', error);
+                                                Alert.alert('Error', 'Failed to delete post. Please try again later.');
+                                            }
+                                        }},
+                                    ]
+                                );
+                                if (confirmed) {
+                                    closeModal();
+                                }
+                            }}
+                        >
+                            <Text style={styles.deleteButtonText}>🗑️ DELETE</Text>
+                    </TouchableOpacity>)}
                     <View style={[
                         common_styles.polaroidLarge,
                         styles.modalPolaroid,
@@ -1694,5 +1726,24 @@ const styles = StyleSheet.create({
         width: '100%',
         height: '100%',
         borderRadius: 16, 
+    },
+    deleteButton: {
+        position: 'absolute',
+        top: -5,
+        right: '20%',
+        backgroundColor: colors.vintageRed,
+        paddingHorizontal: 12,
+        paddingVertical: 6,
+        borderRadius: 4,
+        borderWidth: 1,
+        borderColor: colors.dustyRed,
+        zIndex: 1000,
+        transform: [{ rotate: '3deg' }],
+    },
+    deleteButtonText: {
+        ...typography.bodySmall,
+        color: colors.offWhite,
+        fontSize: 12,
+        fontWeight: 'bold', 
     },
 });
