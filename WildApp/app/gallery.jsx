@@ -810,7 +810,7 @@ export default function GalleryPage() {
             extrapolate: 'clamp',
         });
         const canDelete = user?.id === selectedPost.owner;
-
+    
         const handleShare = async () => {
             Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
             
@@ -818,7 +818,7 @@ export default function GalleryPage() {
                 const shareContent = isCowardPost
                     ? `${selectedPost.username.toUpperCase()} is a COWARD! 📸 Challenge: "${selectedPost.challenge}"`
                     : `"${selectedPost.caption}" - @${selectedPost.username} 📸 Challenge: "${selectedPost.challenge}"`;
-
+    
                 const options = [
                     'Share as Story',
                     'Regular Share',
@@ -837,7 +837,7 @@ export default function GalleryPage() {
                 console.log('Share cancelled or failed:', error);
             }
         };
-
+    
         const shareAsStory = async () => {
             try {
                 let localImageUri = selectedPost.photo;
@@ -871,7 +871,7 @@ export default function GalleryPage() {
                 await regularShare();
             }
         };
-
+    
         const shareToInstagramStory = async (imageUri) => {
             try {
                 const instagramURL = `instagram-stories://share?media=${encodeURIComponent(imageUri)}`;
@@ -897,7 +897,7 @@ export default function GalleryPage() {
                 }
             }
         };
-
+    
         const shareToSnapchat = async (imageUri) => {
             try {
                 const snapchatURL = `snapchat://camera`;
@@ -917,7 +917,7 @@ export default function GalleryPage() {
                 await Linking.openURL(storeURL);
             }
         };
-
+    
         const shareToFacebookStory = async (imageUri) => {
             try {
                 const facebookURL = `fb://story-camera`;
@@ -937,7 +937,7 @@ export default function GalleryPage() {
                 await Linking.openURL(storeURL);
             }
         };
-
+    
         const regularShare = async (shareContent) => {
             const shareOptions = {
                 title: 'Check this out!',
@@ -947,7 +947,7 @@ export default function GalleryPage() {
             
             await Share.share(shareOptions);
         };
-
+    
         const showActionSheet = async (options) => {
             return new Promise((resolve) => {
                 if (Platform.OS === 'ios') {
@@ -971,7 +971,7 @@ export default function GalleryPage() {
                         style: 'cancel',
                         onPress: () => resolve(options.length - 1),
                     });
-
+    
                     Alert.alert(
                         'Choose an option',
                         '',
@@ -981,7 +981,7 @@ export default function GalleryPage() {
                 }
             });
         };
-
+    
         return (
             <Animated.View 
                 style={[
@@ -999,179 +999,184 @@ export default function GalleryPage() {
                 />
                 <ScrollView 
                     style={common_styles.modalContent}
+                    contentContainerStyle={{ flexGrow: 1, justifyContent: 'center' }}
                     showsVerticalScrollIndicator={false}
                     bounces={false}
-                >
-                    <TouchableOpacity
-                        style={common_styles.closeButton}
-                        onPress={closeModal}
-                    >
-                        <Text style={common_styles.closeButtonText}>×</Text>
-                    </TouchableOpacity>
-                    
-                    <TouchableOpacity
-                        style={styles.retroShareButton}
-                        onPress={handleShare}
-                        activeOpacity={0.8}
-                    >
-                        <View style={styles.retroShareIcon}>
-                            <Image  
-                                source={require('../assets/images/pigeon.png')}
-                                style={{height: 32, width: 32}}
-                                resizeMode="contain"
-                            />
-                        </View>
-                        <Text style={styles.retroShareText}>SHARE</Text>
-                        <View style={styles.retroShareGlow} />
-                    </TouchableOpacity>
-                    
-                    {canDelete && (
+                > 
+                    <View style={styles.modalPolaroidContainer}>
                         <TouchableOpacity
-                            style={styles.deleteButton}
-                            onPress={async () => {
-                                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                                const confirmed = Alert.alert(
-                                    'Delete Post',
-                                    'Are you sure you want to delete this post?',
-                                    [
-                                        { text: 'Cancel', style: 'cancel' },
-                                        { text: 'Delete', style: 'destructive', onPress: async () => {
-                                            try {
-                                                await PostService.deletePost(selectedPost.id, user);
-                                                setPosts(prevPosts => prevPosts.filter(post => post.id !== selectedPost.id));
-                                                setPreloadedPosts(prevPosts => prevPosts.filter(post => post.id !== selectedPost.id));
-                                                setMyPosts(prevPosts => prevPosts.filter(post => post.id !== selectedPost.id));
-                                                closeModal();
-                                            } catch (error) {
-                                                console.error('Failed to delete post:', error);
-                                                Alert.alert('Error', 'Failed to delete post. Please try again later.');
-                                            }
-                                        }},
-                                    ]
-                                );
-                                if (confirmed) {
-                                    closeModal();
-                                }
-                            }}
+                            style={[common_styles.closeButton, styles.modalCloseButton]}
+                            onPress={closeModal}
                         >
-                            <Text style={styles.deleteButtonText}>🗑️ DELETE</Text>
-                    </TouchableOpacity>)}
-                    <View style={[
-                        common_styles.polaroidLarge,
-                        styles.modalPolaroid,
-                        isCowardPost ? common_styles.failureContainer : {}
-                    ]}>
-                        {isCowardPost ? (
-                            <View style={styles.modalPhotoContainer}>
-                                <View style={[common_styles.photoFrame, styles.modalCowardPhotoContainer]}>
-                                    <Text style={styles.modalCowardX}>✗</Text>
-                                </View>
-                                <View style={[
-                                    common_styles.categoryBadge,
-                                    { backgroundColor: getCategoryColor('COWARD') }
-                                ]}>
-                                    <Text style={common_styles.categoryBadgeText}>COWARD</Text>
-                                </View>
-                            </View>
-                        ) : (
-                            <View style={styles.modalPhotoContainer}>
-                                <Image
-                                    source={{ uri: selectedPost.photo }}
-                                    style={[common_styles.photoFrame, styles.modalPostPhoto]}
-                                    resizeMode="cover"
+                            <Text style={common_styles.closeButtonText}>×</Text>
+                        </TouchableOpacity>
+                        
+                        <TouchableOpacity
+                            style={[styles.retroShareButton, styles.modalShareButton]}
+                            onPress={handleShare}
+                            activeOpacity={0.8}
+                        >
+                            <View style={styles.retroShareIcon}>
+                                <Image  
+                                    source={require('../assets/images/pigeon.png')}
+                                    style={{height: 32, width: 32}}
+                                    resizeMode="contain"
                                 />
-                                <View style={[
-                                    common_styles.categoryBadge,
-                                    { backgroundColor: getCategoryColor(selectedPost.category) }
-                                ]}>
-                                    <Text style={common_styles.categoryBadgeText}>{selectedPost.category.toUpperCase()}</Text>
-                                </View>
                             </View>
-                        )}
+                            <Text style={styles.retroShareText}>SHARE</Text>
+                            <View style={styles.retroShareGlow} />
+                        </TouchableOpacity>
                         
-                        <View style={[common_styles.captionArea, styles.modalCaptionArea]}>
-                            <Text style={[common_styles.challengeText, styles.modalChallengeText]}>
-                                {selectedPost.challenge}
-                            </Text>
-                            {isCowardPost ? (
-                                <Text style={[common_styles.failureText, styles.modalCowardText]}>
-                                    <Text style={styles.modalCowardUsername}>{selectedPost.username.toUpperCase()}</Text>
-                                    <Text style={styles.modalCowardLabel}> is a </Text>
-                                    <Text style={styles.modalCowardUsername}>COWARD</Text>
-                                </Text>
-                            ) : (
-                                <Text style={[common_styles.captionText, styles.modalCaptionText]}>
-                                    "{selectedPost.caption}"
-                                </Text>
-                            )}
-                            <View style={common_styles.polaroidFooter}>
+                        {canDelete && (
                             <TouchableOpacity
-                                onPress={() => {
-                                    handleUsernameFilter(selectedPost.owner);
+                                style={[styles.deleteButton]}
+                                onPress={async () => {
                                     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                                }}>
-                                <Text style={common_styles.usernameStamp}>@{selectedPost.username}</Text>
+                                    const confirmed = Alert.alert(
+                                        'Delete Post',
+                                        'Are you sure you want to delete this post?',
+                                        [
+                                            { text: 'Cancel', style: 'cancel' },
+                                            { text: 'Delete', style: 'destructive', onPress: async () => {
+                                                try {
+                                                    await PostService.deletePost(selectedPost.id, user);
+                                                    setPosts(prevPosts => prevPosts.filter(post => post.id !== selectedPost.id));
+                                                    setPreloadedPosts(prevPosts => prevPosts.filter(post => post.id !== selectedPost.id));
+                                                    setMyPosts(prevPosts => prevPosts.filter(post => post.id !== selectedPost.id));
+                                                    closeModal();
+                                                } catch (error) {
+                                                    console.error('Failed to delete post:', error);
+                                                    Alert.alert('Error', 'Failed to delete post. Please try again later.');
+                                                }
+                                            }},
+                                        ]
+                                    );
+                                    if (confirmed) {
+                                        closeModal();
+                                    }
+                                }}
+                            >
+                                <Text style={styles.deleteButtonText}>🗑️ DELETE</Text>
                             </TouchableOpacity>
-                                <Text style={common_styles.dateStamp}>{formatTimeAgo(selectedPost.completed_at)}</Text>
-                            </View>
-                        </View>
-                        
-                        {hasLocation && (
-                            <>
-                                <View style={styles.mapContainer}>
-                                    <MapView
-                                        style={styles.modalMap}
-                                        initialRegion={{
-                                            latitude: parseFloat(selectedPost.latitude),
-                                            longitude: parseFloat(selectedPost.longitude),
-                                            latitudeDelta: 0.0922,
-                                            longitudeDelta: 0.0421,
-                                        }}
-                                        scrollEnabled={false}
-                                        zoomEnabled={false}
-                                        rotateEnabled={false}
-                                        pitchEnabled={false}
-                                    >
-                                        <Marker
-                                            coordinate={{
-                                                latitude: parseFloat(selectedPost.latitude),
-                                                longitude: parseFloat(selectedPost.longitude),
-                                            }}
-                                            title="Challenge Location"
-                                            description={selectedPost.challenge}
-                                        />
-                                    </MapView>
-                                    <View style={styles.mapOverlay}>
-                                        <Text style={styles.locationText}>📍 Challenge Location</Text>
+                        )}
+    
+                        <View style={[
+                            common_styles.polaroidLarge,
+                            styles.modalPolaroid,
+                            isCowardPost ? common_styles.failureContainer : {}
+                        ]}>
+                            {isCowardPost ? (
+                                <View style={styles.modalPhotoContainer}>
+                                    <View style={[common_styles.photoFrame, styles.modalCowardPhotoContainer]}>
+                                        <Text style={styles.modalCowardX}>✗</Text>
+                                    </View>
+                                    <View style={[
+                                        common_styles.categoryBadge,
+                                        { backgroundColor: getCategoryColor('COWARD') }
+                                    ]}>
+                                        <Text style={common_styles.categoryBadgeText}>COWARD</Text>
                                     </View>
                                 </View>
-                                <TouchableOpacity 
-                                    style={[styles.circleButton, { marginTop: 0, alignSelf: 'center' }]}
+                            ) : (
+                                <View style={styles.modalPhotoContainer}>
+                                    <Image
+                                        source={{ uri: selectedPost.photo }}
+                                        style={[common_styles.photoFrame, styles.modalPostPhoto]}
+                                        resizeMode="cover"
+                                    />
+                                    <View style={[
+                                        common_styles.categoryBadge,
+                                        { backgroundColor: getCategoryColor(selectedPost.category) }
+                                    ]}>
+                                        <Text style={common_styles.categoryBadgeText}>{selectedPost.category.toUpperCase()}</Text>
+                                    </View>
+                                </View>
+                            )}
+                            
+                            <View style={[common_styles.captionArea, styles.modalCaptionArea]}>
+                                <Text style={[common_styles.challengeText, styles.modalChallengeText]}>
+                                    {selectedPost.challenge}
+                                </Text>
+                                {isCowardPost ? (
+                                    <Text style={[common_styles.failureText, styles.modalCowardText]}>
+                                        <Text style={styles.modalCowardUsername}>{selectedPost.username.toUpperCase()}</Text>
+                                        <Text style={styles.modalCowardLabel}> is a </Text>
+                                        <Text style={styles.modalCowardUsername}>COWARD</Text>
+                                    </Text>
+                                ) : (
+                                    <Text style={[common_styles.captionText, styles.modalCaptionText]}>
+                                        "{selectedPost.caption}"
+                                    </Text>
+                                )}
+                                <View style={common_styles.polaroidFooter}>
+                                <TouchableOpacity
                                     onPress={() => {
+                                        handleUsernameFilter(selectedPost.owner);
                                         Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                                        router.push({
-                                            pathname: '/map',
-                                            params: {
-                                                latitude: selectedPost.latitude,
-                                                longitude: selectedPost.longitude,
-                                            }
-                                        })
-                                }}>
-                                    <Text style={{ fontSize: 18 }}>🌎</Text>
+                                    }}>
+                                    <Text style={common_styles.usernameStamp}>@{selectedPost.username}</Text>
                                 </TouchableOpacity>
-                            </>
-                        )}
-                        
-                        <View onStartShouldSetResponder={() => true}>
-                            {!isCowardPost && renderLikesAndComments(selectedPost)} 
+                                    <Text style={common_styles.dateStamp}>{formatTimeAgo(selectedPost.completed_at)}</Text>
+                                </View>
+                            </View>
+                            
+                            {hasLocation && (
+                                <>
+                                    <View style={styles.mapContainer}>
+                                        <MapView
+                                            style={styles.modalMap}
+                                            initialRegion={{
+                                                latitude: parseFloat(selectedPost.latitude),
+                                                longitude: parseFloat(selectedPost.longitude),
+                                                latitudeDelta: 0.0922,
+                                                longitudeDelta: 0.0421,
+                                            }}
+                                            scrollEnabled={false}
+                                            zoomEnabled={false}
+                                            rotateEnabled={false}
+                                            pitchEnabled={false}
+                                        >
+                                            <Marker
+                                                coordinate={{
+                                                    latitude: parseFloat(selectedPost.latitude),
+                                                    longitude: parseFloat(selectedPost.longitude),
+                                                }}
+                                                title="Challenge Location"
+                                                description={selectedPost.challenge}
+                                            />
+                                        </MapView>
+                                        <View style={styles.mapOverlay}>
+                                            <Text style={styles.locationText}>📍 Challenge Location</Text>
+                                        </View>
+                                    </View>
+                                    <TouchableOpacity 
+                                        style={[styles.circleButton, { marginTop: 0, alignSelf: 'center' }]}
+                                        onPress={() => {
+                                            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                                            router.push({
+                                                pathname: '/map',
+                                                params: {
+                                                    latitude: selectedPost.latitude,
+                                                    longitude: selectedPost.longitude,
+                                                }
+                                            })
+                                    }}>
+                                        <Text style={{ fontSize: 18 }}>🌎</Text>
+                                    </TouchableOpacity>
+                                </>
+                            )}
+                            
+                            <View onStartShouldSetResponder={() => true}>
+                                {!isCowardPost && renderLikesAndComments(selectedPost)} 
+                            </View>
+                            <View style={[common_styles.tapeHorizontal, common_styles.tapeTopLeft]} />
+                            <View style={[common_styles.tapeHorizontal, common_styles.tapeBottomRight]} />
                         </View>
-                        <View style={[common_styles.tapeHorizontal, common_styles.tapeTopLeft]} />
-                        <View style={[common_styles.tapeHorizontal, common_styles.tapeBottomRight]} />
                     </View>
                 </ScrollView>
             </Animated.View>
         );
-    }; 
+    };
 
     const renderFooter = () => {
         if (!loading) return null;
@@ -1500,7 +1505,7 @@ const styles = StyleSheet.create({
     },
     retroShareButton: {
         position: 'absolute',
-        top: -10,
+        top: -17,
         left: 20,
         flexDirection: 'row',
         alignItems: 'center',
@@ -1819,8 +1824,8 @@ const styles = StyleSheet.create({
     },
     deleteButton: {
         position: 'absolute',
-        top: -5,
         right: '20%',
+        top: -14,
         backgroundColor: colors.vintageRed,
         paddingHorizontal: 12,
         paddingVertical: 6,
