@@ -7,6 +7,7 @@ import { PostService } from './services/postService';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useFocusEffect } from '@react-navigation/native';
 import * as ImagePicker from 'expo-image-picker';
+import { useAuth } from './context/AuthContext';
 
 export default function Profile() {
     const router = useRouter();
@@ -30,6 +31,7 @@ export default function Profile() {
     const [isLoading, setIsLoading] = useState(true);
     const [showStatsModal, setShowStatsModal] = useState(false);
     const [isProfilePublic, setIsProfilePublic] = useState(true);
+    const { user } = useAuth(); 
 
     const userId = params?.userId;
 
@@ -51,8 +53,13 @@ export default function Profile() {
     useEffect(() => {
         const checkProfileVisibility = async () => {
             try {
-                const isPublic = await PostService.isProfilePublic(userId);
-                setIsProfilePublic(isPublic);
+                const isFriendWith = await PostService.isFriendWith(user, userId);
+                if (!isFriendWith) {
+                    const isPublic = await PostService.isProfilePublic(userId);
+                    setIsProfilePublic(isPublic);
+                } else {
+                    setIsProfilePublic(true);
+                }
             } catch (error) {
                 console.error('Error checking profile visibility:', error);
                 setIsProfilePublic(true);
@@ -345,10 +352,7 @@ export default function Profile() {
                             <View style={styles.profilePicture}>
                                 <Text style={styles.profilePictureText}>
                                     {username
-                                        ? username.charAt(0).toUpperCase()
-                                        : user?.email
-                                            ? user.email.charAt(0).toUpperCase()
-                                            : '?'}
+                                        ? username.charAt(0).toUpperCase() : 'A'}
                                 </Text>
                             </View>
                         )}

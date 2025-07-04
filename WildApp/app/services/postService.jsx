@@ -1428,6 +1428,27 @@ export class PostService {
       throw error;
     }
   }
+
+  static async isFriendWith(user, userId) {
+    try {
+      const { data, error } = await supabase
+        .from('friendships')
+        .select('status')
+        .or(`and(requester_id.eq.${user.id},addressee_id.eq.${userId}),and(requester_id.eq.${userId},addressee_id.eq.${user.id})`)
+        .eq('status', 'accepted')
+        .single();
+
+      if (error) {
+        console.error('Error checking friendship status:', error);
+        return false;
+      }
+
+      return data !== null;
+    } catch (error) {
+      console.error('Error checking friendship status:', error);
+      return false;
+    }
+  }
 }
  
 export class NewChallengeService {
