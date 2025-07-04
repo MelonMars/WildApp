@@ -7,6 +7,7 @@ import {
     Dimensions,
     StatusBar,
     Animated,
+    ScrollView,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter, useLocalSearchParams } from 'expo-router';
@@ -233,6 +234,7 @@ const StreakPage = () => {
                 );
             })}
 
+            <ScrollView>
             <Animated.View
                 style={[
                     common_styles.contentContainer,
@@ -318,6 +320,7 @@ const StreakPage = () => {
                     </Text>
                 </TouchableOpacity>
             </Animated.View>
+            </ScrollView>
         </View>
     );
 };
