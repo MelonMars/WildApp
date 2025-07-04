@@ -23,13 +23,13 @@ export default function Profile() {
     const params = useLocalSearchParams();
     const [showAchievementsModal, setShowAchievementsModal] = useState(false);
     const [selectedDifficulty, setSelectedDifficulty] = useState('all');
-    // const [username, setUsername] = useState(user?.name || user?.email.split('@')[0] || 'anonymous');
     const [username, setUsername] = useState('anonymous');
     const [profilePicture, setProfilePicture] = useState(null);
     const [isUploadingImage, setIsUploadingImage] = useState(false);
 
     const [isLoading, setIsLoading] = useState(true);
     const [showStatsModal, setShowStatsModal] = useState(false);
+    const [isProfilePublic, setIsProfilePublic] = useState(true);
 
     const userId = params?.userId;
 
@@ -47,6 +47,19 @@ export default function Profile() {
         { label: '👍 Likes Received', value: profileData.likesReceived },
         { label: '📅 Account Age', value: profileData.accountAge },
     ];
+
+    useEffect(() => {
+        const checkProfileVisibility = async () => {
+            try {
+                const isPublic = await PostService.isProfilePublic(userId);
+                setIsProfilePublic(isPublic);
+            } catch (error) {
+                console.error('Error checking profile visibility:', error);
+                setIsProfilePublic(true);
+            }
+        }
+        checkProfileVisibility();
+    }, [userId]);
 
     useEffect(() => {
         const loadUsername = async () => {
@@ -114,6 +127,26 @@ export default function Profile() {
     const loadProfileData = async () => {
         setIsLoading(true);
         try {
+            const savedProfilePicture = await AsyncStorage.getItem(`profilePicture_${userId}`);
+            if (savedProfilePicture) {
+                setProfilePicture(savedProfilePicture);
+            } else {
+                try {
+                    const serverProfilePicture = await PostService.getProfilePicture(userId);
+                    if (serverProfilePicture) {
+                        setProfilePicture(serverProfilePicture);
+                        await AsyncStorage.setItem(`profilePicture_${userId}`, serverProfilePicture);
+                    }
+                } catch (error) {
+                    console.error('Error loading profile picture from server:', error);
+                }
+            }
+
+            if (!isProfilePublic) {
+                setIsLoading(false);
+                return;
+            }
+
             const streak = await PostService.getStreak(userId);
 
             const posts = await PostService.getUsersPosts(userId);
@@ -160,20 +193,7 @@ export default function Profile() {
                 ...a,
                 unlocked: false
             })));
-            const savedProfilePicture = await AsyncStorage.getItem(`profilePicture_${userId}`);
-            if (savedProfilePicture) {
-                setProfilePicture(savedProfilePicture);
-            } else {
-                try {
-                    const serverProfilePicture = await PostService.getProfilePicture(userId);
-                    if (serverProfilePicture) {
-                        setProfilePicture(serverProfilePicture);
-                        await AsyncStorage.setItem(`profilePicture_${userId}`, serverProfilePicture);
-                    }
-                } catch (error) {
-                    console.error('Error loading profile picture from server:', error);
-                }
-            }
+
             const commentsReceived = await PostService.getUserCommentsReceived(userId);
             const likesReceived = await PostService.getUserLikes(userId);
             const createdAt = await PostService.getUserJoinDate(userId);
@@ -198,7 +218,7 @@ export default function Profile() {
     useFocusEffect(
         useCallback(() => {
             loadProfileData();
-        }, [])
+        }, [isProfilePublic])
     );
 
     const navigateToGallery = () => {
@@ -239,6 +259,58 @@ export default function Profile() {
                 <View style={common_styles.loadingContainer}>
                     <ActivityIndicator size="large" color={colors.vintageOrange} />
                     <Text style={common_styles.loadingText}>Loading profile...</Text>
+                </View>
+            </View>
+        );
+    }
+
+    if (!isProfilePublic) {
+        return (
+            <View style={common_styles.container}>
+                <View style={common_styles.backgroundTexture} />
+                
+                <View style={styles.header}>
+                    <TouchableOpacity onPress={navigateBack} style={styles.backButton}>
+                        <Text style={styles.backButtonText}>←</Text>
+                    </TouchableOpacity>
+                    <Text style={styles.headerTitle}>Profile</Text>
+                    <View style={styles.headerSpacer} />
+                </View>
+
+                <View style={styles.privateProfileContainer}>
+                    <View style={styles.profileSection}>
+                        <View style={styles.profilePictureContainer}>
+                            <TouchableOpacity 
+                                style={styles.profilePictureContainer}
+                                disabled={true}
+                                activeOpacity={0.7}
+                            >
+                                {profilePicture ? (
+                                    <Image source={{ uri: profilePicture }} style={styles.profilePictureImage} />
+                                ) : (
+                                    <View style={styles.profilePicture}>
+                                        <Text style={styles.profilePictureText}>
+                                            {username
+                                                ? username.charAt(0).toUpperCase()
+                                                : user?.email
+                                                    ? user.email.charAt(0).toUpperCase()
+                                                    : '?'}
+                                        </Text>
+                                    </View>
+                                )}
+                                <View style={styles.profilePictureTape} />
+                            </TouchableOpacity>
+                        </View>
+                        <Text style={styles.userName}>{username || 'Wild Explorer'}</Text>
+                    </View>
+                    
+                    <View style={styles.privateMessageContainer}>
+                        <Text style={styles.privateMessageIcon}>🔒</Text>
+                        <Text style={styles.privateMessageTitle}>Private Profile</Text>
+                        <Text style={styles.privateMessageText}>
+                            This user has made their profile private. Only their name and profile picture are visible.
+                        </Text>
+                    </View>
                 </View>
             </View>
         );
@@ -1090,4 +1162,35 @@ const styles = StyleSheet.create({
         fontSize: 12,
         fontWeight: 'bold',
     },
+    privateProfileContainer: {
+        flex: 1,
+        justifyContent: 'center',
+        alignItems: 'center',
+        paddingHorizontal: 20,
+    },
+    privateMessageContainer: {
+        backgroundColor: colors.darkGray,
+        borderRadius: 12,
+        padding: 20,
+        alignItems: 'center',
+        marginTop: 20,
+        ...shadows.lightShadow,
+    },
+    privateMessageIcon: {
+        fontSize: 48,
+        color: colors.vintageOrange,
+        marginBottom: 10,
+    },
+    privateMessageTitle: {
+        ...typography.headerMedium,
+        color: colors.tan,
+        fontWeight: '700',
+        marginBottom: 10,
+    },
+    privateMessageText: {
+        ...typography.bodyMedium,
+        color: colors.peach,
+        textAlign: 'center',
+        lineHeight: 20,
+    }
 });

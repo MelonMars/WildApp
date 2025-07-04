@@ -1,5 +1,5 @@
-import React, { useEffect, useState, useCallback } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, ActivityIndicator, StatusBar, ScrollView, Image, Modal, TextInput, Share, } from 'react-native';
+import React, { useEffect, useState, useCallback, useRef } from 'react';
+import { View, Text, TouchableOpacity, StyleSheet, ActivityIndicator, StatusBar, ScrollView, Image, Modal, TextInput, Share, Animated, TouchableWithoutFeedback} from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { common_styles, colors, typography, shadows } from './styles'; 
 import * as Haptics from 'expo-haptics';
@@ -46,6 +46,9 @@ export default function Profile() {
     const [leaderboardLoading, setLeaderboardLoading] = useState(false);
     const [selectedLeaderboardType, setSelectedLeaderboardType] = useState('achievements');
 
+    const [isPrivate, setIsPrivate] = useState(false);
+    const toggleAnim = useRef(new Animated.Value(false ? 1 : 0)).current
+
     const statsData = [
         { label: '🔥 Streak', value: profileData.streak },
         { label: '🎯 Total', value: profileData.totalChallenges },
@@ -89,6 +92,32 @@ export default function Profile() {
           router.replace('/authentication');
         }
       }, [user, loading]);    
+
+    const togglePrivate = async (newValue) => {
+        try {
+            await PostService.setProfileVisibility(user, newValue);
+        } catch (error) {
+            console.error('Error toggling profile visibility:', error);
+            alert('Failed to update profile visibility. Please try again.');
+        }
+    } 
+
+    useEffect(() => {
+        Animated.timing(toggleAnim, {
+          toValue: isPrivate ? 1 : 0,
+          duration: 200,
+          useNativeDriver: false,
+        }).start()
+    }, [isPrivate, toggleAnim]);
+
+    const backgroundColor = toggleAnim.interpolate({
+        inputRange: [0, 1],
+        outputRange: ['#D2B48C', '#8B4513'],
+    })
+    const circleTranslate = toggleAnim.interpolate({
+        inputRange: [0, 1],
+        outputRange: [2, 22],
+    })    
 
     const loadFriendsData = async () => {
         try {
@@ -312,7 +341,8 @@ export default function Profile() {
                 likesReceived,
                 accountAge,
             });
-
+            const isPublic = await PostService.isProfilePublic(user.id);
+            setIsPrivate(!isPublic);
         } catch (error) {
             console.error('Error loading profile data:', error);
         } finally {
@@ -580,6 +610,26 @@ export default function Profile() {
                     </View>
                 )}
             </TouchableOpacity>
+            <View style={{alignItems: 'center', marginVertical: 15}}>
+                <TouchableWithoutFeedback
+                    onPress={() => {
+                        setIsPrivate(!isPrivate)
+                        togglePrivate && togglePrivate(!isPrivate)
+                    }}
+                >
+                    <Animated.View style={[styles.track, { backgroundColor }]}>
+                    <Animated.View
+                        style={[
+                        styles.thumb,
+                            { transform: [{ translateX: circleTranslate }] },
+                        ]}
+                    />
+                    </Animated.View>
+                </TouchableWithoutFeedback>
+                <Text style={styles.label}>
+                    {isPrivate ? 'Private Profile' : 'Public Profile'}
+                </Text>
+            </View>
             <Modal
                 visible={showStatsModal}
                 animationType="slide"
@@ -1900,5 +1950,53 @@ const styles = StyleSheet.create({
         fontSize: 16,
         color: '#666',
         fontWeight: '500',
+    },
+    privateToggle: {
+        backgroundColor: colors.lightBrown,
+        paddingVertical: 12,
+        paddingHorizontal: 30,
+        borderWidth: 2,
+        borderColor: colors.tan,
+        marginVertical: 15,
+        transform: [{ rotate: '0.5deg' }],
+        justifyContent: 'center',
+        alignItems: 'center',
+        ...shadows.lightShadow,
+        width: '50%',
+        justifyContent: 'center',
+        alignSelf: 'center',
+    },
+    privateToggleText: {
+        ...typography.bodyMedium,
+        color: colors.polaroidWhite,
+        textAlign: 'center',
+        fontWeight: '700',
+        letterSpacing: 2,
+    },
+    track: {
+        width: 50,
+        height: 28,
+        borderRadius: 14,
+        padding: 2,
+        borderWidth: 2,
+        borderColor: '#D2B48C',
+        justifyContent: 'center',
+    },
+    thumb: {
+        width: 24,
+        height: 24,
+        borderRadius: 12,
+        backgroundColor: '#FFF',
+        shadowColor: '#000',
+        shadowOpacity: 0.2,
+        shadowRadius: 2,
+        elevation: 2,
+    },
+    label: {
+        marginTop: 8,
+        fontWeight: '700',
+        letterSpacing: 1,
+        fontSize: 14,
+        color: '#FFF',
     },
 });

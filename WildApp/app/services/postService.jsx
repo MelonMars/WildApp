@@ -1387,8 +1387,49 @@ export class PostService {
       throw error;
     }
   }  
-}
 
+  static async isProfilePublic(userId) {
+    try {
+      const { data, error } = await supabase
+        .from('users')
+        .select('private')
+        .eq('id', userId)
+        .single();
+
+      if (error) {
+        console.error('Error checking profile privacy:', error);
+        return true;
+      }
+
+      return !data.private;
+    } catch (error) {
+      console.error('Error checking profile privacy:', error);
+      return true;
+    }
+  }
+
+  static async setProfileVisibility(user, isPrivate) {
+    try {
+      const { data, error } = await supabase
+        .from('users')
+        .update({ private: isPrivate })
+        .eq('id', user.id)
+        .select()
+        .single();
+
+      if (error) {
+        console.error('Error updating profile visibility:', error);
+        throw error;
+      }
+
+      return data.private ? true : false;
+    } catch (error) {
+      console.error('Error setting profile visibility:', error);
+      throw error;
+    }
+  }
+}
+ 
 export class NewChallengeService {
   static async uploadPhoto(photoUri, fileName = null) {
     try {
